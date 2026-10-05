@@ -1,6 +1,6 @@
 window.__APP_CONFIG__ = {
   BASE_PATH: "/",
-  VITE_ROOT_DOMAIN: "autional.cn",
+  VITE_ROOT_DOMAIN: "autional.com",
   VITE_PORTAL_CONFIG: {
     landing: { host: "www", base: "" },
     auth: { host: "auth", base: "" },
@@ -14,7 +14,7 @@ window.__APP_CONFIG__ = {
     trust: { host: "trust", base: "" },
     brand: { host: "brand", base: "" }
   },
-  VITE_COOKIE_DOMAIN: ".autional.cn",
+  VITE_COOKIE_DOMAIN: ".autional.com",
   VITE_API_BASE_URL: "/bff",
   VITE_API_NAMESPACE: "dev"
 };
