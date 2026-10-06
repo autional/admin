@@ -8,9 +8,9 @@ import { PlusOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { message, modal } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
-import { Alert } from '@autional-cn/ui';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import type { DataTableProps } from '@autional-cn/ui/antd';
+import { Alert } from '@autional/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import type { DataTableProps } from '@autional/ui/antd';
 
 import {
 	apiClient,
@@ -18,7 +18,7 @@ import {
 	fromPageResult,
 	toPageParams,
 	useCurrentTenantIdOr,
-} from '@autional-cn/shared';
+} from '@autional/shared';
 import dayjs from 'dayjs';
 
 // A-274（TASK-AB1-23）：契约键直读（响应拦截器已 snake→camel），禁止 snake 双读兼容。

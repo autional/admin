@@ -12,7 +12,7 @@ import {
 	CopyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { extractItem } from '@autional-cn/shared';
+import { extractItem } from '@autional/shared';
 import {
 	useNotificationTemplates,
 	useCreateNotificationTemplate,
@@ -23,8 +23,8 @@ import {
 	type NotificationTemplateRecord,
 } from '@/hooks/use-notifications';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { createNotificationTemplateSchema } from '@/lib/validators';
 
 const { Option } = Select;

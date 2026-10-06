@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useCurrentTenantId } from '@autional-cn/shared';
+import { useCurrentTenantId } from '@autional/shared';
 import { useQuery } from '@tanstack/react-query';
 import { getFeatureGates } from '@/lib/api.generated';
 
 import { queryKeys } from '@/lib/query-keys';
-import type { FeatureGateResponse } from '@autional-cn/shared/generated/types';
+import type { FeatureGateResponse } from '@autional/shared/generated/types';
 
 /**
  * Phase 0b: FeatureGate — feature gates enabled per tenant subscription plan.

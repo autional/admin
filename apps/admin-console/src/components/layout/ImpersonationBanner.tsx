@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { Button } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@autional-cn/shared';
-import { authMeStopImpersonationPost } from '@autional-cn/shared/generated/api';
-import { Alert } from '@autional-cn/ui';
+import { useAuthStore } from '@autional/shared';
+import { authMeStopImpersonationPost } from '@autional/shared/generated/api';
+import { Alert } from '@autional/ui';
 import { message } from '@/lib/antd-app';
 import {
 	completeUserFromAuthMe,

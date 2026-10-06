@@ -6,7 +6,7 @@
 //   修：①ui/packages/shared/src/constants/api-paths.ts 两常量修正（单源；白名单唯一 ui 文件）；
 //   ②CrudTab 增 error state（失败 ≠ 空态：PageError + 重试，替换 toast 后空表）。
 //
-// 阶段 A 判绿口径（重要，防误读）：admin-console 消费的是**已发布** @autional-cn/shared（注册表包，
+// 阶段 A 判绿口径（重要，防误读）：admin-console 消费的是**已发布** @autional/shared（注册表包，
 //   非工作区链接）——阶段 A wire 断言锁定真实不变量「页面请求 = 单源常量」（防页面字面写死漂移）；
 //   「常量 = 后端真路径」由 ui 源修正保证，Stage B 发布 bump 后本断言即传递等价于真路径，
 //   并由 dev 实测两 Tab 200 闭合（plan §14 发布序列已列该步骤）。
@@ -23,7 +23,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { apiClient, API_PATHS } from '@autional-cn/shared';
+import { apiClient, API_PATHS } from '@autional/shared';
 import CompliancePage from '../page';
 
 vi.mock('@/lib/antd-app', () => ({

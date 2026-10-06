@@ -7,11 +7,11 @@ import { message } from '@/lib/antd-app';
 import { SearchOutlined } from '@ant-design/icons';
 import { useAlerts, useUpdateAlertStatus, useAssignAlert } from '@/hooks/use-audit-alerts';
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
-import type { DataTablePagination } from '@autional-cn/ui/antd';
-import { useIsAuditRestricted, AuditStatsOnly } from '@autional-cn/shared';
-import type * as Types from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
+import type { DataTablePagination } from '@autional/ui/antd';
+import { useIsAuditRestricted, AuditStatsOnly } from '@autional/shared';
+import type * as Types from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const SEVERITY_COLORS: Record<string, string> = {

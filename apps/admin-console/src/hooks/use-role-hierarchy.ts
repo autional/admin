@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, extractItem, useCurrentTenantId } from '@autional-cn/shared';
+import { extractList, extractItem, useCurrentTenantId } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 

@@ -20,8 +20,8 @@ import { queryKeys } from '@/lib/query-keys';
 // 行契约 = generated RiskConfigResponse/SignalWeights（camel 直读，拦截器深 camel 化）。
 // wire 锚：service-identity/internal/handler/risk_config_handler.go:26-35（json tenant_id/elevated_threshold/
 // signal_weights/...）；权重 service-identity/internal/domain/risk_config.go:31-46（json ip_unknown 等）。
-import type { RiskConfigResponse, SignalWeights } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import type { RiskConfigResponse, SignalWeights } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 
 const { Text } = Typography;
 

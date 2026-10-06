@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { ErrorBoundary } from '@autional-cn/ui';
+import { ErrorBoundary } from '@autional/ui';
 
 // 只留 devMode —— 三段文案交给设计系统的内置字典（按 <html lang> 选语言）。
 // 原先这里写死「出现错误 / 发生意外错误，请重试。/ 重试」，与字典的中文是三处不同的措辞：

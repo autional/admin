@@ -7,8 +7,8 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useSessions, useActiveSessionCount, useDeleteSession } from '@/hooks/use-sessions';
 import type { SessionRecord } from '@/hooks/use-sessions';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 export default function SessionsPage() {

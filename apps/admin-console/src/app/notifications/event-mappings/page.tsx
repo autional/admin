@@ -6,7 +6,7 @@ import { message } from '@/lib/antd-app';
 import { PlusOutlined, EditOutlined, DeleteOutlined, TagOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional-cn/shared';
+import { useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import {
 	useEventMappings,
@@ -17,8 +17,8 @@ import {
 // A-164（TASK-AB1-26）：选择器数据源切 /available admin twin（列表端点 TemplateResponse 无 code 字段）
 import { useAvailableNotificationTemplates } from '@/hooks/use-notifications';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 const { Option } = Select;
 

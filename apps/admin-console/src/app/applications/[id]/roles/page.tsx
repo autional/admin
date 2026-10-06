@@ -5,7 +5,7 @@ import { useParams } from 'react-router';
 import { Tabs, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, Popconfirm, Card } from 'antd';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
-import { extractItem, usePageTitle, useAuthStore } from '@autional-cn/shared';
+import { extractItem, usePageTitle, useAuthStore } from '@autional/shared';
 import {
 	getAppDefaultRoles,
 	createAppDefaultRole,
@@ -16,8 +16,8 @@ import {
 	revokeAppMember,
 } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 interface AppRole {

@@ -9,11 +9,11 @@ import {
 	getPortalUrl,
 	PLATFORM_TENANT_ID,
 	useCurrentTenantId,
-} from '@autional-cn/shared';
-import type { ApplicationResponse } from '@autional-cn/shared/generated/types';
+} from '@autional/shared';
+import type { ApplicationResponse } from '@autional/shared/generated/types';
 import { useTranslation } from 'react-i18next';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import {
 	getApplications,
 	updateApplication,

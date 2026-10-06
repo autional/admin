@@ -22,9 +22,9 @@ import { getAuthConfig, updateAuthConfig } from '@/lib/api.generated';
 
 import { queryKeys } from '@/lib/query-keys';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { extractItem, useCurrentTenantId } from '@autional-cn/shared';
-import { Alert, ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { extractItem, useCurrentTenantId } from '@autional/shared';
+import { Alert, ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 import { COMPLIANCE_PROFILES, type ProfilePreset } from '@/lib/compliance-profiles';
 

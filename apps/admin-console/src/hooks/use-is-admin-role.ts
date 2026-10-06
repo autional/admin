@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentRole } from '@autional-cn/shared';
+import { useCurrentRole } from '@autional/shared';
 
 /**
  * 当前角色是否为管理面全权角色（admin / super_admin）。

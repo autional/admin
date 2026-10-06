@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
-import { useAuthStore } from '@autional-cn/shared';
+import { useAuthStore } from '@autional/shared';
 import { useIsAdminRole } from './use-is-admin-role';
 
 function setRole(role: string | null): void {

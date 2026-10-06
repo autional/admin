@@ -4,8 +4,8 @@ import React from 'react';
 import { useNavigate } from 'react-router';
 import { Layout, Space, Typography, Select, Tag } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore, useLogout, usePortalCatalog, useTenantSlug } from '@autional-cn/shared';
-import { LanguageSwitcher, PortalSwitcher, ThemeToggle, UserMenu } from '@autional-cn/ui';
+import { useAuthStore, useLogout, usePortalCatalog, useTenantSlug } from '@autional/shared';
+import { LanguageSwitcher, PortalSwitcher, ThemeToggle, UserMenu } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 import { buildNavHref } from '@/lib/nav';
 

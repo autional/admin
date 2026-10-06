@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 
 // 只替掉网络入口：/auth/me 默认挂起（消费后的补全属静默分支，用例不依赖其完成）
-vi.mock('@autional-cn/shared', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('@autional-cn/shared')>();
+vi.mock('@autional/shared', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@autional/shared')>();
 	return {
 		...actual,
 		apiClient: { get: vi.fn(() => new Promise(() => {})) },
 	};
 });
 
-import { useAuthStore, apiClient } from '@autional-cn/shared';
+import { useAuthStore, apiClient } from '@autional/shared';
 import {
 	consumeImpersonationHash,
 	decodeImpersonationInfo,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantIdOr } from '@autional-cn/shared';
+import { useCurrentTenantIdOr } from '@autional/shared';
 import { Button, Space, Tag, Modal, Form, Input, Select, Switch, Timeline, Popconfirm, Spin, Empty } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
@@ -23,8 +23,8 @@ import {
 import type { WebhookRecord, DeliveryLog } from '@/hooks/use-webhooks';
 
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { createWebhookSchema } from '@/lib/validators';
 
 const { Option } = Select;

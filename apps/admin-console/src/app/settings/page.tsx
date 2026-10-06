@@ -10,13 +10,13 @@ import {
 	GlobalOutlined,
 	ClockCircleOutlined,
 } from '@ant-design/icons';
-import { useAuthStore, processPasswordForTransmission } from '@autional-cn/shared';
-import { PublicAuthConfigByAuthConfig } from '@autional-cn/shared/generated/api';
+import { useAuthStore, processPasswordForTransmission } from '@autional/shared';
+import { PublicAuthConfigByAuthConfig } from '@autional/shared/generated/api';
 import { useUpdateSettings } from '@/hooks/use-settings';
 import { updateUser, changePassword } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const PREFERENCE_KEYS = {

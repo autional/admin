@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { DataTable } from '@autional-cn/ui/antd';
+import { DataTable } from '@autional/ui/antd';
 import { Input, Button, Space, Tag, message, Modal, Typography } from 'antd';
 import { SearchOutlined, DownloadOutlined, LockOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard, StatusBadge } from '@autional-cn/ui';
+import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard, StatusBadge } from '@autional/ui';
 import { searchProfiles, archiveProfile, exportProfile } from '@/lib/api.generated';
-import { extractItem, useTenantSlug } from '@autional-cn/shared';
+import { extractItem, useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 
 const { Text } = Typography;

@@ -82,7 +82,7 @@ export default defineConfig({
           'vendor-charts': ['recharts'],
           'vendor-query': ['@tanstack/react-query'],
           'vendor-i18n': ['i18next', 'react-i18next'],
-          'shared-api': ['@autional-cn/shared'],
+          'shared-api': ['@autional/shared'],
         },
       },
     },

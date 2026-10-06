@@ -15,12 +15,12 @@ import {
 	LockOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional-cn/shared';
+import { useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { useUsers, useDeleteUser, useCreateUser, useUpdateUser } from '@/hooks/use-users';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { createUserSchema } from '@/lib/validators';
 
 interface UserRecord {

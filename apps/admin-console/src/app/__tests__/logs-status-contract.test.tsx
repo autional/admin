@@ -24,7 +24,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import type { ReactElement } from 'react';
-import { apiClient } from '@autional-cn/shared';
+import { apiClient } from '@autional/shared';
 import LogsPage from '../logs/page';
 import StatusPage from '../status/page';
 

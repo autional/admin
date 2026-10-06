@@ -5,8 +5,8 @@ import { Tag, Select, Space, Card, Button, Modal, Descriptions } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { usePayRefunds, type PaymentItem } from '@/hooks/use-pay';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function PayRefundsPage() {
 	const { t } = useTranslation();

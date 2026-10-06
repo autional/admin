@@ -9,7 +9,7 @@ import {
 	useNotificationTrend,
 	useNotificationsReadReport,
 } from '@/hooks/use-notifications';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
+import { PageError, DataTable } from '@autional/ui/antd';
 import {
 	LineChart,
 	Line,

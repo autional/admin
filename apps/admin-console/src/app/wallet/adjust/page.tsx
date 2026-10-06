@@ -6,7 +6,7 @@ import { Form, Input, InputNumber, Button, Card } from 'antd';
 import { message } from '@/lib/antd-app';
 import { useAdjustWalletBalance } from '@/hooks/use-wallet-admin';
 import { handleApiError } from '@/lib/error-handler';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function WalletAdjustPage() {
 	const { t } = useTranslation();

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { extractList, useCurrentTenantId } from '@autional-cn/shared';
+import { extractList, useCurrentTenantId } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 import { getRoles } from '@/lib/api.generated';

@@ -18,7 +18,7 @@
 -   username: string;
 -   ...
 - }
-+ import type { AuthUserResponse as User } from '@autional-cn/shared/generated/types';
++ import type { AuthUserResponse as User } from '@autional/shared/generated/types';
 ```
 
 ### Step 2: 函数映射
@@ -47,8 +47,8 @@
 
 ```typescript
 // api.ts — 渐进式迁移版
-import type * as Types from '@autional-cn/shared/generated/types';
-import * as Generated from '@autional-cn/shared/generated/api';
+import type * as Types from '@autional/shared/generated/types';
+import * as Generated from '@autional/shared/generated/api';
 
 // 类型别名（向后兼容）
 export type User = Types.AuthUserResponse;

@@ -8,7 +8,7 @@
 //   decision_id*/model* 且 input/output 发字符串而后端为 object（dto.go:749-756）⇒ 提交即 400。
 //   修：①表单字段逐项对齐 DTO；②input/output/data_types 走 JSON textarea + parse 校验
 //   （ADR-B2-07，非法 JSON 内联报错且阻止提交）；③提交体经 prepareSubmit 构造——键名
-//   camel→snake 由已发布 @autional-cn/shared（rc.21）apiClient 请求拦截器承担，wire 断言穿
+//   camel→snake 由已发布 @autional/shared（rc.21）apiClient 请求拦截器承担，wire 断言穿
 //   真实拦截器，故断言的是 snake 键 + 真形状（防"页面字面写 snake 键"漂移的反向锁）。
 //   A-221 折叠：role-actions 响应 map[string][]string → 行 [{role, actions[]}]；cross-border
 //   列对齐 from_country/to_country/purpose/safeguard；sod 列 roles_a/roles_b 数组 join（A-224：
@@ -32,7 +32,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
-import { apiClient, API_PATHS } from '@autional-cn/shared';
+import { apiClient, API_PATHS } from '@autional/shared';
 import { message } from '@/lib/antd-app';
 import CompliancePage from '../page';
 

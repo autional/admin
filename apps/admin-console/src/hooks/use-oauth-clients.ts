@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { extractList } from '@autional-cn/shared';
+import { extractList } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 import {
 	getOAuthClients,

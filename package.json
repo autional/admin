@@ -1,15 +1,15 @@
 {
-  "name": "@autional-cn/admin",
+  "name": "@autional/admin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @autional-cn/admin-console dev",
-    "build": "pnpm --filter @autional-cn/admin-console... build",
-    "preview": "pnpm --filter @autional-cn/admin-console preview",
-    "typecheck": "pnpm --filter @autional-cn/admin-console typecheck",
-    "lint": "pnpm --filter @autional-cn/admin-console lint",
-    "test": "pnpm --filter @autional-cn/admin-console test"
+    "dev": "pnpm --filter @autional/admin-console dev",
+    "build": "pnpm --filter @autional/admin-console... build",
+    "preview": "pnpm --filter @autional/admin-console preview",
+    "typecheck": "pnpm --filter @autional/admin-console typecheck",
+    "lint": "pnpm --filter @autional/admin-console lint",
+    "test": "pnpm --filter @autional/admin-console test"
   },
   "packageManager": "pnpm@11.0.8",
   "engines": {

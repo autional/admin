@@ -17,7 +17,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup, within } from '@testing-library/react';
-import { apiClient, useAuthStore } from '@autional-cn/shared';
+import { apiClient, useAuthStore } from '@autional/shared';
 import { message } from '@/lib/antd-app';
 import MinorsProtectionPage from '../page';
 

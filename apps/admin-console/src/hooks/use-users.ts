@@ -5,7 +5,7 @@ import {
 	fromPageResult,
 	toPageParams,
 	useCurrentTenantId,
-} from '@autional-cn/shared';
+} from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 

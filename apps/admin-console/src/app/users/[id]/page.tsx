@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router';
-import { extractList, apiClient } from '@autional-cn/shared';
-import { adminSessions } from '@autional-cn/shared/generated/api';
+import { extractList, apiClient } from '@autional/shared';
+import { adminSessions } from '@autional/shared/generated/api';
 import { Card, Avatar, Tabs, Tag, Button, Space, Form, Input, Descriptions, Modal, Spin, Empty, Select } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
@@ -21,7 +21,7 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '@/hooks/use-users';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
+import { PageError, DataTable } from '@autional/ui/antd';
 import {
 	getUserRoles,
 	getUserPermissions,

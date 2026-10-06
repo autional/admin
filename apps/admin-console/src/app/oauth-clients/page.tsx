@@ -32,8 +32,8 @@ import type {
 	OAuthClientStats,
 } from '@/hooks/use-oauth-clients';
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 const { Option } = Select;
 const { Text } = Typography;

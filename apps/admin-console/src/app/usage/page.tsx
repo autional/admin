@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantIdOr } from '@autional-cn/shared';
+import { useCurrentTenantIdOr } from '@autional/shared';
 import { Card, Row, Col, Statistic, Select, Spin, Empty, Button } from 'antd';
 import { ReloadOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getUsageTimeline, getUsageEndpoints } from '@/lib/api.generated';
 
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function UsagePage() {
 	const { t } = useTranslation();

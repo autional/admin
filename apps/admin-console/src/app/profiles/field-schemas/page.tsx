@@ -2,17 +2,17 @@
 // @generated-api-exempt: 1 key(s) [PROFILE.ADMIN_FIELD_SCHEMA] lack generated func
 
 import { useState, useEffect } from 'react';
-import { DataTable } from '@autional-cn/ui/antd';
+import { DataTable } from '@autional/ui/antd';
 import { Button, Modal, Form, Input, Select, Switch, InputNumber, Space, Popconfirm } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional-cn/ui';
-import { apiClient, API_PATHS } from '@autional-cn/shared';
+import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
+import { apiClient, API_PATHS } from '@autional/shared';
 import {
 	adminProfilesFieldSchemas,
 	adminProfilesFieldSchemasPost,
-} from '@autional-cn/shared/generated/api';
+} from '@autional/shared/generated/api';
 
 const FIELD_TYPES = [
 	{ label: 'Text', value: 'text' },

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantIdOr } from '@autional-cn/shared';
+import { useCurrentTenantIdOr } from '@autional/shared';
 import { Button, Space, Tag, Modal, Form, Input, Select, Empty, Spin, Tooltip } from 'antd';
 import { message } from '@/lib/antd-app';
 import { CheckOutlined, CloseOutlined, CheckCircleOutlined } from '@ant-design/icons';
@@ -14,8 +14,8 @@ import {
 } from '@/hooks/use-members-approval';
 
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const { TextArea } = Input;

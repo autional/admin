@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, extractItem } from '@autional-cn/shared';
+import { extractList, extractItem } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,7 +13,7 @@ import {
 	restoreTrashItem,
 	deleteTrashItem,
 } from '@/lib/api.generated';
-import * as Generated from '@autional-cn/shared/generated/api';
+import * as Generated from '@autional/shared/generated/api';
 
 // TASK-AB1-21 / A-294：行标识 = wire 契约键 file_id（generated FileMetadataResponse，经拦截器 camel 为 fileId）；
 // 删除 `id` 回退分支（旧代码按行对象的 id 键取标识恒 undefined → 行操作 URL 带 "undefined"）。

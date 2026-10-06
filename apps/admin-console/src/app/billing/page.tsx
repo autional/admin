@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantId } from '@autional-cn/shared';
+import { useCurrentTenantId } from '@autional/shared';
 import { Card, Tag, Descriptions, Tabs, Button, Spin, Empty, Row, Col, Statistic, Modal, Form, Input, InputNumber, Select, Space } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
@@ -14,8 +14,8 @@ import {
 	PlayCircleOutlined,
 } from '@ant-design/icons';
 
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { handleApiError } from '@/lib/error-handler';
 import { useTranslation } from 'react-i18next';
 import {

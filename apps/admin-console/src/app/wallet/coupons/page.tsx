@@ -13,9 +13,9 @@ import {
 	type CouponItem,
 } from '@/hooks/use-wallet-admin';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import type { CreateCouponRequest } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import type { CreateCouponRequest } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function WalletCouponsPage() {
 	const { t } = useTranslation();

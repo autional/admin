@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantIdOr } from '@autional-cn/shared';
+import { useCurrentTenantIdOr } from '@autional/shared';
 import { Form, Input, Button, Slider, ColorPicker, Card, Row, Col, Spin } from 'antd';
 import { message } from '@/lib/antd-app';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -9,8 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { useBranding, useUpdateBranding } from '@/hooks/use-branding';
 
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 interface BrandingData {
 	logoUrl?: string;

@@ -3,8 +3,8 @@
 import React from 'react';
 import { useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional-cn/shared';
-import { Breadcrumb as SharedBreadcrumb } from '@autional-cn/ui/antd';
+import { useTenantSlug } from '@autional/shared';
+import { Breadcrumb as SharedBreadcrumb } from '@autional/ui/antd';
 import { buildNavHref } from '@/lib/nav';
 
 /**

@@ -7,11 +7,11 @@ import { SaveOutlined } from '@ant-design/icons';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getPasswordPolicy, updatePasswordPolicy } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
+import { PageError } from '@autional/ui/antd';
 import { queryKeys } from '@/lib/query-keys';
 import { useTranslation } from 'react-i18next';
-import type { PasswordPolicyResponse } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import type { PasswordPolicyResponse } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function PasswordPolicyPage() {
 	const { t } = useTranslation();

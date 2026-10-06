@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router';
-import { useTenantSlug } from '@autional-cn/shared';
+import { useTenantSlug } from '@autional/shared';
 
 /**
  * 角色不满足时的落点：/403 在本站是租户段内路由（/:tenantSlug/403），

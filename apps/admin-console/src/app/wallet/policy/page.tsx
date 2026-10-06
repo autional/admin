@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantId } from '@autional-cn/shared';
+import { useCurrentTenantId } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import { Form, Input, InputNumber, Select, Button, Card, Spin, Switch, Space, Empty } from 'antd';
 import { message } from '@/lib/antd-app';
@@ -12,8 +12,8 @@ import {
 	type WalletPolicy,
 } from '@/hooks/use-wallet-admin';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function WalletPolicyPage() {
 	const { t } = useTranslation();

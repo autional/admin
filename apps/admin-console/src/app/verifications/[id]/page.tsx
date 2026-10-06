@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { extractItem, apiClient, API_PATHS, useTenantSlug } from '@autional-cn/shared';
+import { extractItem, apiClient, API_PATHS, useTenantSlug } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import { buildNavHref } from '@/lib/nav';
 import { Card, Tag, Button, Space, Descriptions, Modal, Form, Select, Input, Spin, Empty, Tabs } from 'antd';
@@ -17,7 +17,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
+import { PageError, DataTable } from '@autional/ui/antd';
 import type { ColumnsType } from 'antd/es/table';
 
 const statusColorMap: Record<string, string> = {

@@ -1,12 +1,12 @@
 'use client';
 
-import { extractList, extractItem } from '@autional-cn/shared';
+import { extractList, extractItem } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 import type {
 	CommunicationDashboardResponse,
 	MessageTemplateResponse,
 	TemplateResponse,
-} from '@autional-cn/shared/generated/types';
+} from '@autional/shared/generated/types';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,7 +24,7 @@ import {
 	updateCommunicationProvider,
 	deleteCommunicationProvider,
 } from '@/lib/api.generated';
-import * as Generated from '@autional-cn/shared/generated/api';
+import * as Generated from '@autional/shared/generated/api';
 
 interface LogRecord {
 	id: string;

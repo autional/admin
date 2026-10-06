@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
 import { createSecretSchema, updateSecretSchema } from '@/lib/validators';
 import {
 	useSecrets,
@@ -31,8 +31,8 @@ import {
 	useBatchDelete,
 	useEncryptionKeys,
 } from '@/hooks/use-secrets';
-import type { SecretVersionResponse } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import type { SecretVersionResponse } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 
 const { Text } = Typography;
 

@@ -5,9 +5,9 @@ import { Card, Row, Col, Statistic, Spin, Empty, Button } from 'antd';
 import { ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { statusOverview } from '@autional-cn/shared/generated/api';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { statusOverview } from '@autional/shared/generated/api';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 /**
  * GET /status/overview 实读契约（service-status dto.OverviewResponse，DataResponse 信封经

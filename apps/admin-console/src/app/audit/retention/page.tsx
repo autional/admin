@@ -27,16 +27,16 @@ import {
 } from '@ant-design/icons';
 import { useRetentionPolicy, useSaveRetentionPolicy } from '@/hooks/use-retention-policy';
 import type { RetentionPolicy } from '@/hooks/use-retention-policy';
-import type * as Types from '@autional-cn/shared/generated/types';
+import type * as Types from '@autional/shared/generated/types';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { apiClient, extractItem, extractListResult } from '@autional-cn/shared';
+import { PageError } from '@autional/ui/antd';
+import { apiClient, extractItem, extractListResult } from '@autional/shared';
 import {
 	adminAuditArchiveStatus,
 	adminAuditArchivePost,
 	adminAuditLogs,
-} from '@autional-cn/shared/generated/api';
-import { ConsolePageHeader } from '@autional-cn/ui';
+} from '@autional/shared/generated/api';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 export default function RetentionPolicyPage() {

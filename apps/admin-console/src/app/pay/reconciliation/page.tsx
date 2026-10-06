@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantId } from '@autional-cn/shared';
+import { useCurrentTenantId } from '@autional/shared';
 import { Tag, Select, Space, Card, Row, Col, Statistic, Button } from 'antd';
 import { RetweetOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -11,9 +11,9 @@ import {
 	useRunPayReconciliation,
 	type ReconciliationRecord,
 } from '@/hooks/use-pay';
-import { PageError, DataTable, DateRangeFilter } from '@autional-cn/ui/antd';
-import type { DateRangeValue } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
+import type { DateRangeValue } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 /** 该页的筛选口径（收敛前是 `Record<string, unknown>`，于是 RangePicker 那边只能靠 `dates[0]?.format()` 现场拼）。 */
 type ReconFilters = {

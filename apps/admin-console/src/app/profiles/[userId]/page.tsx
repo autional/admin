@@ -22,8 +22,8 @@ import {
 	AuditOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader, EmptyState, ErrorState, LoadingScreen, SectionCard } from '@autional-cn/ui';
-import { apiClient, API_PATHS, extractItem, useTenantSlug } from '@autional-cn/shared';
+import { ConsolePageHeader, EmptyState, ErrorState, LoadingScreen, SectionCard } from '@autional/ui';
+import { apiClient, API_PATHS, extractItem, useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { getProfile, archiveProfile, exportProfile } from '@/lib/api.generated';
 

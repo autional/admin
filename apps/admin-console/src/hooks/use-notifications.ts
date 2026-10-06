@@ -1,12 +1,12 @@
 'use client';
 
-import { extractItem, extractList } from '@autional-cn/shared';
+import { extractItem, extractList } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 import type {
 	NotificationStatsResponse,
 	ReadReportResponse,
 	AvailableTemplateResponse,
-} from '@autional-cn/shared/generated/types';
+} from '@autional/shared/generated/types';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -22,7 +22,7 @@ import {
 	broadcastNotification,
 	type NotificationTemplateCloneToLocaleRequest,
 } from '@/lib/api.generated';
-import * as Generated from '@autional-cn/shared/generated/api';
+import * as Generated from '@autional/shared/generated/api';
 
 export interface TrendPoint {
 	date: string;

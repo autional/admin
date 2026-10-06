@@ -13,9 +13,9 @@ import {
 } from '@/hooks/use-abac-policies';
 import type { ABACPolicy } from '@/hooks/use-abac-policies';
 import { handleApiError } from '@/lib/error-handler';
-import { useCurrentTenantId, PLATFORM_TENANT_ID } from '@autional-cn/shared';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { useCurrentTenantId, PLATFORM_TENANT_ID } from '@autional/shared';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function AbacPoliciesPage() {
 	const { t } = useTranslation();

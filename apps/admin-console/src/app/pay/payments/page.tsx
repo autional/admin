@@ -5,12 +5,12 @@ import { Tag, Input, Select, Space, Button, Card } from 'antd';
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional-cn/shared';
+import { useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { usePayPayments, type PaymentItem } from '@/hooks/use-pay';
-import { PageError, DataTable, DateRangeFilter } from '@autional-cn/ui/antd';
-import type { DateRangeValue } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
+import type { DateRangeValue } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 /** 该页的筛选口径（收敛前是 `Record<string, unknown>`）。 */
 type PaymentFilters = {

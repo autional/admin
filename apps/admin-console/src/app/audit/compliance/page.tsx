@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DataTable, PageError } from '@autional-cn/ui/antd';
+import { DataTable, PageError } from '@autional/ui/antd';
 import { Tabs, Button, Modal, Form, Input, Select, Space, Tag, Typography, InputNumber, Switch } from 'antd';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional-cn/ui';
-import { apiClient, API_PATHS } from '@autional-cn/shared';
+import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
+import { apiClient, API_PATHS } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 

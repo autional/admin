@@ -4,14 +4,14 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, Typography, Space, Spin, Descriptions } from 'antd';
-import { Result } from '@autional-cn/ui';
+import { Result } from '@autional/ui';
 import {
 	SearchOutlined,
 	CheckCircleFilled,
 	CloseCircleFilled,
 	LinkOutlined,
 } from '@ant-design/icons';
-import { apiClient, API_PATHS, extractItem } from '@autional-cn/shared';
+import { apiClient, API_PATHS, extractItem } from '@autional/shared';
 
 const { Title, Text } = Typography;
 

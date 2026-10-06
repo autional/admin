@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DataTable } from '@autional-cn/ui/antd';
+import { DataTable } from '@autional/ui/antd';
 import { Button, Space, Modal, Form, Input, Select, Popconfirm, Skeleton } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional-cn/shared';
+import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
-import { ConsolePageHeader, EmptyState, ErrorState, StatusBadge } from '@autional-cn/ui';
+import { ConsolePageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, extractItem, extractList } from '@autional-cn/shared';
-import type { RobotInfo } from '@autional-cn/shared/generated/types';
+import { apiClient, extractItem, extractList } from '@autional/shared';
+import type { RobotInfo } from '@autional/shared/generated/types';
 import {
 	adminRobots,
 	adminRobotsPost,
 	adminRobotsByRobotsDelete,
-} from '@autional-cn/shared/generated/api';
+} from '@autional/shared/generated/api';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';

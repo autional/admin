@@ -7,8 +7,8 @@ import { SendOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useBroadcastNotification } from '@/hooks/use-notifications';
 import { handleApiError } from '@/lib/error-handler';
-import type { BroadcastNotificationResponse } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import type { BroadcastNotificationResponse } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 
 const { TextArea } = Input;
 const { Option } = Select;

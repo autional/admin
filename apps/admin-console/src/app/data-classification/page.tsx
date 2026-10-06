@@ -9,10 +9,10 @@ import {
 	useUpdateDataClassification,
 } from '@/hooks/use-data-classification';
 
-import { usePageTitle, useCurrentTenantIdOr } from '@autional-cn/shared';
+import { usePageTitle, useCurrentTenantIdOr } from '@autional/shared';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 interface ClassificationLevel {

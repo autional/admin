@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuthStore, TenantSlugProvider } from '@autional-cn/shared';
+import { useAuthStore, TenantSlugProvider } from '@autional/shared';
 import type { ReactNode } from 'react';
 
 vi.mock('../../app/verifications/page', () => ({

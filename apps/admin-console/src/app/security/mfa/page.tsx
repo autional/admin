@@ -7,11 +7,11 @@ import { SaveOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAuthPolicy, updateAuthPolicy } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
+import { PageError } from '@autional/ui/antd';
 import { queryKeys } from '@/lib/query-keys';
-import { extractItem, useCurrentTenantId } from '@autional-cn/shared';
-import type { AuthPolicyResponse, UpdateAuthPolicyRequest } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { extractItem, useCurrentTenantId } from '@autional/shared';
+import type { AuthPolicyResponse, UpdateAuthPolicyRequest } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 type MFAMode = 'required' | 'optional' | 'disabled';

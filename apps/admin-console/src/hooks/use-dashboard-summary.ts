@@ -1,11 +1,11 @@
 'use client';
 
-import { useAuthStore } from '@autional-cn/shared';
-import { useAdminAuthApi_keysStats } from '@autional-cn/shared/generated/queries';
+import { useAuthStore } from '@autional/shared';
+import { useAdminAuthApi_keysStats } from '@autional/shared/generated/queries';
 import { useActiveSessions } from '@/hooks/use-users';
 import { useRoles } from '@/hooks/use-roles';
 import { useQuery } from '@tanstack/react-query';
-import { adminSecrets } from '@autional-cn/shared/generated/api';
+import { adminSecrets } from '@autional/shared/generated/api';
 import { getUsers } from '@/lib/api.generated';
 import { queryKeys } from '@/lib/query-keys';
 

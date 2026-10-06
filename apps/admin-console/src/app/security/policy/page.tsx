@@ -8,9 +8,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getSecurityPolicy, updateSecurityPolicy } from '@/lib/api.generated';
 import { queryKeys } from '@/lib/query-keys';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { extractItem, useCurrentTenantId } from '@autional-cn/shared';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { extractItem, useCurrentTenantId } from '@autional/shared';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 /** 后端 GET 返回的嵌套结构（apiClient 响应已转 camelCase） */

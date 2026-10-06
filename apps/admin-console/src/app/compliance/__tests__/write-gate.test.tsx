@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { apiClient, useAuthStore } from '@autional-cn/shared';
+import { apiClient, useAuthStore } from '@autional/shared';
 
 vi.mock('@/hooks/use-compliance', () => ({
 	useDSARs: () => ({

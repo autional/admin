@@ -16,17 +16,17 @@ import {
 	Typography,
 } from 'antd';
 import { FileProtectOutlined, AuditOutlined, ReloadOutlined } from '@ant-design/icons';
-import { extractItem, useCurrentTenantId } from '@autional-cn/shared';
+import { extractItem, useCurrentTenantId } from '@autional/shared';
 import {
 	adminAuditReportsSecurity,
 	adminAuditReportsCompliance,
-} from '@autional-cn/shared/generated/api';
-import type { ComplianceCheckResp, SecurityRiskResp } from '@autional-cn/shared/generated/types';
+} from '@autional/shared/generated/api';
+import type { ComplianceCheckResp, SecurityRiskResp } from '@autional/shared/generated/types';
 import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { useIsAuditRestricted, AuditStatsOnly } from '@autional-cn/shared';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { useIsAuditRestricted, AuditStatsOnly } from '@autional/shared';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;

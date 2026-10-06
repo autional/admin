@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, extractItem } from '@autional-cn/shared';
+import { extractList, extractItem } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,7 +12,7 @@ import {
 	testSIEMConnector,
 } from '@/lib/api.generated';
 
-import type * as Types from '@autional-cn/shared/generated/types';
+import type * as Types from '@autional/shared/generated/types';
 
 export type SIEMConnectorRecord = Types.SIEMConnectorResponse;
 

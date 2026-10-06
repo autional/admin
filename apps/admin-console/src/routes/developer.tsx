@@ -1,8 +1,8 @@
 'use client';
 
 import { Route } from 'react-router';
-import { RequireAuth } from '@autional-cn/shared';
-import { ErrorBoundary } from '@autional-cn/ui';
+import { RequireAuth } from '@autional/shared';
+import { ErrorBoundary } from '@autional/ui';
 import { DEFAULT_ERROR_BOUNDARY } from '../lib/error-boundary-config';
 import { ForbiddenRedirect } from '../components/common/ForbiddenRedirect';
 

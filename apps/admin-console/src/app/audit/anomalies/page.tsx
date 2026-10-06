@@ -16,10 +16,10 @@ import {
 	useLinkAnomalyToCase,
 } from '@/hooks/use-audit-anomalies';
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
-import type { DataTablePagination } from '@autional-cn/ui/antd';
-import { useIsAuditRestricted, AuditStatsOnly, extractItem } from '@autional-cn/shared';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
+import type { DataTablePagination } from '@autional/ui/antd';
+import { useIsAuditRestricted, AuditStatsOnly, extractItem } from '@autional/shared';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const SEVERITY_COLORS: Record<string, string> = {

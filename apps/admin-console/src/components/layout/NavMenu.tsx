@@ -24,7 +24,7 @@ import {
 } from '@ant-design/icons';
 import { Menu, Badge } from 'antd';
 import { useUIStore } from '@/stores/ui-store';
-import { usePermission, useTenantSlug, useCurrentTenantId } from '@autional-cn/shared';
+import { usePermission, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { getPendingMembers } from '@/lib/api.generated';

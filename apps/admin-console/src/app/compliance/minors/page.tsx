@@ -2,7 +2,7 @@
 // @generated-api-exempt: 2 key(s) [IDENTITY.ADMIN_CONSENTS, TENANT.MINORS_PROTECTION] lack generated func
 
 import React, { useState, useEffect } from 'react';
-import { DataTable, PageError } from '@autional-cn/ui/antd';
+import { DataTable, PageError } from '@autional/ui/antd';
 import { Card, Form, InputNumber, Switch, Button, Spin, TimePicker, Space, Statistic, Row, Col, Tabs, Tag } from 'antd';
 import {
 	SafetyCertificateOutlined,
@@ -15,9 +15,9 @@ import { useTranslation } from 'react-i18next';
 import { handleApiError } from '@/lib/error-handler';
 import { message } from '@/lib/antd-app';
 
-import { apiClient, API_PATHS, extractList, fromPageResult, toPageParams, useCurrentTenantId } from '@autional-cn/shared';
-import { adminUsers } from '@autional-cn/shared/generated/api';
-import { ConsolePageHeader, SectionCard } from '@autional-cn/ui';
+import { apiClient, API_PATHS, extractList, fromPageResult, toPageParams, useCurrentTenantId } from '@autional/shared';
+import { adminUsers } from '@autional/shared/generated/api';
+import { ConsolePageHeader, SectionCard } from '@autional/ui';
 import dayjs from 'dayjs';
 
 // TASK-AB1-27（RC-5 契约收敛）：契约键直读（响应拦截器已 snake→camel），禁止 snake 直读。

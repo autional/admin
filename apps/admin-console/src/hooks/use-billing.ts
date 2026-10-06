@@ -10,8 +10,8 @@ import {
 	getBillingStatistics,
 	getBillingRecords,
 } from '@/lib/api.generated';
-import { extractItem, extractList } from '@autional-cn/shared';
-import * as Generated from '@autional-cn/shared/generated/api';
+import { extractItem, extractList } from '@autional/shared';
+import * as Generated from '@autional/shared/generated/api';
 import type {
 	CreatePlanRequest,
 	UpdatePlanRequest,
@@ -19,7 +19,7 @@ import type {
 	UpdatePaymentGatewayRequest,
 	ExecuteRefundRequest,
 	DunningSettingsRequest,
-} from '@autional-cn/shared/generated/types';
+} from '@autional/shared/generated/types';
 
 export interface BillingSubscription {
 	plan: string;

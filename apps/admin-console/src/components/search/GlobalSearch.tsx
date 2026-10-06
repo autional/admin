@@ -13,7 +13,7 @@ import {
 // icons from @ant-design/icons
 import { getUsers, getRoles, getAllTenants } from '@/lib/api.generated';
 import { getApplications } from '@/lib/api.generated';
-import { useAuthStore, useTenantSlug } from '@autional-cn/shared';
+import { useAuthStore, useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 
 import { useTranslation } from 'react-i18next';

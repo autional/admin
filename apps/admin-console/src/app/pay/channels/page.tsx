@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useCurrentTenantId } from '@autional-cn/shared';
+import { useCurrentTenantId } from '@autional/shared';
 import { Button, Modal, Form, Input, Select, Tag, Space, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -15,8 +15,8 @@ import {
 	type Channel,
 } from '@/hooks/use-pay';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function PayChannelsPage() {
 	const { t } = useTranslation();

@@ -17,7 +17,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuthStore, TenantSlugProvider } from '@autional-cn/shared';
+import { useAuthStore, TenantSlugProvider } from '@autional/shared';
 import type { ReactNode } from 'react';
 
 // ---- 页面模块桩（AC-AB1-22 直链矩阵涉及面）----

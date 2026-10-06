@@ -2,14 +2,14 @@
 // @generated-api-exempt: 2 key(s) [PROFILE.ADMIN_APPROVAL_APPROVE, PROFILE.ADMIN_APPROVAL_REJECT] lack generated func
 
 import React, { useState } from 'react';
-import { DataTable } from '@autional-cn/ui/antd';
+import { DataTable } from '@autional/ui/antd';
 import { Button, Modal, Input, Space, message, Tag } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional-cn/ui';
+import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_PATHS, extractList } from '@autional-cn/shared';
-import { adminProfilesApprovalRequests } from '@autional-cn/shared/generated/api';
+import { apiClient, API_PATHS, extractList } from '@autional/shared';
+import { adminProfilesApprovalRequests } from '@autional/shared/generated/api';
 
 const STATUS_COLORS: Record<string, string> = {
 	pending: 'orange',

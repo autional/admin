@@ -1,6 +1,6 @@
 'use client';
 
-import { fromPageResult, toPageParams, useCurrentTenantId } from '@autional-cn/shared';
+import { fromPageResult, toPageParams, useCurrentTenantId } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 

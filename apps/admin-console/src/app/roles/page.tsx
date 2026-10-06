@@ -25,8 +25,8 @@ import { useCloneRole } from '@/hooks/use-role-hierarchy';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { PermissionItem } from '@/hooks/use-permissions';
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { createRoleSchema } from '@/lib/validators';
 
 const { Title, Text } = Typography;

@@ -29,10 +29,10 @@ import {
 	useRevokeConsent,
 } from '@/hooks/use-compliance';
 import { handleApiError } from '@/lib/error-handler';
-import { DataTable, Drawer, PageError } from '@autional-cn/ui/antd';
-import { apiClient, API_PATHS, useIsAuditRestricted, AuditStatsOnly, extractItem, useTenantSlug } from '@autional-cn/shared';
-import type { CreateRetentionPolicyRequest, UpdateRetentionPolicyRequest } from '@autional-cn/shared/generated/types';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { DataTable, Drawer, PageError } from '@autional/ui/antd';
+import { apiClient, API_PATHS, useIsAuditRestricted, AuditStatsOnly, extractItem, useTenantSlug } from '@autional/shared';
+import type { CreateRetentionPolicyRequest, UpdateRetentionPolicyRequest } from '@autional/shared/generated/types';
+import { ConsolePageHeader } from '@autional/ui';
 import { buildNavHref } from '@/lib/nav';
 import { useNavigate } from 'react-router';
 import { useIsAdminRole } from '@/hooks/use-is-admin-role';

@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, extractItem } from '@autional-cn/shared';
+import { extractList, extractItem } from '@autional/shared';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listVerifications, getVerificationStats, overrideVerification } from '@/lib/api.generated';
 

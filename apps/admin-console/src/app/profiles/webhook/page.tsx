@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { Form, Input, Select, Switch, Button, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
-import { ConsolePageHeader, LoadingScreen, SectionCard } from '@autional-cn/ui';
-import { apiClient } from '@autional-cn/shared';
+import { ConsolePageHeader, LoadingScreen, SectionCard } from '@autional/ui';
+import { apiClient } from '@autional/shared';
 import {
 	adminProfilesWebhook,
 	adminProfilesWebhookPut,
 	adminProfilesWebhookDelete,
-} from '@autional-cn/shared/generated/api';
+} from '@autional/shared/generated/api';
 
 const ALL_EVENTS = [
 	{ label: 'profile.updated', value: 'profile.updated' },

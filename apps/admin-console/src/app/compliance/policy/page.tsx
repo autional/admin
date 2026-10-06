@@ -13,14 +13,14 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { handleApiError } from '@/lib/error-handler';
-import { apiClient, API_PATHS, extractItem } from '@autional-cn/shared';
+import { apiClient, API_PATHS, extractItem } from '@autional/shared';
 import {
 	adminComplianceStandards,
 	adminComplianceTenantsSelfOverrides,
 	adminComplianceTenantsSelfStandardsPut,
 	adminComplianceTenantsSelfOverridesByOverridesDelete,
-} from '@autional-cn/shared/generated/api';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
+} from '@autional/shared/generated/api';
+import { PageError, DataTable } from '@autional/ui/antd';
 
 interface StandardItem {
 	id: string;

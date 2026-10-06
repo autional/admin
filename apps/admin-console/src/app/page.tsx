@@ -19,8 +19,8 @@ import { useRoles } from '@/hooks/use-roles';
 import { useAuditStats, useAuditLogs, type AuditLogRecord } from '@/hooks/use-audit-logs';
 import { useAnnouncements, type AnnouncementRecord } from '@/hooks/use-announcements';
 import { useTenantSummary } from '@/hooks/use-dashboard-summary';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 const DashboardPage = memo(function DashboardPage() {
 	const { t } = useTranslation();

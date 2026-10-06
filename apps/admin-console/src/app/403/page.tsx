@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Button } from 'antd';
-import { Result } from '@autional-cn/ui';
+import { Result } from '@autional/ui';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional-cn/shared';
+import { useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 
 export default function ForbiddenPage() {

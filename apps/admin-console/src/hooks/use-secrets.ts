@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { extractList, useCurrentTenantId } from '@autional-cn/shared';
-import type * as GeneratedTypes from '@autional-cn/shared/generated/types';
+import { extractList, useCurrentTenantId } from '@autional/shared';
+import type * as GeneratedTypes from '@autional/shared/generated/types';
 import { queryKeys } from '@/lib/query-keys';
 
 import {

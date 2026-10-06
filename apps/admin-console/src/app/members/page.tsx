@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantIdOr } from '@autional-cn/shared';
+import { useCurrentTenantIdOr } from '@autional/shared';
 import { Button, Space, Tag, Modal, Form, Input, Select, Empty, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMembers, useInviteMember, useUpdateMember, useRemoveMember } from '@/hooks/use-members';
 
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { inviteMemberSchema } from '@/lib/validators';
 import { useTranslation } from 'react-i18next';
 

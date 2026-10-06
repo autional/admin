@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Button } from 'antd';
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { AppShell, ErrorBoundary } from '@autional-cn/ui';
+import { AppShell, ErrorBoundary } from '@autional/ui';
 import { DEFAULT_ERROR_BOUNDARY } from './lib/error-boundary-config';
 import { NavMenu } from './components/layout/NavMenu';
 import { HeaderActions } from './components/layout/HeaderActions';
@@ -25,7 +25,7 @@ import {
 	useBootstrap,
 	useBranding,
 	BrandingInitializer,
-} from '@autional-cn/shared';
+} from '@autional/shared';
 
 // Pages
 import DashboardPage from './app/page';

@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Select, Button, Spin, Descriptions, Tag } from 'antd';
 import { message } from '@/lib/antd-app';
 import { SaveOutlined, ReloadOutlined, SafetyOutlined } from '@ant-design/icons';
-import { extractItem, useCurrentTenantId } from '@autional-cn/shared';
+import { extractItem, useCurrentTenantId } from '@autional/shared';
 
-import { apiClient, API_PATHS } from '@autional-cn/shared';
+import { apiClient, API_PATHS } from '@autional/shared';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 // TASK-AB1-27（RC-5 契约收敛）：表单键 camel 契约直读（拦截器深 camel 化；写入 camel 书面写。

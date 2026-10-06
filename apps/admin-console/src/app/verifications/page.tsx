@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { extractList, apiClient, useTenantSlug, toPageParams } from '@autional-cn/shared';
+import { extractList, apiClient, useTenantSlug, toPageParams } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { useTranslation } from 'react-i18next';
 import { Tag, Button, Input, Space, Card, Statistic, Row, Col, Select, Modal, Form, Empty, Skeleton } from 'antd';
@@ -16,8 +16,8 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 import {
 	useVerifications,
 	useVerificationStats,

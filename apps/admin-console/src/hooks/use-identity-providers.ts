@@ -1,7 +1,7 @@
 'use client';
 
-import { extractList, toPageParams } from '@autional-cn/shared';
-import type { LdapHealthResponse, SamlProviderItem } from '@autional-cn/shared/generated/types';
+import { extractList, toPageParams } from '@autional/shared';
+import type { LdapHealthResponse, SamlProviderItem } from '@autional/shared/generated/types';
 import { queryKeys } from '@/lib/query-keys';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

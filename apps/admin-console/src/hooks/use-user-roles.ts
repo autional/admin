@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, useCurrentTenantId } from '@autional-cn/shared';
+import { extractList, useCurrentTenantId } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 
@@ -17,7 +17,7 @@ import type {
 	AssignPermissionsRequest,
 	AssignRolesRequest,
 	RemoveRolesRequest,
-} from '@autional-cn/shared/generated/types';
+} from '@autional/shared/generated/types';
 
 export interface UserRole {
 	id: string;

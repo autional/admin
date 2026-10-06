@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, Row, Col, Button, Typography, List } from 'antd';
 import { DownloadOutlined, BookOutlined, CodeOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { ConsolePageHeader } from '@autional/ui';
 
 const { Title, Paragraph, Text } = Typography;
 

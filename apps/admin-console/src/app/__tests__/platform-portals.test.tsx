@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { apiClient, useAuthStore, PLATFORM_TENANT_ID } from '@autional-cn/shared';
+import { apiClient, useAuthStore, PLATFORM_TENANT_ID } from '@autional/shared';
 import PlatformPortalsPage from '../applications/platform-portals/page';
 
 const OTHER_TENANT_ID = '01AAAA1111BBBB2222CCCC3333';

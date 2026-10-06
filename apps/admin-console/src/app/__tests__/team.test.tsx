@@ -21,7 +21,7 @@ vi.mock('@/lib/api.generated', () => ({
 	removeMember: vi.fn(),
 }));
 
-vi.mock('@autional-cn/shared', async (importOriginal) => ({ ...(await importOriginal<typeof import('@autional-cn/shared')>()), useCurrentTenantIdOr: vi.fn().mockReturnValue('test-tenant') }));
+vi.mock('@autional/shared', async (importOriginal) => ({ ...(await importOriginal<typeof import('@autional/shared')>()), useCurrentTenantIdOr: vi.fn().mockReturnValue('test-tenant') }));
 
 import { getMembers } from '@/lib/api.generated';
 

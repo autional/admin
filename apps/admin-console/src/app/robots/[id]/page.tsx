@@ -22,18 +22,18 @@ import {
 	PauseCircleOutlined,
 	KeyOutlined,
 } from '@ant-design/icons';
-import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional-cn/shared';
+import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
-import { ConsolePageHeader, EmptyState, ErrorState, SectionCard, StatusBadge } from '@autional-cn/ui';
+import { ConsolePageHeader, EmptyState, ErrorState, SectionCard, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_PATHS, extractItem } from '@autional-cn/shared';
-import { adminRobotsByRobots, adminRobotsByRobotsPut } from '@autional-cn/shared/generated/api';
+import { apiClient, API_PATHS, extractItem } from '@autional/shared';
+import { adminRobotsByRobots, adminRobotsByRobotsPut } from '@autional/shared/generated/api';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
 
-import type { RobotInfo } from '@autional-cn/shared/generated/types';
+import type { RobotInfo } from '@autional/shared/generated/types';
 
 const { Paragraph, Text } = Typography;
 

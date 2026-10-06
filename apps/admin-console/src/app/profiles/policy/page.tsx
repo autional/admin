@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { Form, InputNumber, Select, Switch, Radio, Button, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
-import { ConsolePageHeader, LoadingScreen, SectionCard } from '@autional-cn/ui';
-import { apiClient } from '@autional-cn/shared';
+import { ConsolePageHeader, LoadingScreen, SectionCard } from '@autional/ui';
+import { apiClient } from '@autional/shared';
 import {
 	adminProfilesPolicy,
 	adminProfilesPolicyPut,
 	adminProfilesPolicyDelete,
-} from '@autional-cn/shared/generated/api';
+} from '@autional/shared/generated/api';
 
 export default function ProfilePolicyPage() {
 	const { t } = useTranslation();

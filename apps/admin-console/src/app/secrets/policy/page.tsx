@@ -3,15 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Form, Input, InputNumber, Switch, Button, Space, Spin } from 'antd';
 import { message } from '@/lib/antd-app';
-import { ConsolePageHeader, SectionCard } from '@autional-cn/ui';
-import { apiClient, extractItem } from '@autional-cn/shared';
+import { ConsolePageHeader, SectionCard } from '@autional/ui';
+import { apiClient, extractItem } from '@autional/shared';
 import {
 	adminSecretsPolicy,
 	adminSecretsPolicyPut,
 	adminSecretsPolicyDelete,
-} from '@autional-cn/shared/generated/api';
+} from '@autional/shared/generated/api';
 import { useTranslation } from 'react-i18next';
-import type { SecretPolicyResponse } from '@autional-cn/shared/generated/types';
+import type { SecretPolicyResponse } from '@autional/shared/generated/types';
 
 // TASK-AB1-27（RC-5 契约收敛）：契约类型直读（generated types，键名 camel），旧本地 snake 接口删除。
 // wire 锚：service-secret dto/dto.go:261-270 SecretPolicyResponse（tenant_id/default_ttl/max_ttl… snake json tag）

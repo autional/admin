@@ -6,8 +6,8 @@
  * 「store 尚未落模拟 token」判为未登录，整页弹去登录页。
  * hash 命中即清（replaceState）——防刷新重放，也防 token 留在地址栏/历史记录。
  */
-import { apiClient, useAuthStore, decodeJwtPayload as decodeJwtPayloadShared } from '@autional-cn/shared';
-import type { User } from '@autional-cn/shared';
+import { apiClient, useAuthStore, decodeJwtPayload as decodeJwtPayloadShared } from '@autional/shared';
+import type { User } from '@autional/shared';
 
 // token 为 URL 未编码形态（JWT 字符集 [A-Za-z0-9._-]）
 const IMPERSONATION_HASH = /^#impersonate=([A-Za-z0-9._-]+)$/;

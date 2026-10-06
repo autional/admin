@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantId } from '@autional-cn/shared';
+import { useCurrentTenantId } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import { Card, Tag, Button, Statistic, Row, Col, Space, Modal, Form, Input, Select, DatePicker, Tabs, InputNumber } from 'antd';
 import { message, modal } from '@/lib/antd-app';
@@ -39,9 +39,9 @@ import { useWalletPolicy, useUpdateWalletPolicy } from '@/hooks/use-wallet-admin
 import type { Transaction, Dispute, Coupon, FraudRule } from '@/hooks/use-wallets';
 
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable, DateRangeFilter } from '@autional-cn/ui/antd';
-import type { DateRangeValue } from '@autional-cn/ui/antd';
-import { ConsolePageHeader } from '@autional-cn/ui';
+import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
+import type { DateRangeValue } from '@autional/ui/antd';
+import { ConsolePageHeader } from '@autional/ui';
 
 export default function WalletsPage() {
 	const { t } = useTranslation();

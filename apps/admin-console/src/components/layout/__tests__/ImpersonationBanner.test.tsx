@@ -6,12 +6,12 @@ vi.mock('@/lib/antd-app', () => ({
 	message: { success: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('@autional-cn/shared/generated/api', () => ({
+vi.mock('@autional/shared/generated/api', () => ({
 	authMeStopImpersonationPost: vi.fn(),
 }));
 
-vi.mock('@autional-cn/shared', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('@autional-cn/shared')>();
+vi.mock('@autional/shared', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@autional/shared')>();
 	return {
 		...actual,
 		// 终止后的 /auth/me 补全：挂起即可（静默分支，用例不依赖其完成）
@@ -19,8 +19,8 @@ vi.mock('@autional-cn/shared', async (importOriginal) => {
 	};
 });
 
-import { useAuthStore } from '@autional-cn/shared';
-import { authMeStopImpersonationPost } from '@autional-cn/shared/generated/api';
+import { useAuthStore } from '@autional/shared';
+import { authMeStopImpersonationPost } from '@autional/shared/generated/api';
 import { message } from '@/lib/antd-app';
 import { ImpersonationBanner } from '../ImpersonationBanner';
 
