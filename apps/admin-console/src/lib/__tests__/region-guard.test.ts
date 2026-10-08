@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 // 唯一合法出处在构建期单点链路：scripts/env.mjs（node 侧）+ src/lib/site-env.ts（客户端侧，
 // 本地兜底值在此一处）；index.html 一律 {{TOKEN}} 占位符，由 vite regionPlugin 注入。
 // 白名单：__tests__（夹具）、src/lib/site-env.ts（区域读单点）。
-// 不在扫描面：src/harness/（本地 dev 壳，独立入口不入生产构建）、i18n locale JSON
+// 2026-10-08 起 src/harness/index.html 也在扫描面（区域值改由 vite.harness.config.ts 注入）；不在扫描面：i18n locale JSON
 //（内容语料，非 ts/tsx 不入扫描面）。
 const BANNED: Array<{ pattern: RegExp; label: string }> = [
 	{ pattern: /autional\.(cn|com)/, label: '区域域名字面量（应走 site-env / {{TOKEN}}）' },
@@ -47,6 +47,10 @@ function findOffenders(files: string[]): string[] {
 describe('区域字面量回归锁', () => {
 	it('index.html 无区域字面量（占位符 {{TOKEN}} 由构建期注入）', () => {
 		expect(findOffenders([resolve(APP_ROOT, 'index.html')])).toEqual([]);
+	});
+
+	it('harness/index.html 无区域字面量（占位符 {{CDN_ASSET_BASE}} 由 vite.harness.config.ts 注入）', () => {
+		expect(findOffenders([resolve(SRC_ROOT, 'harness', 'index.html')])).toEqual([]);
 	});
 
 	it('src 源码无区域字面量（唯一例外 = site-env 白名单）', () => {
