@@ -13,7 +13,7 @@ import {
 import type { ApplicationResponse } from '@autional/shared/generated/types';
 import { useTranslation } from 'react-i18next';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import {
 	getApplications,
 	updateApplication,
@@ -189,7 +189,7 @@ export default function PlatformPortalsPage() {
 	if (!isPlatformTenant) {
 		return (
 			<div>
-				<ConsolePageHeader title={t('applications.platformPortals', 'Platform Portals')} />
+				<AppPageHeader title={t('applications.platformPortals', 'Platform Portals')} />
 				<Empty
 					description={t(
 						'applications.platformOnlyTenant',
@@ -206,7 +206,7 @@ export default function PlatformPortalsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('applications.platformPortals', 'Platform Portals')}
 				description={<>{t('applications.platformPortalsDesc', '平台内置的系统 Portal，对所有租户可见。')}{' '} {portals.length} {t('applications.portalsCount', 'portals')}</>}
 			/>

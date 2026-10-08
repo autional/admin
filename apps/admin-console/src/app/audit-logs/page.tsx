@@ -29,7 +29,7 @@ import {
 } from '@autional/shared/generated/api';
 import { useTranslation } from 'react-i18next';
 import { useIsAuditRestricted, AuditStatsOnly } from '@autional/shared';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Text, Paragraph } = Typography;
 
@@ -352,7 +352,7 @@ export default function AuditLogsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('audit.title')}
 				actions={
 					<>

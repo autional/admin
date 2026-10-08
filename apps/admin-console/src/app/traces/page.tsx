@@ -5,7 +5,7 @@ import { Input, Button, Empty } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function TracesPage() {
 	const { t } = useTranslation();
@@ -21,7 +21,7 @@ export default function TracesPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('traces.title')}
 				actions={
 					<>

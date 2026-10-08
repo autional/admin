@@ -26,7 +26,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import type { PermissionItem } from '@/hooks/use-permissions';
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { createRoleSchema } from '@/lib/validators';
 
 const { Title, Text } = Typography;
@@ -345,7 +345,7 @@ export default function RolesPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('nav.roles')}
 				actions={
 					<>

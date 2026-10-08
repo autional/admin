@@ -14,7 +14,7 @@ import {
 } from '@/hooks/use-billing-admin';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 export default function BillingSubscriptionsPage() {
@@ -198,7 +198,7 @@ export default function BillingSubscriptionsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('subscriptions.title')} />
+			<AppPageHeader title={t('subscriptions.title')} />
 
 			{error && (
 				<PageError message={t('subscriptions.loadError')} retry={refetch} className="mb-4" />

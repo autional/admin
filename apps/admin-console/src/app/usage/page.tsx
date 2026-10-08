@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getUsageTimeline, getUsageEndpoints } from '@/lib/api.generated';
 
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function UsagePage() {
 	const { t } = useTranslation();
@@ -55,7 +55,7 @@ export default function UsagePage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('usage.title')}
 				actions={
 					<>

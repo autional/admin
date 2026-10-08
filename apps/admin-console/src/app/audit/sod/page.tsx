@@ -9,7 +9,7 @@ import { extractItem, useCurrentTenantId } from '@autional/shared';
 import { apiClient, API_PATHS } from '@autional/shared';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 // TASK-AB1-27（RC-5 契约收敛）：表单键 camel 契约直读（拦截器深 camel 化；写入 camel 书面写。
@@ -77,7 +77,7 @@ export default function SodConfigPage() {
 			<div className="flex items-center justify-between mb-6">
 				<div className="flex items-center gap-2">
 					<SafetyOutlined className="text-xl" />
-					<ConsolePageHeader title={t('sod.title')} />
+					<AppPageHeader title={t('sod.title')} />
 				</div>
 				<Button icon={<ReloadOutlined />} onClick={fetchConfig} loading={loading}>
 					{t('common.refresh')}

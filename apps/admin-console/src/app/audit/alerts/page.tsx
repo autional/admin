@@ -11,7 +11,7 @@ import { DataTable, Drawer, PageError } from '@autional/ui/antd';
 import type { DataTablePagination } from '@autional/ui/antd';
 import { useIsAuditRestricted, AuditStatsOnly } from '@autional/shared';
 import type * as Types from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -213,7 +213,7 @@ export default function AuditAlertsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('auditAlerts.title')} />
+			<AppPageHeader title={t('auditAlerts.title')} />
 
 			{error && <PageError message={t('auditAlerts.loadError')} retry={refetch} className="mb-4" />}
 			<div className="mb-4">

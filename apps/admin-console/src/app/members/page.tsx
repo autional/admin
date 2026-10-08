@@ -9,7 +9,7 @@ import { useMembers, useInviteMember, useUpdateMember, useRemoveMember } from '@
 
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { inviteMemberSchema } from '@/lib/validators';
 import { useTranslation } from 'react-i18next';
 
@@ -164,7 +164,7 @@ export default function MembersPage() {
 		<div>
 			{error && <PageError message={t('members.loadError')} retry={refetch} className="mb-4" />}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('members.title')}
 				actions={
 					<>

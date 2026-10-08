@@ -20,7 +20,7 @@ import { buildNavHref } from '@/lib/nav';
 import { useUsers, useDeleteUser, useCreateUser, useUpdateUser } from '@/hooks/use-users';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { createUserSchema } from '@/lib/validators';
 
 interface UserRecord {
@@ -222,7 +222,7 @@ export default function UsersPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('nav.users')}
 				actions={
 					<>

@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { getMyAuditLogs } from '@/lib/api.generated';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function RequestLogsPage() {
 	const { t } = useTranslation();
@@ -38,7 +38,7 @@ export default function RequestLogsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('requestLogs.title')}
 				actions={
 					<>

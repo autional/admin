@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, Row, Col, Button, Typography, List } from 'antd';
 import { DownloadOutlined, BookOutlined, CodeOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -21,7 +21,7 @@ export default function SdkPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('sdks.title')} description={t('sdks.description')} />
+			<AppPageHeader title={t('sdks.title')} description={t('sdks.description')} />
 
 			<Row gutter={[16, 16]}>
 				{sdks.map((sdk) => (

@@ -8,7 +8,7 @@ import { useSessions, useActiveSessionCount, useDeleteSession } from '@/hooks/us
 import type { SessionRecord } from '@/hooks/use-sessions';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 export default function SessionsPage() {
@@ -121,7 +121,7 @@ export default function SessionsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('sessions.title')}
 				actions={
 					<>

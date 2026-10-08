@@ -16,7 +16,7 @@ import {
 } from '@/hooks/use-pay';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function PayChannelsPage() {
 	const { t } = useTranslation();
@@ -137,7 +137,7 @@ export default function PayChannelsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('payChannels.title')}
 				actions={
 					<>

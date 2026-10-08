@@ -5,7 +5,7 @@ import { DataTable, PageError } from '@autional/ui/antd';
 import { Tabs, Button, Modal, Form, Input, Select, Space, Tag, Typography, InputNumber, Switch } from 'antd';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
+import { AppPageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
 import { apiClient, API_PATHS } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -648,7 +648,7 @@ export default function CompliancePage() {
 	});
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('compliance.audit.title')}
 				description={t('compliance.audit.subtitle')}
 			/>

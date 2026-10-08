@@ -25,7 +25,7 @@ import type { AppRecord } from '@/hooks/use-applications';
 
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 import { createApplicationSchema } from '@/lib/validators';
 
@@ -239,7 +239,7 @@ export default function ApplicationsPage() {
 				<PageError message={t('applications.loadError')} retry={refetch} className="mb-4" />
 			)}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('applications.title')}
 				actions={
 					<>

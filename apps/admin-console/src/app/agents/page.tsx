@@ -6,7 +6,7 @@ import { Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Popconfirm
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { usePageTitle, useTenantSlug, useCurrentTenantId, extractList, extractItem } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
-import { ConsolePageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
+import { AppPageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	adminAgents,
@@ -201,7 +201,7 @@ export default function AgentsPage() {
 
 	return (
 		<div className="p-6">
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('agents.title')}
 				description={t('agents.subtitle')}
 				actions={

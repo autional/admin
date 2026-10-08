@@ -11,7 +11,7 @@ import { PageError } from '@autional/ui/antd';
 import { queryKeys } from '@/lib/query-keys';
 import { extractItem, useCurrentTenantId } from '@autional/shared';
 import type { AuthPolicyResponse, UpdateAuthPolicyRequest } from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 type MFAMode = 'required' | 'optional' | 'disabled';
@@ -103,7 +103,7 @@ export default function MFAPolicyPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('mfa.title')} />
+			<AppPageHeader title={t('mfa.title')} />
 			{error && <PageError message={t('mfa.saveFailed')} retry={refetch} className="mb-4" />}
 			<Card loading={isLoading}>
 				<Form form={form} layout="vertical" onFinish={onFinish}>

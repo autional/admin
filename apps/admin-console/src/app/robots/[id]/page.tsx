@@ -24,7 +24,7 @@ import {
 } from '@ant-design/icons';
 import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
-import { ConsolePageHeader, EmptyState, ErrorState, SectionCard, StatusBadge } from '@autional/ui';
+import { AppPageHeader, EmptyState, ErrorState, SectionCard, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, API_PATHS, extractItem } from '@autional/shared';
 import { adminRobotsByRobots, adminRobotsByRobotsPut } from '@autional/shared/generated/api';
@@ -237,7 +237,7 @@ export default function RobotDetailPage() {
 					{t('robotDetail.backToList')}
 				</Button>
 				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-					<ConsolePageHeader
+					<AppPageHeader
 						title={robot?.name || t('robotDetail.title')}
 						description={
 							robot?.model

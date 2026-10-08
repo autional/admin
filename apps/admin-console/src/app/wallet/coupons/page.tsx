@@ -15,7 +15,7 @@ import {
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import type { CreateCouponRequest } from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function WalletCouponsPage() {
 	const { t } = useTranslation();
@@ -135,7 +135,7 @@ export default function WalletCouponsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('walletCoupons.title')}
 				actions={
 					<>

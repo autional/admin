@@ -15,7 +15,7 @@ import {
 
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const { TextArea } = Input;
@@ -165,7 +165,7 @@ export default function ApprovalPage() {
 		<div>
 			{error && <PageError message={t('approval.loadError')} retry={refetch} className="mb-4" />}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('approval.title')}
 				actions={
 					<>

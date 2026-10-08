@@ -10,7 +10,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
 import { extractItem, useCurrentTenantId } from '@autional/shared';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 /** 后端 GET 返回的嵌套结构（apiClient 响应已转 camelCase） */
@@ -125,7 +125,7 @@ export default function SecurityPolicyPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('securityPolicy.title')} />
+			<AppPageHeader title={t('securityPolicy.title')} />
 			<Card loading={isLoading}>
 				<Form form={form} layout="vertical" onFinish={onFinish}>
 					<Form.Item name="allowedIpRanges" label={t('securityPolicy.ipWhitelist')}>

@@ -13,7 +13,7 @@ import {
 } from '@/hooks/use-communication';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -174,7 +174,7 @@ export default function CommunicationProvidersPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('communication.providers.title')}
 				actions={
 					<>

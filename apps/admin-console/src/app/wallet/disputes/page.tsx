@@ -9,7 +9,7 @@ import { message } from '@/lib/antd-app';
 import { useWalletDisputes, useResolveDispute, type Dispute } from '@/hooks/use-wallets';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function WalletDisputesPage() {
 	const { t } = useTranslation();
@@ -89,7 +89,7 @@ export default function WalletDisputesPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('walletDisputes.title')} />
+			<AppPageHeader title={t('walletDisputes.title')} />
 
 			{error && (
 				<PageError message={t('walletDisputes.loadError')} retry={refetch} className="mb-4" />

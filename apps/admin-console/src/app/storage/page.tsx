@@ -30,7 +30,7 @@ import {
 import { uploadFile, downloadFile } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 import { useTranslation } from 'react-i18next';
 
@@ -281,7 +281,7 @@ export default function StoragePage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('storage.title')}
 				actions={
 					<>

@@ -7,7 +7,7 @@ import { Button, Modal, Form, Input, Select, Switch, InputNumber, Space, Popconf
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { ConsolePageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
+import { AppPageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
 import { apiClient, API_PATHS } from '@autional/shared';
 import {
 	adminProfilesFieldSchemas,
@@ -133,7 +133,7 @@ export default function FieldSchemaPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('profileFields.title')} description={t('profileFields.subtitle')} />
+			<AppPageHeader title={t('profileFields.title')} description={t('profileFields.subtitle')} />
 			<SectionCard>
 				<Button
 					type="primary"

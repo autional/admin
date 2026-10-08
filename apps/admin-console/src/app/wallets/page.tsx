@@ -41,7 +41,7 @@ import type { Transaction, Dispute, Coupon, FraudRule } from '@/hooks/use-wallet
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
 import type { DateRangeValue } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function WalletsPage() {
 	const { t } = useTranslation();
@@ -456,7 +456,7 @@ export default function WalletsPage() {
 				/>
 			)}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('wallets.title')}
 				actions={
 					<>

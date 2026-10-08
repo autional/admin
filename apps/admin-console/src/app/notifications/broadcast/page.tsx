@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useBroadcastNotification } from '@/hooks/use-notifications';
 import { handleApiError } from '@/lib/error-handler';
 import type { BroadcastNotificationResponse } from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -36,7 +36,7 @@ export default function BroadcastPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('notifications.broadcast.title')} />
+			<AppPageHeader title={t('notifications.broadcast.title')} />
 
 			<Row gutter={[16, 16]}>
 				<Col xs={24} lg={16}>

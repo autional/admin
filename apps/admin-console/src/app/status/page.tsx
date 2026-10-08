@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { statusOverview } from '@autional/shared/generated/api';
 import { PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 /**
  * GET /status/overview 实读契约（service-status dto.OverviewResponse，DataResponse 信封经
@@ -40,7 +40,7 @@ export default function StatusPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('status.title')}
 				actions={
 					<>

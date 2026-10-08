@@ -12,7 +12,7 @@ import {
 import { usePageTitle, useCurrentTenantIdOr } from '@autional/shared';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 interface ClassificationLevel {
@@ -80,7 +80,7 @@ export default function DataClassificationPage() {
 				<PageError message={t('dataClassification.loadError')} retry={refetch} className="mb-4" />
 			)}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('dataClassification.title')}
 				actions={
 					<>

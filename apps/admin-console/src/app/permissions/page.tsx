@@ -13,7 +13,7 @@ import {
 } from '@/hooks/use-permissions';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 interface PermissionRecord {
 	id: string;
@@ -159,7 +159,7 @@ export default function PermissionsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('nav.permissions')}
 				actions={
 					<>

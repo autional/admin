@@ -10,7 +10,7 @@ import { useBranding, useUpdateBranding } from '@/hooks/use-branding';
 
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 interface BrandingData {
 	logoUrl?: string;
@@ -70,7 +70,7 @@ export default function BrandingPage() {
 		<div>
 			{error && <PageError message={t('branding.loadFailed')} retry={refetch} className="mb-4" />}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('branding.title')}
 				actions={
 					<>

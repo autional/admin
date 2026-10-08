@@ -11,7 +11,7 @@ import { PageError } from '@autional/ui/antd';
 import { queryKeys } from '@/lib/query-keys';
 import { useTranslation } from 'react-i18next';
 import type { PasswordPolicyResponse } from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function PasswordPolicyPage() {
 	const { t } = useTranslation();
@@ -68,7 +68,7 @@ export default function PasswordPolicyPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('passwordPolicy.title')} />
+			<AppPageHeader title={t('passwordPolicy.title')} />
 			<Card loading={isLoading}>
 				<Form form={form} layout="vertical" onFinish={onFinish}>
 					<Form.Item name="minLength" label={t('passwordPolicy.minLength')}>

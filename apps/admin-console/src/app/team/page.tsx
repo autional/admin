@@ -12,7 +12,7 @@ import { extractList, useCurrentTenantIdOr } from '@autional/shared';
 
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Option } = Select;
 
@@ -104,7 +104,7 @@ export default function TeamPage() {
 		<div>
 			{error && <PageError message={t('team.loadError')} retry={refetch} className="mb-4" />}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('team.title')}
 				actions={
 					<>

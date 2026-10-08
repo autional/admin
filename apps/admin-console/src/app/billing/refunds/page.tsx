@@ -13,7 +13,7 @@ import {
 } from '@/hooks/use-billing-admin';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 export default function BillingRefundsPage() {
@@ -158,7 +158,7 @@ export default function BillingRefundsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('refunds2.title')} />
+			<AppPageHeader title={t('refunds2.title')} />
 
 			{error && <PageError message={t('refunds2.loadError')} retry={refetch} className="mb-4" />}
 

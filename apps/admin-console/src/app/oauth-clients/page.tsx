@@ -33,7 +33,7 @@ import type {
 } from '@/hooks/use-oauth-clients';
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -209,7 +209,7 @@ export default function OAuthClientsPage() {
 				<PageError message={t('oauthClients.loadError')} retry={refetch} className="mb-4" />
 			)}
 
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('oauthClients.title')}
 				actions={
 					<>

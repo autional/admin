@@ -7,7 +7,7 @@ import { Button, Space, Modal, Form, Input, Select, Popconfirm, Skeleton } from 
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
-import { ConsolePageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
+import { AppPageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, API_PATHS, extractItem, extractList } from '@autional/shared';
 import type { DeviceInfo } from '@autional/shared/generated/types';
@@ -197,7 +197,7 @@ export default function DevicesPage() {
 
 	return (
 		<div className="p-6">
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('devices.title')}
 				description={t('devices.subtitle')}
 				actions={

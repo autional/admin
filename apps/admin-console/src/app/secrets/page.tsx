@@ -32,7 +32,7 @@ import {
 	useEncryptionKeys,
 } from '@/hooks/use-secrets';
 import type { SecretVersionResponse } from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Text } = Typography;
 
@@ -341,7 +341,7 @@ export default function SecretsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('secrets.title')}
 				actions={
 					<>

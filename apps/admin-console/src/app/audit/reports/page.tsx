@@ -26,7 +26,7 @@ import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
 import { useIsAuditRestricted, AuditStatsOnly } from '@autional/shared';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const { Text, Paragraph } = Typography;
@@ -415,7 +415,7 @@ export default function AuditReportsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('auditReports.title')} />
+			<AppPageHeader title={t('auditReports.title')} />
 
 			<Tabs
 				defaultActiveKey="security"

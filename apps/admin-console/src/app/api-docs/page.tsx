@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, Button, Typography, List } from 'antd';
 import { LinkOutlined, BookOutlined, ApiOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const { Title, Paragraph } = Typography;
 
@@ -34,7 +34,7 @@ export default function ApiDocsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('apiDocs.title')} description={t('apiDocs.description')} />
+			<AppPageHeader title={t('apiDocs.title')} description={t('apiDocs.description')} />
 
 			<Card>
 				<List

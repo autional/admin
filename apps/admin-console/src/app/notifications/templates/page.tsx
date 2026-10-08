@@ -24,7 +24,7 @@ import {
 } from '@/hooks/use-notifications';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { createNotificationTemplateSchema } from '@/lib/validators';
 
 const { Option } = Select;
@@ -288,7 +288,7 @@ export default function NotificationTemplatesPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('notifications.templates.title')}
 				actions={
 					<>

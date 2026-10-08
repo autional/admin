@@ -12,7 +12,7 @@ import {
 } from '@/hooks/use-wallet-admin';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function WalletWithdrawalsPage() {
 	const { t } = useTranslation();
@@ -121,7 +121,7 @@ export default function WalletWithdrawalsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('walletWithdrawals.title')} />
+			<AppPageHeader title={t('walletWithdrawals.title')} />
 
 			{error && (
 				<PageError message={t('walletWithdrawals.loadError')} retry={refetch} className="mb-4" />

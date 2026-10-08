@@ -6,7 +6,7 @@ import { Form, Input, InputNumber, Button, Card } from 'antd';
 import { message } from '@/lib/antd-app';
 import { useAdjustWalletBalance } from '@/hooks/use-wallet-admin';
 import { handleApiError } from '@/lib/error-handler';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function WalletAdjustPage() {
 	const { t } = useTranslation();
@@ -28,7 +28,7 @@ export default function WalletAdjustPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('walletAdjust.title')} />
+			<AppPageHeader title={t('walletAdjust.title')} />
 			<Card className="max-w-lg">
 				<Form form={form} layout="vertical" onFinish={handleAdjust}>
 					<Form.Item

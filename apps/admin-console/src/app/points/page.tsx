@@ -36,7 +36,7 @@ import {
 } from '@/hooks/use-points';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 interface PointRule {
 	id: string;
@@ -482,7 +482,7 @@ export default function PointsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('points.title')} />
+			<AppPageHeader title={t('points.title')} />
 
 			<Tabs
 				activeKey={activeTab}

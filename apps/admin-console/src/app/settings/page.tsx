@@ -16,7 +16,7 @@ import { useUpdateSettings } from '@/hooks/use-settings';
 import { updateUser, changePassword } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
 const PREFERENCE_KEYS = {
@@ -110,7 +110,7 @@ export default function SettingsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('settings.title')} />
+			<AppPageHeader title={t('settings.title')} />
 
 			<Card title={t('settings.profile')} className="mb-6">
 				<div className="flex items-center gap-4 mb-6">

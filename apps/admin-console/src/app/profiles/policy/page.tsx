@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Form, InputNumber, Select, Switch, Radio, Button, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
-import { ConsolePageHeader, LoadingScreen, SectionCard } from '@autional/ui';
+import { AppPageHeader, LoadingScreen, SectionCard } from '@autional/ui';
 import { apiClient } from '@autional/shared';
 import {
 	adminProfilesPolicy,
@@ -76,7 +76,7 @@ export default function ProfilePolicyPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('profilePolicy.title')} description={t('profilePolicy.subtitle')} />
+			<AppPageHeader title={t('profilePolicy.title')} description={t('profilePolicy.subtitle')} />
 			<Form form={form} layout="vertical" onFinish={handleSave}>
 				<SectionCard title={t('profilePolicy.section.completion')}>
 					<Form.Item name="required_fields" label={t('profilePolicy.field.requiredFields')}>

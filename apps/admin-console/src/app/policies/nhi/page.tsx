@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { Form, InputNumber, Select, Button, Card, Skeleton } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { usePageTitle } from '@autional/shared';
-import { ConsolePageHeader, ErrorState, SectionCard } from '@autional/ui';
+import { AppPageHeader, ErrorState, SectionCard } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, extractItem } from '@autional/shared';
 import { adminPoliciesNhi, adminPoliciesNhiPut } from '@autional/shared/generated/api';
@@ -96,7 +96,7 @@ export default function NhiPolicyPage() {
 	return (
 		<div className="p-6">
 			<div className="mb-6">
-				<ConsolePageHeader title={t('nhiPolicy.title')} description={t('nhiPolicy.subtitle')} />
+				<AppPageHeader title={t('nhiPolicy.title')} description={t('nhiPolicy.subtitle')} />
 			</div>
 
 			<Form

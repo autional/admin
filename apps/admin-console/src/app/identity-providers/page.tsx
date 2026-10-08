@@ -21,7 +21,7 @@ import {
 } from '@/hooks/use-identity-providers';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { Alert, ConsolePageHeader } from '@autional/ui';
+import { Alert, AppPageHeader } from '@autional/ui';
 import { createIdpSchema } from '@/lib/validators';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -270,7 +270,7 @@ export default function IdentityProvidersPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('idp.title')}
 				actions={
 					<>

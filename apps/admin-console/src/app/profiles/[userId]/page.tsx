@@ -22,7 +22,7 @@ import {
 	AuditOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ConsolePageHeader, EmptyState, ErrorState, LoadingScreen, SectionCard } from '@autional/ui';
+import { AppPageHeader, EmptyState, ErrorState, LoadingScreen, SectionCard } from '@autional/ui';
 import { apiClient, API_PATHS, extractItem, useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { getProfile, archiveProfile, exportProfile } from '@/lib/api.generated';
@@ -217,7 +217,7 @@ export default function ProfileDetailPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={
 					profile.displayName ||
 					profile.nickname ||

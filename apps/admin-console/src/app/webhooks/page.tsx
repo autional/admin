@@ -24,7 +24,7 @@ import type { WebhookRecord, DeliveryLog } from '@/hooks/use-webhooks';
 
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 import { createWebhookSchema } from '@/lib/validators';
 
 const { Option } = Select;
@@ -216,7 +216,7 @@ export default function WebhooksPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('webhooks.title')}
 				actions={
 					<>

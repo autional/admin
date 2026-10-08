@@ -19,7 +19,7 @@ import {
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import type { CreateWalletRequest } from '@autional/shared/generated/types';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 export default function WalletListPage() {
 	const { t } = useTranslation();
@@ -155,7 +155,7 @@ export default function WalletListPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('walletList.title')}
 				actions={
 					<>

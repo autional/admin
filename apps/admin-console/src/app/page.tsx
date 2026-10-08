@@ -20,7 +20,7 @@ import { useAuditStats, useAuditLogs, type AuditLogRecord } from '@/hooks/use-au
 import { useAnnouncements, type AnnouncementRecord } from '@/hooks/use-announcements';
 import { useTenantSummary } from '@/hooks/use-dashboard-summary';
 import { PageError } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 const DashboardPage = memo(function DashboardPage() {
 	const { t } = useTranslation();
@@ -98,7 +98,7 @@ const DashboardPage = memo(function DashboardPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader
+			<AppPageHeader
 				title={t('dashboard.title')}
 				actions={
 					<>
@@ -159,7 +159,7 @@ const DashboardPage = memo(function DashboardPage() {
 						<Statistic
 							title={t('dashboard.apiKeys')}
 							value={summary.apiKeysCount}
-							prefix={<KeyOutlined className="text-purple-500" />}
+							prefix={<KeyOutlined className="text-chart-7" />}
 						/>
 					</Col>
 					<Col xs={12} sm={8} md={4}>

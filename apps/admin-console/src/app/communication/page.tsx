@@ -15,7 +15,7 @@ import {
 import { getCommunicationHealth } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 interface HealthStatus {
 	channel: string;
@@ -418,7 +418,7 @@ export default function CommunicationPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('communication.title')} />
+			<AppPageHeader title={t('communication.title')} />
 
 			<Row gutter={[16, 16]} className="mb-6">
 				{CHANNELS.map((c) => {

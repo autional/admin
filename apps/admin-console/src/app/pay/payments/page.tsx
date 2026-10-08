@@ -10,7 +10,7 @@ import { buildNavHref } from '@/lib/nav';
 import { usePayPayments, type PaymentItem } from '@/hooks/use-pay';
 import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
 import type { DateRangeValue } from '@autional/ui/antd';
-import { ConsolePageHeader } from '@autional/ui';
+import { AppPageHeader } from '@autional/ui';
 
 /** 该页的筛选口径（收敛前是 `Record<string, unknown>`）。 */
 type PaymentFilters = {
@@ -137,7 +137,7 @@ export default function PayPaymentsPage() {
 
 	return (
 		<div>
-			<ConsolePageHeader title={t('payPayments.title')} />
+			<AppPageHeader title={t('payPayments.title')} />
 
 			{error && <PageError message={t('payPayments.loadError')} retry={refetch} className="mb-4" />}
 
