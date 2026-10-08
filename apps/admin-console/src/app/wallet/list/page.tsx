@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantId } from '@autional/shared';
+import { useCurrentTenantId, usePageTitle } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import { Tag, Button, Modal, Form, Input, Select, Space, Popconfirm, InputNumber } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { Lock, Plus, Unlock } from 'lucide-react';
 import {
 	useWalletList,
 	useCreateWallet,
-	useUpdateWallet,
 	useDeleteWallet,
 	useBatchFreeze,
 	useBatchUnfreeze,
@@ -21,12 +20,25 @@ import { PageError, DataTable } from '@autional/ui/antd';
 import type { CreateWalletRequest } from '@autional/shared/generated/types';
 import { AppPageHeader } from '@autional/ui';
 
+// A-362①：币符按钱包币种（USD → $，其余默认 ¥；旧实现硬编码 ¥ 而创建弹窗币种可选 USD）
+const currencySymbol = (currency?: string) => (currency === 'USD' ? '$' : '¥');
+
 export default function WalletListPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	usePageTitle(t('walletList.title'));
 	const tenantId = useCurrentTenantId() ?? '';
-	const { data: wallets = [], isLoading, error, refetch } = useWalletList({ tenant_id: tenantId });
+	// A-362⑥：服务端分页受控（服务端真 total 驱动）
+	const [walletPage, setWalletPage] = useState(1);
+	const [walletPageSize, setWalletPageSize] = useState(10);
+	const {
+		data: walletResult,
+		isLoading,
+		error,
+		refetch,
+	} = useWalletList({ tenant_id: tenantId, page: walletPage, pageSize: walletPageSize });
+	const wallets = walletResult?.items ?? [];
+	const walletTotal = walletResult?.pagination?.total ?? 0;
 	const createMut = useCreateWallet();
-	const updateMut = useUpdateWallet();
 	const deleteMut = useDeleteWallet();
 	const freezeMut = useBatchFreeze();
 	const unfreezeMut = useBatchUnfreeze();
@@ -77,7 +89,8 @@ export default function WalletListPage() {
 			dataIndex: 'balance',
 			key: 'balance',
 			width: 120,
-			render: (v: string) => `¥${parseFloat(v).toFixed(2)}`,
+			// A-362①：币符按 record.currency（旧硬编码 ¥）
+			render: (v: string, r: WalletItem) => `${currencySymbol(r.currency)}${parseFloat(v).toFixed(2)}`,
 		},
 		{ title: t('walletList.colCurrency'), dataIndex: 'currency', key: 'currency', width: 80 },
 		{
@@ -100,14 +113,17 @@ export default function WalletListPage() {
 			dataIndex: 'frozenAmount',
 			key: 'frozenAmount',
 			width: 120,
-			render: (v: string) => (v ? `¥${parseFloat(v).toFixed(2)}` : '-'),
+			// A-362①：币符按 record.currency（旧硬编码 ¥）
+			render: (v: string, r: WalletItem) =>
+				v ? `${currencySymbol(r.currency)}${parseFloat(v).toFixed(2)}` : '-',
 		},
 		{
 			title: t('walletList.colCreatedAt'),
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 160,
-			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+			// A-362③：时间本地化（旧 toLocaleString() 无 locale ⇒ 恒系统区域）
+			render: (v: string) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
 		},
 		{
 			title: t('walletList.colActions'),
@@ -122,7 +138,7 @@ export default function WalletListPage() {
 							okText={t('walletList.ok')}
 							cancelText={t('walletList.cancel')}
 						>
-							<Button type="link" icon={<LockOutlined />} size="small">
+							<Button type="link" icon={<Lock size="1em" />} size="small">
 								{t('walletList.freeze')}
 							</Button>
 						</Popconfirm>
@@ -133,7 +149,7 @@ export default function WalletListPage() {
 							okText={t('walletList.ok')}
 							cancelText={t('walletList.cancel')}
 						>
-							<Button type="link" icon={<UnlockOutlined />} size="small">
+							<Button type="link" icon={<Unlock size="1em" />} size="small">
 								{t('walletList.unfreeze')}
 							</Button>
 						</Popconfirm>
@@ -161,7 +177,7 @@ export default function WalletListPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								form.resetFields();
 								setCreateModal(true);
@@ -180,7 +196,17 @@ export default function WalletListPage() {
 				columns={columns}
 				dataSource={wallets}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
+				pagination={{
+					// A-362⑥：服务端分页受控（旧本地 pageSize:10 ⇒ 服务端默认 20/页下第 11 条起不可达）
+					current: walletPage,
+					pageSize: walletPageSize,
+					total: walletTotal,
+					showSizeChanger: true,
+					onChange: (p, ps) => {
+						setWalletPage(p);
+						setWalletPageSize(ps);
+					},
+				}}
 				scroll={{ x: 1100 }}
 			/>
 

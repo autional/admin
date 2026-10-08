@@ -45,9 +45,6 @@ importers:
 
   apps/admin-console:
     dependencies:
-      '@ant-design/icons':
-        specifier: 6.2.2
-        version: 6.2.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@autional/shared':
         specifier: 0.1.0-rc.33
         version: 0.1.0-rc.33(immer@11.1.18)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.7.0(react@19.2.5))
@@ -78,6 +75,9 @@ importers:
       i18next-browser-languagedetector:
         specifier: 8.2.1
         version: 8.2.1
+      lucide-react:
+        specifier: 0.509.0
+        version: 0.509.0(react@19.2.5)
       react:
         specifier: 19.2.5
         version: 19.2.5
@@ -167,13 +167,6 @@ packages:
 
   '@ant-design/icons-svg@4.6.0':
     resolution: {integrity: sha512-PRomU725ABMf/lnQp5HiB7my1kjEbFY0D10N4lXYxK6TIB1gKjIVD5MRThpDaezLgw1D774J8eOeeDB0M6wHrQ==}
-
-  '@ant-design/icons@6.2.2':
-    resolution: {integrity: sha512-zlJtE7AMbG12TeYVPhtBXwNpFInNy8mjLzcIm+0BPw16/b8ODG87YJ1G37VIF5VFscdgfsf6EweAFPTobu/3iQ==}
-    engines: {node: '>=8'}
-    peerDependencies:
-      react: 19.2.5
-      react-dom: 19.2.5
 
   '@ant-design/icons@6.3.4':
     resolution: {integrity: sha512-kDoUlppczVyCUTFthF6cHmPzMBYqNZQhu9j6EyIX/YIdM9j9CZNZoJUjzVw7/1v1VO8WwVMmPp15r/uwIAS0AQ==}
@@ -2679,15 +2672,6 @@ snapshots:
   '@ant-design/fast-color@3.0.1': {}
 
   '@ant-design/icons-svg@4.6.0': {}
-
-  '@ant-design/icons@6.2.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
-    dependencies:
-      '@ant-design/colors': 8.0.1
-      '@ant-design/icons-svg': 4.6.0
-      '@rc-component/util': 1.13.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      clsx: 2.1.1
-      react: 19.2.5
-      react-dom: 19.2.5(react@19.2.5)
 
   '@ant-design/icons@6.3.4(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:

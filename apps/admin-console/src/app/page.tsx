@@ -3,24 +3,27 @@
 import React, { useState, useMemo, memo } from 'react';
 import { Card, Col, Row, Statistic, Segmented, Tag, Empty, Spin, Skeleton, List } from 'antd';
 import {
-	TeamOutlined,
-	UserAddOutlined,
-	SafetyOutlined,
-	LoginOutlined,
-	FileTextOutlined,
-	WarningOutlined,
-	KeyOutlined,
-	LockOutlined,
-} from '@ant-design/icons';
+	AlertTriangle,
+	FileText,
+	KeyRound,
+	Lock,
+	LogIn,
+	ShieldCheck,
+	UserPlus,
+	Users,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
 import { useUsers } from '@/hooks/use-users';
 import { useActiveSessions } from '@/hooks/use-users';
 import { useRoles } from '@/hooks/use-roles';
-import { useAuditStats, useAuditLogs, type AuditLogRecord } from '@/hooks/use-audit-logs';
+import { useAuditLogs, type AuditLogRecord } from '@/hooks/use-audit-logs';
+import { useAlerts } from '@/hooks/use-audit-alerts';
 import { useAnnouncements, type AnnouncementRecord } from '@/hooks/use-announcements';
 import { useTenantSummary } from '@/hooks/use-dashboard-summary';
-import { PageError } from '@autional/ui/antd';
+import { classifyQueryState, type QueryState } from '@autional/shared';
 import { AppPageHeader } from '@autional/ui';
+import { QueryStateFallback } from '@/components/common/QueryStateFallback';
 
 const DashboardPage = memo(function DashboardPage() {
 	const { t } = useTranslation();
@@ -40,18 +43,24 @@ const DashboardPage = memo(function DashboardPage() {
 				start = new Date(now);
 				start.setHours(0, 0, 0, 0);
 		}
-		return { startDate: start.toISOString(), endDate: now.toISOString() };
+		// F2-04②（RC-B4-02）：audit 只认 start_date/end_date（YYYY-MM-DD）；ISO 串会 60100001 被 400。
+		return {
+			start_date: dayjs(start).format('YYYY-MM-DD'),
+			end_date: dayjs(now).format('YYYY-MM-DD'),
+		};
 	}, [timeRange]);
 
+	// F2-04①（RC-B4-02）：page_size 上限 100（service-core/base/dto/page.go:45），200 直接 400 → 50（ADM-009 先例）。
 	const {
 		data: usersResult,
 		isLoading: usersLoading,
 		error: usersError,
 		refetch: usersRefetch,
-	} = useUsers({ page: 1, pageSize: 200 });
+	} = useUsers({ page: 1, pageSize: 50 });
 	const users = usersResult?.items ?? [];
+	// RC-B4-01：不做 `= 0` 默认——error 时该值恒 0 即「假 0」；状态判定走 classifyQueryState。
 	const {
-		data: activeSessions = 0,
+		data: activeSessions,
 		isLoading: sessionsLoading,
 		error: activeSessionsError,
 		refetch: activeSessionsRefetch,
@@ -62,23 +71,66 @@ const DashboardPage = memo(function DashboardPage() {
 		error: rolesError,
 		refetch: rolesRefetch,
 	} = useRoles();
-	const { data: auditStats = {}, isLoading: auditLoading } = useAuditStats();
+	// F2（批 5 补修）：原读 auditStats.alerts/pending 为幻影契约（后端 stats 无此字段，恒 undefined→假 0）；
+	// 真实源 = 告警列表 status=open 的 total（service-audit ListAlerts → NewListResponse total）。
+	const {
+		data: alertsResult,
+		isLoading: alertsLoading,
+		error: alertsError,
+	} = useAlerts({ status: 'open', page: 1, page_size: 1 });
 	const {
 		data: recentLogins,
 		isLoading: logsLoading,
 		error: auditLogsError,
 		refetch: auditLogsRefetch,
-	} = useAuditLogs({ action: 'LOGIN', pageSize: 10, page: 1, ...timeRangeParams });
+	} = useAuditLogs({ action: 'LOGIN', page_size: 10, page: 1, ...timeRangeParams });
 	const recentLoginItems = recentLogins?.items ?? [];
-	const { data: announcements, isLoading: announcementsLoading } = useAnnouncements();
+	const {
+		data: announcements,
+		isLoading: announcementsLoading,
+		error: announcementsError,
+	} = useAnnouncements();
 	const summary = useTenantSummary();
 
-	const statsLoading = usersLoading || sessionsLoading || rolesLoading || auditLoading;
+	// 六查询逐个分类（AC-B4-W1-01-3；硬序 forbidden > error > loading > empty > ready）。
+	const usersState = classifyQueryState({
+		isLoading: usersLoading,
+		error: usersError,
+		data: usersResult,
+	});
+	const sessionsState = classifyQueryState({
+		isLoading: sessionsLoading,
+		error: activeSessionsError,
+		data: activeSessions,
+	});
+	const rolesState = classifyQueryState({ isLoading: rolesLoading, error: rolesError, data: rolesResult });
+	const alertsState = classifyQueryState({
+		isLoading: alertsLoading,
+		error: alertsError,
+		data: alertsResult,
+	});
+	const logsState = classifyQueryState({
+		isLoading: logsLoading,
+		error: auditLogsError,
+		data: recentLoginItems,
+	});
+	const announcementsData = (announcements?.items ?? []).slice(0, 5);
+	const announcementsState = classifyQueryState({
+		isLoading: announcementsLoading,
+		error: announcementsError,
+		data: announcementsData,
+	});
+
+	/** forbidden/error 的卡级文案；loading/empty/ready 返回 null（由 Skeleton/Empty/数值原位承担）。 */
+	const stateText = (state: QueryState): string | null =>
+		state === 'forbidden' ? t('common.forbidden') : state === 'error' ? t('common.loadError') : null;
 
 	const totalUsers = summary.memberCount;
-	// TASK-AB1-18：useRoles 返回 { items, total }（服务端分页结果），总数直接取 total（不再取首页数组长度）。
-	const roleCount = rolesResult?.total ?? 0;
-	const auditAlerts = auditStats?.alerts ?? auditStats?.pending ?? 0;
+	// TASK-AB1-18：useRoles 返回 { items, total }（服务端分页结果）；error/forbidden 时 total 为 undefined，
+	// 由 stateText 覆盖显示，杜绝 error → 0（假 0）。
+	const roleCount = rolesResult?.total;
+	const roleStatValue = stateText(rolesState) ?? roleCount ?? summary.rolesCount ?? (rolesState === 'loading' ? '…' : 0);
+	const openAlertsCount = alertsResult?.pagination?.total;
 
 	const todayStart = new Date();
 	todayStart.setHours(0, 0, 0, 0);
@@ -87,8 +139,6 @@ const DashboardPage = memo(function DashboardPage() {
 		const d = new Date(u.createdAt);
 		return d >= todayStart;
 	}).length;
-
-	const announcementsData = (announcements?.items ?? []).slice(0, 5);
 
 	const timeRangeOptions = [
 		{ label: t('dashboard.timeToday'), value: 'today' },
@@ -111,22 +161,31 @@ const DashboardPage = memo(function DashboardPage() {
 				}
 			/>
 
-			{usersError && (
-				<PageError message={t('dashboard.loadError')} retry={usersRefetch} className="mb-4" />
-			)}
-			{activeSessionsError && (
-				<PageError
-					message={t('dashboard.loadError')}
-					retry={activeSessionsRefetch}
-					className="mb-4"
-				/>
-			)}
-			{rolesError && (
-				<PageError message={t('dashboard.loadError')} retry={rolesRefetch} className="mb-4" />
-			)}
-			{auditLogsError && (
-				<PageError message={t('dashboard.loadError')} retry={auditLogsRefetch} className="mb-4" />
-			)}
+			{/* 四来源错误横幅：文案含来源；403 走无权限（无 retry）；retry 仅 isRetryableError（AC-B4-W1-01-3）。 */}
+			<QueryStateFallback
+				error={usersError}
+				onRetry={usersRefetch}
+				errorMessage={t('dashboard.loadErrorUsers')}
+				className="mb-4"
+			/>
+			<QueryStateFallback
+				error={activeSessionsError}
+				onRetry={activeSessionsRefetch}
+				errorMessage={t('dashboard.loadErrorSessions')}
+				className="mb-4"
+			/>
+			<QueryStateFallback
+				error={rolesError}
+				onRetry={rolesRefetch}
+				errorMessage={t('dashboard.loadErrorRoles')}
+				className="mb-4"
+			/>
+			<QueryStateFallback
+				error={auditLogsError}
+				onRetry={auditLogsRefetch}
+				errorMessage={t('dashboard.loadErrorLogins')}
+				className="mb-4"
+			/>
 
 			<Card
 				title={t('dashboard.tenantOverview')}
@@ -138,35 +197,41 @@ const DashboardPage = memo(function DashboardPage() {
 						<Statistic
 							title={t('dashboard.members')}
 							value={summary.memberCount}
-							prefix={<TeamOutlined className="text-info" />}
+							prefix={<Users size="1em" className="text-info" />}
 						/>
 					</Col>
 					<Col xs={12} sm={8} md={4}>
+						{/* AC-B4-W1-01-1：roles 403 呈「无权限」不显 0（无 retry）。 */}
 						<Statistic
 							title={t('dashboard.roles')}
-							value={summary.rolesCount}
-							prefix={<SafetyOutlined className="text-warning" />}
+							value={roleStatValue}
+							prefix={<ShieldCheck size="1em" className="text-warning" />}
 						/>
 					</Col>
 					<Col xs={12} sm={8} md={4}>
 						<Statistic
 							title={t('dashboard.activeSessions')}
 							value={summary.activeSessionsCount}
-							prefix={<LoginOutlined className="text-info" />}
+							prefix={<LogIn size="1em" className="text-info" />}
 						/>
 					</Col>
 					<Col xs={12} sm={8} md={4}>
 						<Statistic
 							title={t('dashboard.apiKeys')}
 							value={summary.apiKeysCount}
-							prefix={<KeyOutlined className="text-chart-7" />}
+							prefix={<KeyRound size="1em" className="text-chart-7" />}
 						/>
 					</Col>
 					<Col xs={12} sm={8} md={4}>
+						{/* W2-03（U426）：secrets 403/未就绪呈态不显 0（按 roles 模式三态）。 */}
 						<Statistic
 							title={t('dashboard.secrets')}
-							value={summary.secretsCount}
-							prefix={<LockOutlined className="text-danger" />}
+							value={
+								stateText(summary.secretsState) ??
+								summary.secretsCount ??
+								(summary.secretsState === 'loading' ? '…' : 0)
+							}
+							prefix={<Lock size="1em" className="text-danger" />}
 						/>
 					</Col>
 				</Row>
@@ -175,52 +240,52 @@ const DashboardPage = memo(function DashboardPage() {
 			<Row gutter={[16, 16]}>
 				<Col xs={24} sm={12} lg={6}>
 					<Card>
-						{statsLoading ? (
+						{usersState === 'loading' ? (
 							<Skeleton active paragraph={{ rows: 0 }} />
 						) : (
 							<Statistic
 								title={t('dashboard.totalUsers')}
-								value={totalUsers}
-								prefix={<TeamOutlined className="text-info" />}
+								value={stateText(usersState) ?? totalUsers}
+								prefix={<Users size="1em" className="text-info" />}
 							/>
 						)}
 					</Card>
 				</Col>
 				<Col xs={24} sm={12} lg={6}>
 					<Card>
-						{statsLoading ? (
+						{usersState === 'loading' ? (
 							<Skeleton active paragraph={{ rows: 0 }} />
 						) : (
 							<Statistic
 								title={t('dashboard.newToday')}
-								value={newUsers}
-								prefix={<UserAddOutlined className="text-success" />}
+								value={stateText(usersState) ?? newUsers}
+								prefix={<UserPlus size="1em" className="text-success" />}
 							/>
 						)}
 					</Card>
 				</Col>
 				<Col xs={24} sm={12} lg={6}>
 					<Card>
-						{statsLoading ? (
+						{sessionsState === 'loading' ? (
 							<Skeleton active paragraph={{ rows: 0 }} />
 						) : (
 							<Statistic
 								title={t('dashboard.activeSessions')}
-								value={activeSessions}
-								prefix={<LoginOutlined className="text-info" />}
+								value={stateText(sessionsState) ?? activeSessions ?? 0}
+								prefix={<LogIn size="1em" className="text-info" />}
 							/>
 						)}
 					</Card>
 				</Col>
 				<Col xs={24} sm={12} lg={6}>
 					<Card>
-						{statsLoading ? (
+						{rolesState === 'loading' ? (
 							<Skeleton active paragraph={{ rows: 0 }} />
 						) : (
 							<Statistic
 								title={t('dashboard.roleCount')}
-								value={roleCount}
-								prefix={<SafetyOutlined className="text-warning" />}
+								value={stateText(rolesState) ?? roleCount ?? 0}
+								prefix={<ShieldCheck size="1em" className="text-warning" />}
 							/>
 						)}
 					</Card>
@@ -230,13 +295,13 @@ const DashboardPage = memo(function DashboardPage() {
 			<Row gutter={[16, 16]} className="mt-4">
 				<Col xs={24} sm={12} lg={6}>
 					<Card>
-						{statsLoading ? (
+						{alertsState === 'loading' ? (
 							<Skeleton active paragraph={{ rows: 0 }} />
 						) : (
 							<Statistic
 								title={t('dashboard.pendingAlerts')}
-								value={auditAlerts}
-								prefix={<WarningOutlined className="text-danger" />}
+								value={stateText(alertsState) ?? openAlertsCount ?? 0}
+								prefix={<AlertTriangle size="1em" className="text-danger" />}
 							/>
 						)}
 					</Card>
@@ -246,10 +311,13 @@ const DashboardPage = memo(function DashboardPage() {
 			<Row gutter={[16, 16]} className="mt-6">
 				<Col xs={24} lg={12}>
 					<Card title={t('dashboard.recentLogins')} className="h-full">
-						{logsLoading ? (
+						{logsState === 'loading' ? (
 							<div className="py-8 flex justify-center">
 								<Spin />
 							</div>
+						) : stateText(logsState) ? (
+							/* error 绝不回落「暂无登录记录」（修伪空态；AC-B4-W1-01-3）。 */
+							<Empty description={stateText(logsState)} />
 						) : recentLoginItems.length === 0 ? (
 							<Empty description={t('dashboard.noLogins')} />
 						) : (
@@ -282,10 +350,13 @@ const DashboardPage = memo(function DashboardPage() {
 				</Col>
 				<Col xs={24} lg={12}>
 					<Card title={t('dashboard.announcements')} className="h-full">
-						{announcementsLoading ? (
+						{announcementsState === 'loading' ? (
 							<div className="py-8 flex justify-center">
 								<Spin />
 							</div>
+						) : stateText(announcementsState) ? (
+							/* 403/失败成态 ≠「暂无公告」；真空数组才空态（AC-B4-W1-01-2）。 */
+							<Empty description={stateText(announcementsState)} />
 						) : announcementsData.length === 0 ? (
 							<Empty description={t('dashboard.noAnnouncements')} />
 						) : (
@@ -293,7 +364,7 @@ const DashboardPage = memo(function DashboardPage() {
 								{announcementsData.map((item: AnnouncementRecord, i: number) => (
 									<div key={i} className="flex justify-between items-center py-1">
 										<div className="flex items-center gap-2">
-											<FileTextOutlined className="text-neutral-500" />
+											<FileText size="1em" className="text-neutral-500" />
 											<span className="text-sm">{item.title}</span>
 										</div>
 										<span className="text-xs text-neutral-600">

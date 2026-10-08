@@ -36,23 +36,26 @@ const mockedUseCreateApiKey = vi.mocked(useCreateApiKey);
 const mockedUseDeleteApiKey = vi.mocked(useDeleteApiKey);
 const mockedUseRotateApiKey = vi.mocked(useRotateApiKey);
 
+// A-52：前缀列已删（wire 无 key_prefix）；补 usageCount/lastUsedIp 等有值列。
 const mockKeys = [
 	{
 		id: 'ak-1',
 		name: '开发环境密钥',
-		keyPrefix: 'dev_abc',
 		scopes: ['read', 'write'],
 		status: 'active',
 		environment: 'development',
+		usageCount: 5,
+		lastUsedIp: '10.0.0.1',
 		createdAt: '2026-01-01T00:00:00Z',
 	},
 	{
 		id: 'ak-2',
 		name: '生产环境密钥',
-		keyPrefix: 'prod_xyz',
 		scopes: ['read'],
 		status: 'active',
 		environment: 'production',
+		usageCount: 9,
+		lastUsedIp: '10.0.0.2',
 		createdAt: '2026-01-02T00:00:00Z',
 	},
 ];
@@ -71,8 +74,9 @@ function renderPage() {
 describe('ApiKeysPage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// A-52：hook 返回服务端分页形状 { items, total }
 		mockedUseApiKeys.mockReturnValue({
-			data: mockKeys,
+			data: { items: mockKeys, total: 2 },
 			isLoading: false,
 			error: null,
 			refetch: vi.fn(),
@@ -106,9 +110,14 @@ describe('ApiKeysPage', () => {
 		expect(screen.getByText('生产环境密钥')).toBeTruthy();
 	});
 
-	it('displays key prefix truncated', () => {
+	it('renders usage/last-used columns and localized status (A-52)', () => {
 		renderPage();
-		expect(screen.getByText(/dev_abc/)).toBeTruthy();
+		// 有值列上屏（原前缀死列已删）；antd scroll 表格表头渲染两份，用 getAll 断言存在性
+		expect(screen.getAllByText('使用次数').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('最近使用 IP').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('10.0.0.1').length).toBeGreaterThan(0);
+		// 状态列本地化（活跃 = apiKeys.status.active）
+		expect(screen.getAllByText('活跃').length).toBe(2);
 	});
 
 	it('displays environment info', () => {
@@ -120,7 +129,7 @@ describe('ApiKeysPage', () => {
 	// === State Tests: empty ===
 	it('shows empty state when no data', () => {
 		mockedUseApiKeys.mockReturnValue({
-			data: [],
+			data: { items: [], total: 0 },
 			isLoading: false,
 			error: null,
 			refetch: vi.fn(),
@@ -132,7 +141,7 @@ describe('ApiKeysPage', () => {
 	// === State Tests: loading ===
 	it('shows loading spinner', () => {
 		mockedUseApiKeys.mockReturnValue({
-			data: [],
+			data: { items: [], total: 0 },
 			isLoading: true,
 			error: null,
 			refetch: vi.fn(),
@@ -144,7 +153,7 @@ describe('ApiKeysPage', () => {
 	// === State Tests: error ===
 	it('shows error state', () => {
 		mockedUseApiKeys.mockReturnValue({
-			data: [],
+			data: { items: [], total: 0 },
 			isLoading: false,
 			error: new Error('API Error'),
 			refetch: vi.fn(),

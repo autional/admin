@@ -1,21 +1,20 @@
 'use client';
 // @generated-api-exempt: 2 key(s) [IDENTITY.ADMIN_CONSENTS, TENANT.MINORS_PROTECTION] lack generated func
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DataTable, PageError } from '@autional/ui/antd';
 import { Card, Form, InputNumber, Switch, Button, Spin, TimePicker, Space, Statistic, Row, Col, Tabs, Tag } from 'antd';
 import {
-	SafetyCertificateOutlined,
-	SaveOutlined,
-	ReloadOutlined,
-	UserOutlined,
-	AuditOutlined,
-} from '@ant-design/icons';
+	BadgeCheck,
+	RefreshCw,
+	Save,
+	User,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { handleApiError } from '@/lib/error-handler';
 import { message } from '@/lib/antd-app';
 
-import { apiClient, API_PATHS, extractList, fromPageResult, toPageParams, useCurrentTenantId } from '@autional/shared';
+import { apiClient, API_PATHS, fromPageResult, toPageParams, useCurrentTenantId } from '@autional/shared';
 import { adminUsers } from '@autional/shared/generated/api';
 import { AppPageHeader, SectionCard } from '@autional/ui';
 import dayjs from 'dayjs';
@@ -33,6 +32,9 @@ interface MinorsProtectionConfig {
 	contentFilterEnabled: boolean;
 	childDefaultMaxPrivacy: boolean;
 	minorDataRetentionDays: number;
+	// A-272（W1e，分支②补展示）：wire 含两阈值字段而前端 10 键接口零 UI → 补只读展示
+	minorsAgeThreshold?: number;
+	digitalConsentAge?: number;
 }
 
 /** wire 锚：service-identity dto/user.go:272-296 AuthUserResponse（isMinor/ageGroup/pendingParentalConsent…）。 */
@@ -63,6 +65,9 @@ interface ConsentRecord {
 	verifiedAt?: string;
 }
 
+/** W4-02（A-273）：真服务端分页——wire 契约 page/page_size（service-core base/dto/page.go，默认 20 上限 100）。 */
+const PAGE_SIZE = 20;
+
 export default function MinorsProtectionPage() {
 	const { t } = useTranslation();
 
@@ -88,8 +93,16 @@ export default function MinorsProtectionPage() {
 	const [users, setUsers] = useState<MinorUser[]>([]);
 	const [usersLoading, setUsersLoading] = useState(false);
 	const [userTotal, setUserTotal] = useState(0);
+	// A-271（W1e）：统计卡首屏恒 0（懒加载）→ 挂载即载 + 三态（加载中 '-' / 已载真值）。
+	// requestedRef 同步置位：挂载在飞请求不被首次 Tab 点击二次触发（保 pagination 测试 1 次调用不变量）。
+	const usersRequestedRef = useRef(false);
+	const [usersLoaded, setUsersLoaded] = useState(false);
+	// W4-02（A-273）：真服务端分页——当前页由请求回填，翻页触发新请求（旧实现 pageSize=100 单页假分页）。
+	const [userPage, setUserPage] = useState(1);
 	const [consents, setConsents] = useState<ConsentRecord[]>([]);
 	const [consentsLoading, setConsentsLoading] = useState(false);
+	const [consentTotal, setConsentTotal] = useState(0);
+	const [consentPage, setConsentPage] = useState(1);
 	// A-268f（RC-B2-14 P2）：失败 ≠ 空态。403 专用文案（权限不足/管理面配置缺失）与通用失败文案分流。
 	const [consentsError, setConsentsError] = useState<'forbidden' | 'failed' | null>(null);
 	const [activeTab, setActiveTab] = useState('config');
@@ -98,6 +111,8 @@ export default function MinorsProtectionPage() {
 
 	useEffect(() => {
 		loadConfig();
+		// A-271（W1e）：users 挂载即载（旧实现仅 Tab 点击懒加载 → 统计卡恒 0 直到点击）
+		loadUsers();
 	}, []);
 
 	const loadConfig = async () => {
@@ -135,15 +150,21 @@ export default function MinorsProtectionPage() {
 		loadConfig();
 	};
 
-	const loadUsers = async () => {
+	const loadUsers = async (page: number = userPage) => {
+		usersRequestedRef.current = true;
 		setUsersLoading(true);
 		try {
 			// 请求侧 camel 书面写（拦截器 snake 化）；分页经 toPageParams 单点。
 			// isMinor 过滤为后端实名参数（identity dto/user.go:59 form:"is_minor"），生成签名未收编故 as any 收窄。
-			const res = await adminUsers({ isMinor: true, ...toPageParams({ pageSize: 100 }) } as any);
-			const page = fromPageResult<MinorUser>(res);
-			setUsers(page.items);
-			setUserTotal(page.total);
+			const res = await adminUsers({
+				isMinor: true,
+				...toPageParams({ page, pageSize: PAGE_SIZE }),
+			} as any);
+			const result = fromPageResult<MinorUser>(res);
+			setUsers(result.items);
+			setUserTotal(result.total);
+			setUserPage(page);
+			setUsersLoaded(true);
 		} catch (err) {
 			handleApiError(err, t('compliance.minors.loadUsersFailed'));
 		} finally {
@@ -151,13 +172,16 @@ export default function MinorsProtectionPage() {
 		}
 	};
 
-	const loadConsents = async () => {
+	const loadConsents = async (page: number = consentPage) => {
 		setConsentsLoading(true);
 		try {
 			const res = await apiClient.get(API_PATHS.IDENTITY.ADMIN_CONSENTS, {
-				params: toPageParams({ pageSize: 100 }),
+				params: toPageParams({ page, pageSize: PAGE_SIZE }),
 			});
-			setConsents(extractList(res.data));
+			const result = fromPageResult<ConsentRecord>(res.data);
+			setConsents(result.items);
+			setConsentTotal(result.total);
+			setConsentPage(page);
 			setConsentsError(null);
 		} catch (err) {
 			// 403 = 权限不足或管理面配置缺失（TASK-AB2-32 网关声明面）；其余失败走通用文案。
@@ -170,7 +194,8 @@ export default function MinorsProtectionPage() {
 
 	const handleTabChange = (key: string) => {
 		setActiveTab(key);
-		if (key === 'users' && users.length === 0) loadUsers();
+		// A-271（W1e）：挂载已在飞/已载（ref 同步置位）→ Tab 点击不二次触发
+		if (key === 'users' && !usersRequestedRef.current) loadUsers();
 		if (key === 'consents' && consents.length === 0) loadConsents();
 	};
 
@@ -248,10 +273,10 @@ export default function MinorsProtectionPage() {
 		},
 	];
 
-	if (loading) return <Spin size="large" className="block mx-auto my-[100px]" />;
+	if (loading) return <Spin size="large" className="block mx-auto my-20" />;
 
 	return (
-		<div className="p-6">
+		<div>
 			<AppPageHeader title={t('compliance.minors.title')} description={t('compliance.minors.subtitle')} />
 
 			{/* 配置不可知时统计卡整体退场：绝不呈现伪 0（「0 分钟/关闭」= 把失败伪装成未配置）。 */}
@@ -259,10 +284,11 @@ export default function MinorsProtectionPage() {
 				<Row gutter={16} className="mb-6">
 					<Col span={8}>
 						<Card>
+							{/* A-271（W1e）：三态——加载中 '-' / 已载真值（首屏不再恒 0 伪值） */}
 							<Statistic
 								title={t('compliance.minors.userCount')}
-								value={userTotal}
-								prefix={<UserOutlined />}
+								value={usersLoaded ? userTotal : undefined}
+								prefix={<User size="1em" />}
 							/>
 						</Card>
 					</Col>
@@ -284,7 +310,7 @@ export default function MinorsProtectionPage() {
 										? `${config.nightModeStart}-${config.nightModeEnd}`
 										: t('compliance.minors.curfewOff')
 								}
-								prefix={<SafetyCertificateOutlined />}
+								prefix={<BadgeCheck size="1em" />}
 							/>
 						</Card>
 					</Col>
@@ -390,17 +416,24 @@ export default function MinorsProtectionPage() {
 											<InputNumber min={30} max={3650} className="w-full" />
 										</Form.Item>
 									</Form>
+									{/* A-272（W1e，分支②补展示）：wire 两阈值字段（minors_age_threshold/digital_consent_age）原零 UI → 只读回显 */}
+									<div className="text-neutral-600 text-sm">
+										{t('compliance.minors.ageThresholdLabel')}：
+										{config?.minorsAgeThreshold ?? '-'} ·{' '}
+										{t('compliance.minors.digitalConsentAgeLabel')}：
+										{config?.digitalConsentAge ?? '-'}
+									</div>
 								</SectionCard>
 
 								<div className="mt-6 text-right">
-									<Button onClick={loadConfig} icon={<ReloadOutlined />} className="mr-2">
+									<Button onClick={loadConfig} icon={<RefreshCw size="1em" />} className="mr-2">
 										{t('compliance.minors.reset')}
 									</Button>
 									<Button
 										type="primary"
 										onClick={handleSave}
 										loading={saving}
-										icon={<SaveOutlined />}
+										icon={<Save size="1em" />}
 									>
 										{t('compliance.minors.saveConfig')}
 									</Button>
@@ -418,10 +451,13 @@ export default function MinorsProtectionPage() {
 								rowKey="id"
 								loading={usersLoading}
 								pagination={{
-									pageSize: 20,
+									current: userPage,
+									pageSize: PAGE_SIZE,
 									total: userTotal,
-									showSizeChanger: true,
-									showTotal: (total) => t('paginationTotal', { count: total }),
+									onChange: (p) => loadUsers(p),
+									showSizeChanger: false,
+									// A-270（W1e）：模板为 {{total}} 而旧传 { count } ⇒ DOM 字面量；改传 { total }
+									showTotal: (total) => t('paginationTotal', { total }),
 								}}
 								scroll={{ x: 800 }}
 							/>
@@ -487,7 +523,13 @@ export default function MinorsProtectionPage() {
 								dataSource={consents}
 								rowKey="id"
 								loading={consentsLoading}
-								pagination={{ pageSize: 20 }}
+								pagination={{
+									current: consentPage,
+									pageSize: PAGE_SIZE,
+									total: consentTotal,
+									onChange: (p) => loadConsents(p),
+									showSizeChanger: false,
+								}}
 								scroll={{ x: 800 }}
 							/>
 						),

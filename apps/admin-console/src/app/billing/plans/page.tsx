@@ -1,9 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Modal, Form, Input, Select, InputNumber, Space, Popconfirm, Tag } from 'antd';
+import {
+	Button,
+	Modal,
+	Form,
+	Input,
+	Select,
+	InputNumber,
+	Space,
+	Popconfirm,
+	Tag,
+} from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import {
 	useBillingPlans,
 	useCreatePlan,
@@ -13,12 +23,31 @@ import {
 } from '@/hooks/use-billing-admin';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
-import { AppPageHeader } from '@autional/ui';
+import { Alert, AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
 import { createPlanSchema } from '@/lib/validators';
+
+/**
+ * A-398：编辑载荷构建（纯函数，导出供单测）。
+ * 编辑面键 = UpdatePlanRequest（dto.go:297-312 指针语义）：name/description/monthly_price/
+ * yearly_price、max_ 前缀配额键、mfa、sso、audit_log_days、support_level、status(active|inactive)。
+ * 本页表单可编辑键只有 name/monthlyPrice/yearlyPrice/status —— 只提交已提供键；
+ * 旧行为把 createPlanSchema 全量输出（含 code/billingCycle/quarterlyPrice/features/isCustom）
+ * 原样上行，用户见「更新成功」而部分改动静默丢弃（结果失真）。
+ */
+export function buildPlanUpdatePayload(values: Record<string, unknown>): Record<string, unknown> {
+	const data: Record<string, unknown> = {};
+	if (values.name !== undefined) data.name = values.name;
+	if (values.monthlyPrice !== undefined) data.monthlyPrice = values.monthlyPrice;
+	if (values.yearlyPrice !== undefined) data.yearlyPrice = values.yearlyPrice;
+	if (values.status !== undefined) data.status = values.status;
+	return data;
+}
 
 export default function BillingPlansPage() {
 	const { t } = useTranslation();
+	usePageTitle(t('plans2.title'));
 	const { data: plans = [], isLoading, error, refetch } = useBillingPlans();
 	const createMut = useCreatePlan();
 	const updateMut = useUpdatePlan();
@@ -29,6 +58,19 @@ export default function BillingPlansPage() {
 	const [form] = Form.useForm();
 
 	const handleSave = async (values: Record<string, unknown>) => {
+		// A-398：编辑面不走 createPlanSchema（create-only 约束不适用于更新载荷）
+		if (editing) {
+			try {
+				await updateMut.mutateAsync({ id: editing.id, data: buildPlanUpdatePayload(values) });
+				message.success(t('plans2.updateSuccess'));
+				setModalOpen(false);
+				form.resetFields();
+				setEditing(null);
+			} catch (err) {
+				handleApiError(err, t('plans2.saveFailed'));
+			}
+			return;
+		}
 		const result = createPlanSchema.safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
@@ -43,13 +85,8 @@ export default function BillingPlansPage() {
 					/* keep as string */
 				}
 			}
-			if (editing) {
-				await updateMut.mutateAsync({ id: editing.id, data });
-				message.success(t('plans2.updateSuccess'));
-			} else {
-				await createMut.mutateAsync(data);
-				message.success(t('plans2.createSuccess'));
-			}
+			await createMut.mutateAsync(data);
+			message.success(t('plans2.createSuccess'));
 			setModalOpen(false);
 			form.resetFields();
 			setEditing(null);
@@ -81,14 +118,15 @@ export default function BillingPlansPage() {
 			dataIndex: 'monthlyPrice',
 			key: 'monthlyPrice',
 			width: 100,
-			render: (v: string) => (v ? `$${parseFloat(v).toFixed(2)}` : '-'),
+			// A-400②：wire 全 CNY → 币符 ¥（A-292 $ 家族）
+			render: (v: string) => (v ? `¥${parseFloat(v).toFixed(2)}` : '-'),
 		},
 		{
 			title: t('plans2.column.yearlyPrice'),
 			dataIndex: 'yearlyPrice',
 			key: 'yearlyPrice',
 			width: 100,
-			render: (v: string) => (v ? `$${parseFloat(v).toFixed(2)}` : '-'),
+			render: (v: string) => (v ? `¥${parseFloat(v).toFixed(2)}` : '-'),
 		},
 		{
 			title: t('plans2.column.features'),
@@ -104,7 +142,11 @@ export default function BillingPlansPage() {
 			width: 80,
 			render: (v: string) => (
 				<Tag color={v === 'active' ? 'success' : 'default'}>
-					{v === 'active' ? t('plans2.status.active') : v}
+					{v === 'active'
+						? t('plans2.status.active')
+						: v === 'inactive'
+							? t('plans2.status.inactive')
+							: v}
 				</Tag>
 			),
 		},
@@ -116,7 +158,7 @@ export default function BillingPlansPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
@@ -134,7 +176,7 @@ export default function BillingPlansPage() {
 						okText={t('plans2.okText')}
 						cancelText={t('plans2.cancelText')}
 					>
-						<Button type="link" danger icon={<DeleteOutlined />}>
+						<Button type="link" danger icon={<Trash2 size="1em" />}>
 							{t('plans2.delete')}
 						</Button>
 					</Popconfirm>
@@ -151,7 +193,7 @@ export default function BillingPlansPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -189,7 +231,19 @@ export default function BillingPlansPage() {
 				className="w-full max-w-[600px]"
 			>
 				<Form form={form} layout="vertical" onFinish={handleSave}>
-					<Form.Item name="code" label={t('plans2.form.code')} rules={[{ required: true }]}>
+					{editing && (
+						// 第 63 轮补：antd Alert → 设计系统 Alert（图标由 variant 自带，原来是 showIcon）
+						<Alert
+							variant="info"
+							title={t('plans2.form.editHint')}
+							className="mb-4"
+						/>
+					)}
+					<Form.Item
+						name="code"
+						label={t('plans2.form.code')}
+						rules={editing ? [] : [{ required: true }]}
+					>
 						<Input placeholder={t('plans2.form.codePlaceholder')} disabled={!!editing} />
 					</Form.Item>
 					<Form.Item name="name" label={t('plans2.form.name')} rules={[{ required: true }]}>
@@ -198,9 +252,10 @@ export default function BillingPlansPage() {
 					<Form.Item
 						name="billingCycle"
 						label={t('plans2.form.billingCycle')}
-						rules={[{ required: true }]}
+						rules={editing ? [] : [{ required: true }]}
 					>
 						<Select
+							disabled={!!editing}
 							options={[
 								{ value: 'monthly', label: t('plans2.billingCycle.monthly') },
 								{ value: 'yearly', label: t('plans2.billingCycle.yearly') },
@@ -216,14 +271,32 @@ export default function BillingPlansPage() {
 						<Form.Item name="yearlyPrice" label={t('plans2.form.yearlyPrice')}>
 							<InputNumber precision={2} min={0} />
 						</Form.Item>
+						{/* A-398：季价无 UpdatePlanRequest 落点 → 编辑态只读（避免静默丢弃） */}
 						<Form.Item name="quarterlyPrice" label={t('plans2.form.quarterlyPrice')}>
-							<InputNumber precision={2} min={0} />
+							<InputNumber precision={2} min={0} disabled={!!editing} />
 						</Form.Item>
 					</Space>
+					{/* A-398：功能特性无 UpdatePlanRequest 落点 → 编辑态只读（避免静默丢弃） */}
 					<Form.Item name="features" label={t('plans2.form.features')}>
-						<Input.TextArea rows={4} placeholder={t('plans2.form.featuresPlaceholder')} />
+						<Input.TextArea
+							rows={4}
+							placeholder={t('plans2.form.featuresPlaceholder')}
+							disabled={!!editing}
+						/>
 					</Form.Item>
-					<Form.Item name="isCustom" label={t('plans2.form.isCustom')} valuePropName="checked">
+					{editing && (
+						<Form.Item name="status" label={t('plans2.form.status')}>
+							<Select
+								allowClear
+								options={[
+									{ value: 'active', label: t('plans2.status.active') },
+									{ value: 'inactive', label: t('plans2.status.inactive') },
+								]}
+							/>
+						</Form.Item>
+					)}
+					{/* A-399：Select 链路修复 —— 移除 valuePropName="checked"（旧值向 Select 注入 checked 而非 value，选中渲染/回填链路断） */}
+					<Form.Item name="isCustom" label={t('plans2.form.isCustom')}>
 						<Select
 							options={[
 								{ value: true, label: t('plans2.form.isCustomYes') },

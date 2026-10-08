@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, useCurrentTenantId } from '@autional/shared';
+import { fromPageResult, toPageParams, useCurrentTenantId } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 
@@ -28,14 +28,28 @@ export interface ABACPolicy {
 	updatedAt: string;
 }
 
-export function useAbacPolicies() {
+/** 查询入参（camel 书面；分页键经 toPageParams 单点转 wire snake）。 */
+export interface AbacPoliciesQuery {
+	page?: number;
+	pageSize?: number;
+}
+
+export function useAbacPolicies(params?: AbacPoliciesQuery) {
 	const tenantId = useCurrentTenantId() ?? '';
 	return useQuery({
-		queryKey: queryKeys.abacPolicies.all(tenantId),
+		queryKey: queryKeys.abacPolicies.list(tenantId, params),
 		staleTime: 300000,
 		queryFn: async ({ signal }) => {
-			const res = await getAbacPolicies(undefined, signal);
-			return extractList<ABACPolicy>(res);
+			// A-136：服务端分页契约（toPageParams 单点转 wire page/page_size；旧实现无参调用 →
+			// 后端默认 page_size=20 截断，21 条起永不可达）。响应侧 fromPageResult 归一 items/total。
+			// spread 成对象字面量：PageParams 接口无索引签名，直传不满足 generated
+			// Record<string, unknown> 形参（与 use-role-activations 同法）。
+			const res = await getAbacPolicies(
+				{ ...toPageParams({ page: params?.page, pageSize: params?.pageSize }) },
+				signal,
+			);
+			const paged = fromPageResult<ABACPolicy>(res);
+			return { items: paged.items, total: paged.total };
 		},
 	});
 }

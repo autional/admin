@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DataTable } from '@autional/ui/antd';
 import { Input, Button, Space, Tag, message, Modal, Typography } from 'antd';
-import { SearchOutlined, DownloadOutlined, LockOutlined, EyeOutlined } from '@ant-design/icons';
+import { Download, Eye, Lock, Search } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { AppPageHeader, EmptyState, LoadingScreen, SectionCard, StatusBadge } from '@autional/ui';
@@ -111,13 +111,13 @@ export default function ProfilesPage() {
 			key: 'actions',
 			render: (_: any, r: any) => (
 				<Space>
-					<Button size="small" icon={<EyeOutlined />} onClick={() => navigate(buildNavHref(`/profiles/${r.id}`, tenantSlug))}>
+					<Button size="small" icon={<Eye size="1em" />} onClick={() => navigate(buildNavHref(`/profiles/${r.id}`, tenantSlug))}>
 						{t('profilesList.action.view')}
 					</Button>
-					<Button size="small" icon={<LockOutlined />} onClick={() => handleArchive(r.id)} danger>
+					<Button size="small" icon={<Lock size="1em" />} onClick={() => handleArchive(r.id)} danger>
 						{t('profilesList.action.archive')}
 					</Button>
-					<Button size="small" icon={<DownloadOutlined />} onClick={() => handleExport(r.id)}>
+					<Button size="small" icon={<Download size="1em" />} onClick={() => handleExport(r.id)}>
 						{t('profilesList.action.export')}
 					</Button>
 				</Space>
@@ -135,7 +135,7 @@ export default function ProfilesPage() {
 						value={keyword}
 						onChange={(e) => setKeyword(e.target.value)}
 						onSearch={handleSearch}
-						enterButton={<SearchOutlined />}
+						enterButton={<Search size="1em" />}
 						className="w-[300px]"
 						allowClear
 					/>

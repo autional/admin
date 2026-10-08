@@ -1,6 +1,8 @@
 'use client';
 
-import { apiClient, extractList, extractItem, useCurrentTenantId } from '@autional/shared';
+import { extractList, extractListResult, extractItem } from '@autional/shared';
+import type { ListResult } from '@autional/shared';
+import { retryUnlessNotFound } from '@/lib/nhi';
 import { queryKeys } from '@/lib/query-keys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Generated from '@autional/shared/generated/api';
@@ -15,6 +17,7 @@ import {
 	getFraudRules,
 	getWalletPolicy,
 	updateWalletPolicy,
+	deleteWalletPolicy,
 	adjustWallet,
 } from '@/lib/api.generated';
 
@@ -31,29 +34,31 @@ export interface WalletItem {
 	createdAt: string;
 }
 
+// W1-04（A-376）：键对齐 CouponResponse——usage_limit/usage_count 为真源（旧 maxUses/usedCount 无落点恒空）；
+// valid_until 为空串表示无到期（NULL）；min_amount 为 wire 键（表单提交侧用 min_spend）。
 export interface CouponItem {
 	id: string;
 	code: string;
+	name: string;
 	value: string;
 	type: string;
 	status: string;
-	maxUses?: number;
-	usedCount?: number;
-	minAmount?: string;
-	validFrom?: string;
-	validUntil?: string;
+	minAmount: string;
+	validFrom: string;
+	validUntil: string;
+	usageLimit: number;
+	usageCount: number;
 	createdAt: string;
 }
 
+// W1-02（A-365/A-367）：对齐 WithdrawalRequestResponse——真源为 withdrawal_requests；
+// 旧 walletId/currency/bankAccount/note 字段服务端均无落点（A-367 数据源错位的镜像残留）。
 export interface WithdrawalItem {
 	id: string;
 	userId: string;
-	walletId: string;
 	amount: string;
-	currency: string;
 	status: string;
-	bankAccount?: string;
-	note?: string;
+	remark: string;
 	createdAt: string;
 }
 
@@ -89,9 +94,11 @@ export interface WalletPolicy {
 export function useWalletList(params?: Record<string, unknown>) {
 	return useQuery({
 		queryKey: queryKeys.walletAdmin.list(params),
-		queryFn: async () => {
+		queryFn: async (): Promise<ListResult<WalletItem>> => {
+			// A-362⑥：消费服务端 total（服务端真分页 page/page_size；旧实现只取 items
+			// + 本地 10/页 ⇒ 第 21 条起不可达）。
 			const res = await Generated.adminWallets(params);
-			return extractList<WalletItem>(res);
+			return extractListResult<WalletItem>(res);
 		},
 	});
 }
@@ -173,15 +180,16 @@ export function useDeleteCoupon() {
 }
 
 export function useWithdrawals(params?: Record<string, unknown>) {
-	const tenantId = useCurrentTenantId() ?? '';
 	return useQuery({
 		queryKey: queryKeys.walletAdmin.withdrawals(params),
 		queryFn: async () => {
-			const res = await Generated.adminWalletsTenantsTransactionsByTenants(tenantId, {
-				...params,
-				type: 'withdraw',
-			} as any);
-			return extractList<WithdrawalItem>(res);
+			// W1-02（A-365）：管理面真源 = GET /admin/wallets/withdrawals（withdrawal_requests），
+			// 旧实现走租户交易端点 type=withdraw（列表/审批实体错位）。
+			// A-369⑤：透出 pagination（旧 extractList 丢 total ⇒ 本地 10/页伪全量）。
+			const res = await Generated.adminWalletsWithdrawals(
+				params as { status?: string; page?: number; page_size?: number },
+			);
+			return extractListResult<WithdrawalItem>(res);
 		},
 	});
 }
@@ -222,6 +230,8 @@ export function useWalletPolicy(tenantId: string, appId: string) {
 			return extractItem<WalletPolicy>(res);
 		},
 		enabled: !!tenantId && !!appId,
+		// A-385④：404（尚未配置策略）零重试 —— 消「404 双请求 + console 噪声」（A-86/A-93 同法）。
+		retry: retryUnlessNotFound,
 	});
 }
 
@@ -237,6 +247,16 @@ export function useUpdateWalletPolicy() {
 			appId: string;
 			data: Record<string, unknown>;
 		}) => updateWalletPolicy(tenantId, appId, data) as Promise<unknown>,
+		onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.walletAdmin.all }),
+	});
+}
+
+/** A-385⑥：DELETE /policy 端点接线（此前零 UI 消费；删除后策略回退全局默认）。 */
+export function useDeleteWalletPolicy() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: ({ tenantId, appId }: { tenantId: string; appId: string }) =>
+			deleteWalletPolicy(tenantId, appId),
 		onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.walletAdmin.all }),
 	});
 }

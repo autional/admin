@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList } from '@autional/shared';
+import { apiClient, API_PATHS, extractItem, extractList, fromPageResult, toPageParams } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,6 @@ import {
 	createErasure,
 	executeErasure,
 	getRetentionPolicies,
-	getSODRules,
 	getISOControls,
 } from '@/lib/api.generated';
 import * as Generated from '@autional/shared/generated/api';
@@ -44,12 +43,15 @@ interface RetentionPolicy {
 	status: string;
 }
 
+// A-243（W4-01）：键位对齐 wire（service-audit advanced_types.go:285-292 SoDRule{name / roles_a[] /
+// roles_b[] / enabled}）——旧本地类型 roleA/roleB 单值与响应不符 → 列表两列恒空（批 2 listRender 同款修法）。
 interface SODRule {
 	id: string;
 	name: string;
-	roleA: string;
-	roleB: string;
-	description: string;
+	rolesA: string[];
+	rolesB: string[];
+	enabled: boolean;
+	description?: string;
 }
 
 interface ISOControl {
@@ -72,12 +74,29 @@ interface Consent {
 	expiredAt?: string;
 }
 
-export function useDSARs() {
+/** W4-01（A-244）：列表分页入参（camel 书面；wire 键经 toPageParams 单点转 snake）。 */
+export interface CompliancePageParams {
+	page?: number;
+	pageSize?: number;
+}
+
+/** W4-01（A-244/A-245）：DSAR 列表过滤入参——status=pending 供首页「待处理 DSAR」卡取 total。 */
+export interface DSARQueryParams extends CompliancePageParams {
+	status?: string;
+}
+
+// W4-01（A-244）：DSAR 列表服务端分页——发 page/page_size，total 由 ListResponse 回传
+// （旧实现无参单拉，超一页即截断且分页器假全量）。
+export function useDSARs(params?: DSARQueryParams) {
 	return useQuery({
-		queryKey: queryKeys.compliance.dsars,
+		// 分页/过滤参数入 key（同端点各页各成缓存条目）；前缀 [compliance,dsars] 仍被失效命中。
+		queryKey: [...queryKeys.compliance.dsars, params],
 		queryFn: async () => {
-			const res = await getDSARs();
-			return extractList<DSAR>(res);
+			const res = await getDSARs({
+				...toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+				status: params?.status,
+			});
+			return fromPageResult<DSAR>(res);
 		},
 	});
 }
@@ -131,35 +150,46 @@ export function useExecuteErasure() {
 	});
 }
 
-export function useRetentionPolicies() {
+// W4-01（A-244）：留存策略列表服务端分页（后端已支持 page/page_size——generated api.ts:2983-2989）。
+export function useRetentionPolicies(params?: CompliancePageParams) {
 	return useQuery({
-		queryKey: queryKeys.compliance.retentionPolicies,
+		queryKey: [...queryKeys.compliance.retentionPolicies, params],
 		staleTime: 300000,
 		queryFn: async () => {
-			const res = await getRetentionPolicies();
-			return extractList<RetentionPolicy>(res);
+			const res = await getRetentionPolicies(
+				toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+			);
+			return fromPageResult<RetentionPolicy>(res);
 		},
 	});
 }
 
-export function useSODRules() {
+// W4-01（A-244，Q-02 = 扩展）：sod-rules 生成签名无分页参数（api.ts:353-356 无参）→ 后端已随本 ITEM
+// 扩展（service-audit handler/repository 收 page/page_size + NewListResponse 携 total），前端走裸
+// apiClient 发 wire 参数（生成签名收敛前不改造生成层）。
+export function useSODRules(params?: CompliancePageParams) {
 	return useQuery({
-		queryKey: queryKeys.compliance.sodRules,
+		queryKey: [...queryKeys.compliance.sodRules, params],
 		staleTime: 300000,
 		queryFn: async () => {
-			const res = await getSODRules();
-			return extractList<SODRule>(res);
+			const res = await apiClient.get(API_PATHS.AUDIT.ADMIN_COMPLIANCE_SOD_RULES, {
+				params: toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+			});
+			return fromPageResult<SODRule>(res.data);
 		},
 	});
 }
 
-export function useISOControls() {
+// W4-01（A-244）：ISO27001 控制项列表服务端分页（generated api.ts:2612-2618 收 page/page_size）。
+export function useISOControls(params?: CompliancePageParams) {
 	return useQuery({
-		queryKey: queryKeys.compliance.isoControls,
+		queryKey: [...queryKeys.compliance.isoControls, params],
 		staleTime: 300000,
 		queryFn: async () => {
-			const res = await getISOControls();
-			return extractList<ISOControl>(res);
+			const res = await getISOControls(
+				toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+			);
+			return fromPageResult<ISOControl>(res);
 		},
 	});
 }
@@ -186,13 +216,16 @@ export function useUpdateRetentionPolicy() {
 	});
 }
 
-export function useConsents() {
+// W4-01（A-244）：同意记录列表服务端分页（generated api.ts:2438-2448 收 page/page_size）。
+export function useConsents(params?: CompliancePageParams) {
 	return useQuery({
-		queryKey: queryKeys.compliance.consents,
+		queryKey: [...queryKeys.compliance.consents, params],
 		staleTime: 30000,
 		queryFn: async () => {
-			const res = await Generated.adminComplianceGdprConsent();
-			return extractList<Consent>(res);
+			const res = await Generated.adminComplianceGdprConsent(
+				toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+			);
+			return fromPageResult<Consent>(res);
 		},
 	});
 }
@@ -213,5 +246,42 @@ export function useRevokeConsent() {
 		// A-236（TASK-AB2-28）：类型对齐 RevokeConsentRequest（user_id*/purpose* + reason?）。
 		mutationFn: (data: RevokeConsentRequest) => Generated.adminComplianceGdprConsentDelete(data),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.compliance.consents }),
+	});
+}
+
+// ========== W4-01（A-245）：首页两卡查询（旧 useEffect 静默 catch → 403/失败伪 0） ==========
+
+/** 租户合规自评分（wire {tenant_id, overall_score, grade}——grade 旧实现零渲染，本批补）。 */
+export interface ComplianceScore {
+	tenantId?: string;
+	overallScore?: number;
+	grade?: string;
+}
+
+/** 合规策略框架（standards 数组——「遵守标准」卡计数来源）。 */
+export interface CompliancePolicy {
+	standards?: unknown[];
+}
+
+// A-245（W4-01）：自评分卡查询——error/forbidden 态由消费方经 QueryStateFallback 成态，
+// 不再 `?? 0` 伪 0（旧实现 catch 仅 DEV console.error，失败静默显示 0 分）。
+export function useComplianceScore() {
+	return useQuery({
+		queryKey: [...queryKeys.compliance.status, 'score'],
+		queryFn: async () => {
+			const res = await apiClient.get(API_PATHS.COMPLIANCE.ADMIN_TENANT_SELF_SCORE);
+			return extractItem<ComplianceScore>(res.data);
+		},
+	});
+}
+
+// A-245（W4-01）：策略框架查询（standards 计数卡）。
+export function useCompliancePolicy() {
+	return useQuery({
+		queryKey: [...queryKeys.compliance.status, 'policy'],
+		queryFn: async () => {
+			const res = await apiClient.get(API_PATHS.COMPLIANCE.ADMIN_TENANT_SELF_POLICY);
+			return extractItem<CompliancePolicy>(res.data);
+		},
 	});
 }

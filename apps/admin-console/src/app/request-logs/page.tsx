@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Input, DatePicker, Button, Spin, Empty } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Button, Spin, Empty } from 'antd';
+import { RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
@@ -42,7 +42,7 @@ export default function RequestLogsPage() {
 				title={t('requestLogs.title')}
 				actions={
 					<>
-						<Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+						<Button icon={<RefreshCw size="1em" />} onClick={() => refetch()}>
 							{t('common.refresh')}
 						</Button>
 					</>

@@ -4,13 +4,12 @@ import React, { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { AutoComplete, Input, type AutoCompleteProps } from 'antd';
 import {
-	UserOutlined,
-	TeamOutlined,
-	SafetyOutlined,
-	AppstoreOutlined,
-	SearchOutlined,
-} from '@ant-design/icons';
-// icons from @ant-design/icons
+	LayoutGrid,
+	Search,
+	ShieldCheck,
+	User,
+	Users,
+} from 'lucide-react';
 import { getUsers, getRoles, getAllTenants } from '@/lib/api.generated';
 import { getApplications } from '@/lib/api.generated';
 import { useAuthStore, useTenantSlug } from '@autional/shared';
@@ -19,10 +18,10 @@ import { buildNavHref } from '@/lib/nav';
 import { useTranslation } from 'react-i18next';
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-	users: { label: 'users', icon: <UserOutlined />, color: '#1677ff' },
-	roles: { label: 'roles', icon: <SafetyOutlined />, color: 'var(--color-success)' },
-	tenants: { label: 'tenants', icon: <TeamOutlined />, color: '#fa8c16' },
-	applications: { label: 'applications', icon: <AppstoreOutlined />, color: '#722ed1' },
+	users: { label: 'users', icon: <User size="1em" />, color: '#1677ff' },
+	roles: { label: 'roles', icon: <ShieldCheck size="1em" />, color: 'var(--color-success)' },
+	tenants: { label: 'tenants', icon: <Users size="1em" />, color: '#fa8c16' },
+	applications: { label: 'applications', icon: <LayoutGrid size="1em" />, color: '#722ed1' },
 };
 
 function extractItems(res: unknown): unknown[] {
@@ -200,7 +199,7 @@ export function GlobalSearch() {
 			}
 		>
 			<Input
-				prefix={<SearchOutlined className="text-neutral-500" />}
+				prefix={<Search size="1em" className="text-neutral-500" />}
 				placeholder={t('globalSearch.placeholder')}
 				size="small"
 				allowClear

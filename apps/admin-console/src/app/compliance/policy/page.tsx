@@ -2,15 +2,15 @@
 // @generated-api-exempt: 2 key(s) [COMPLIANCE.ADMIN_TENANT_SELF_POLICY, COMPLIANCE.ADMIN_TENANT_SELF_READINESS] lack generated func
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Tabs, Card, Checkbox, Button, Tag, Space, Modal, Form, Input, message, Progress, Row, Col, Statistic, Descriptions } from 'antd';
+import { Tabs, Card, Checkbox, Button, Tag, Space, Modal, Form, Input, message, Progress, Row, Col, Statistic, Descriptions, Popconfirm } from 'antd';
 import {
-	SafetyCertificateOutlined,
-	CheckCircleOutlined,
-	CloseCircleOutlined,
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-} from '@ant-design/icons';
+	BadgeCheck,
+	CheckCircle2,
+	Pencil,
+	Plus,
+	Trash2,
+	XCircle,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { handleApiError } from '@/lib/error-handler';
 import { apiClient, API_PATHS, extractItem } from '@autional/shared';
@@ -205,18 +205,27 @@ export default function CompliancePolicyPage() {
 	// gapReport.overallScore（口径收敛，不再并存 GET /score 的安全评分）。
 
 	const handleApply = async () => {
+		setLoading(true);
 		try {
-			setLoading(true);
 			await adminComplianceTenantsSelfStandardsPut({ standards: selectedIds });
+			// A-253（W1e）②：PUT 成功即回执（旧实现回读并进同一 try——GET 失败连带报"更新失败"，
+			// 成功被吞、文案与事实不符）。
+			message.success(t('compliance.policy.standardsUpdated'));
+		} catch (err) {
+			handleApiError(err, t('compliance.policy.updateFailed'));
+			setLoading(false);
+			return;
+		}
+		// A-253（W1e）②：回读分段——GET 失败仅提示刷新失败，不推翻更新成功事实。
+		try {
 			const res = await apiClient.get(API_PATHS.COMPLIANCE.ADMIN_TENANT_SELF_POLICY);
 			const policy = extractItem(res.data);
 			setResolvedPolicy(policy?.parameters || {});
 			setResolvedStandards(policy?.standards || []);
 			seedConfigRows(policy?.parameters || {});
-			message.success(t('compliance.policy.standardsUpdated'));
 			fetchOverrides();
 		} catch (err) {
-			handleApiError(err, t('compliance.policy.updateFailed'));
+			handleApiError(err, t('compliance.policy.refreshFailed'));
 		} finally {
 			setLoading(false);
 		}
@@ -321,8 +330,6 @@ export default function CompliancePolicyPage() {
 		return <PageError message={t('compliance.policy.loadFailed')} retry={fetchStandards} />;
 	}
 
-	const filteredStandards = standards;
-
 	const tabs = [
 		{
 			key: 'standards',
@@ -336,7 +343,7 @@ export default function CompliancePolicyPage() {
 							className="w-full"
 						>
 							<Space direction="vertical" size="middle" className="w-full">
-								{filteredStandards.map((std) => (
+								{standards.map((std) => (
 									<Card key={std.id} size="small" hoverable>
 										<Checkbox value={std.id}>
 											<strong>{std.name}</strong>
@@ -350,14 +357,29 @@ export default function CompliancePolicyPage() {
 						</Checkbox.Group>
 					</Card>
 					<Space>
-						<Button
-							type="primary"
-							icon={<SafetyCertificateOutlined />}
-							onClick={handleApply}
-							loading={loading}
-						>
-							{t('compliance.policy.apply')}
-						</Button>
+						{selectedIds.length === 0 ? (
+							// A-253（W1e）③：零勾选应用 = 静默清空全部标准（无确认无警示）→ 前置 Popconfirm
+							<Popconfirm
+								title={t('compliance.policy.zeroSelectionConfirmTitle')}
+								description={t('compliance.policy.zeroSelectionConfirmDesc')}
+								okText={t('common.confirm')}
+								cancelText={t('common.cancel')}
+								onConfirm={handleApply}
+							>
+								<Button type="primary" icon={<BadgeCheck size="1em" />} loading={loading}>
+									{t('compliance.policy.apply')}
+								</Button>
+							</Popconfirm>
+						) : (
+							<Button
+								type="primary"
+								icon={<BadgeCheck size="1em" />}
+								onClick={handleApply}
+								loading={loading}
+							>
+								{t('compliance.policy.apply')}
+							</Button>
+						)}
 						<Button onClick={handleRunGapAnalysis} loading={loading}>
 							{t('compliance.policy.runGap')}
 						</Button>
@@ -380,46 +402,53 @@ export default function CompliancePolicyPage() {
 								))}
 							</Space>
 						)}
-						<DataTable
-							rowKey="parameter"
-							dataSource={Object.entries(resolvedPolicy).map(([k, v]) => ({
-								parameter: k,
-								...v,
-								key: k,
-							}))}
-							columns={[
-								{ title: t('compliance.policy.parameter'), dataIndex: 'parameter', width: 200 },
-								{
-									title: t('compliance.policy.requiredValue'),
-									dataIndex: 'value',
-									render: (v: any) => String(v),
-								},
-								{ title: t('compliance.policy.mergeRule'), dataIndex: 'mergeRule', width: 100 },
-								{
-									title: t('compliance.policy.sourceStandards'),
-									dataIndex: 'source',
-									render: (s: string[]) => s.join(', '),
-								},
-								{
-									title: t('compliance.policy.severity'),
-									dataIndex: 'severity',
-									render: (s: string) => <Tag color={severityColor[s]}>{severityLabel[s]}</Tag>,
-								},
-								{
-									title: t('compliance.policy.overridden'),
-									dataIndex: 'overridden',
-									render: (v: boolean) =>
-										v ? (
-											<Tag color="green">{t('compliance.policy.yes')}</Tag>
-										) : (
-											<Tag>{t('compliance.policy.no')}</Tag>
-										),
-								},
-							]}
-							pagination={{ pageSize: 20 }}
-							size="small"
-							scroll={{ x: 800 }}
-						/>
+						{/* A-253（W1e）④：组合策略空态无引导（对照认证就绪有明确指引）→ 空态引导文案 */}
+						{Object.keys(resolvedPolicy).length === 0 ? (
+							<div className="text-center py-10 text-neutral-600">
+								{t('compliance.policy.matrixEmptyHint')}
+							</div>
+						) : (
+							<DataTable
+								rowKey="parameter"
+								dataSource={Object.entries(resolvedPolicy).map(([k, v]) => ({
+									parameter: k,
+									...v,
+									key: k,
+								}))}
+								columns={[
+									{ title: t('compliance.policy.parameter'), dataIndex: 'parameter', width: 200 },
+									{
+										title: t('compliance.policy.requiredValue'),
+										dataIndex: 'value',
+										render: (v: any) => String(v),
+									},
+									{ title: t('compliance.policy.mergeRule'), dataIndex: 'mergeRule', width: 100 },
+									{
+										title: t('compliance.policy.sourceStandards'),
+										dataIndex: 'source',
+										render: (s: string[]) => s.join(', '),
+									},
+									{
+										title: t('compliance.policy.severity'),
+										dataIndex: 'severity',
+										render: (s: string) => <Tag color={severityColor[s]}>{severityLabel[s]}</Tag>,
+									},
+									{
+										title: t('compliance.policy.overridden'),
+										dataIndex: 'overridden',
+										render: (v: boolean) =>
+											v ? (
+												<Tag color="green">{t('compliance.policy.yes')}</Tag>
+											) : (
+												<Tag>{t('compliance.policy.no')}</Tag>
+											),
+									},
+								]}
+								pagination={{ pageSize: 20 }}
+								size="small"
+								scroll={{ x: 800 }}
+							/>
+						)}
 					</Card>
 				</div>
 			),
@@ -467,7 +496,7 @@ export default function CompliancePolicyPage() {
 										<Button
 											type="link"
 											danger
-											icon={<DeleteOutlined />}
+											icon={<Trash2 size="1em" />}
 											onClick={() => removeConfigRow(row.key)}
 										>
 											{t('compliance.policy.remove')}
@@ -477,7 +506,7 @@ export default function CompliancePolicyPage() {
 							]}
 						/>
 						<Space className="mt-3">
-							<Button icon={<PlusOutlined />} onClick={addConfigRow}>
+							<Button icon={<Plus size="1em" />} onClick={addConfigRow}>
 								{t('compliance.policy.addParam')}
 							</Button>
 							<Button type="primary" onClick={handleRunGapAnalysis} loading={loading}>
@@ -532,11 +561,11 @@ export default function CompliancePolicyPage() {
 										width: 80,
 										render: (v: boolean) =>
 											v ? (
-												<Tag color="green" icon={<CheckCircleOutlined />}>
+												<Tag color="green" icon={<CheckCircle2 size="1em" />}>
 													{t('compliance.gap.compliant')}
 												</Tag>
 											) : (
-												<Tag color="red" icon={<CloseCircleOutlined />}>
+												<Tag color="red" icon={<XCircle size="1em" />}>
 													{t('compliance.gap.nonCompliant')}
 												</Tag>
 											),
@@ -575,7 +604,7 @@ export default function CompliancePolicyPage() {
 					<Card
 						title={t('compliance.policy.overrides')}
 						extra={
-							<Button type="primary" icon={<EditOutlined />} onClick={() => setOverrideModal(true)}>
+							<Button type="primary" icon={<Pencil size="1em" />} onClick={() => setOverrideModal(true)}>
 								{t('compliance.policy.addOverride')}
 							</Button>
 						}
@@ -599,7 +628,7 @@ export default function CompliancePolicyPage() {
 										<Button
 											type="link"
 											danger
-											icon={<DeleteOutlined />}
+											icon={<Trash2 size="1em" />}
 											onClick={() => handleRemoveOverride(record.parameter)}
 										>
 											{t('compliance.policy.remove')}
@@ -742,7 +771,7 @@ export default function CompliancePolicyPage() {
 	return (
 		<div>
 			<h2 className="mb-4">
-				<SafetyCertificateOutlined className="mr-2" />
+				<BadgeCheck size="1em" className="mr-2" />
 				{t('compliance.policy.title')}
 			</h2>
 			<Tabs activeKey={activeTab} onChange={setActiveTab} items={tabs} />

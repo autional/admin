@@ -9,15 +9,15 @@ import { buildNavHref } from '@/lib/nav';
 import { Card, Tag, Button, Space, Descriptions, Modal, Form, Select, Input, Spin, Empty, Tabs } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
-	ArrowLeftOutlined,
-	EditOutlined,
-	ReloadOutlined,
-	CheckCircleOutlined,
-	CloseCircleOutlined,
-} from '@ant-design/icons';
+	ArrowLeft,
+	Pencil,
+	RefreshCw,
+	UserCheck,
+} from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
+import { useManualReviewVerification, useResolveVerificationReview } from '@/hooks/use-verifications';
 import type { ColumnsType } from 'antd/es/table';
 
 const statusColorMap: Record<string, string> = {
@@ -29,6 +29,8 @@ const statusColorMap: Record<string, string> = {
 	expired: 'purple',
 	ocr_pending: 'cyan',
 	ocr_completed: 'geekblue',
+	// A-260（W1e）：domain 9 值 vs 页面映射 8 值（缺 manual_review）→ 补齐
+	manual_review: 'gold',
 };
 
 interface VerificationDetail {
@@ -106,7 +108,7 @@ function useResetRetry() {
 }
 
 export default function VerificationDetailPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const params = useParams();
 	const navigate = useNavigate();
 	const tenantSlug = useTenantSlug();
@@ -122,6 +124,8 @@ export default function VerificationDetailPage() {
 			expired: t('verifications.status.expired'),
 			ocr_pending: t('verifications.status.ocr_pending'),
 			ocr_completed: t('verifications.status.ocr_completed'),
+			// A-260（W1e）：manual_review 补映射
+			manual_review: t('verifications.status.manual_review'),
 		}),
 		[t],
 	);
@@ -131,12 +135,64 @@ export default function VerificationDetailPage() {
 		[statusLabelMap],
 	);
 
+	// A-262（W1e）：枚举值原样英文 → 词表（未收录值回退原值）
+	const methodLabelMap: Record<string, string> = {
+		ocr: t('verifications.method.ocr'),
+		two_element: t('verifications.method.two_element'),
+		three_element: t('verifications.method.three_element'),
+		four_element: t('verifications.method.four_element'),
+		manual: t('verifications.method.manual'),
+	};
+	const providerLabelMap: Record<string, string> = {
+		aliyun: t('verifications.provider.aliyun'),
+	};
+	const ageGroupLabelMap: Record<string, string> = {
+		adult: t('verifications.ageGroup.adult'),
+		minor: t('verifications.ageGroup.minor'),
+	};
+	const genderLabelMap: Record<string, string> = {
+		male: t('verifications.gender.male'),
+		female: t('verifications.gender.female'),
+	};
+
 	const { data: record, isLoading: loading, error, refetch } = useVerificationDetail(id);
 	const overrideMutation = useOverrideVerification();
 	const resetRetryMutation = useResetRetry();
 
 	const [overrideModalOpen, setOverrideModalOpen] = useState(false);
 	const [overrideForm] = Form.useForm();
+
+	// A-264（W1e）：manual-review/resolve-review 能力零入口 → 全部补入口（均需 Step-up）
+	const manualReviewMutation = useManualReviewVerification();
+	const resolveReviewMutation = useResolveVerificationReview();
+	const [manualReviewModalOpen, setManualReviewModalOpen] = useState(false);
+	const [manualReviewForm] = Form.useForm();
+	const [resolveReviewModalOpen, setResolveReviewModalOpen] = useState(false);
+	const [resolveReviewForm] = Form.useForm();
+
+	const handleManualReview = async (values: { reason: string }) => {
+		try {
+			await manualReviewMutation.mutateAsync({ id, reason: values.reason });
+			message.success(t('verifications.manualReviewSuccess'));
+			setManualReviewModalOpen(false);
+			manualReviewForm.resetFields();
+			refetch();
+		} catch (err) {
+			handleApiError(err, t('verifications.manualReviewFailed'));
+		}
+	};
+
+	const handleResolveReview = async (values: { resolution: 'approved' | 'rejected'; reason: string }) => {
+		try {
+			await resolveReviewMutation.mutateAsync({ id, resolution: values.resolution, reason: values.reason });
+			message.success(t('verifications.resolveReviewSuccess'));
+			setResolveReviewModalOpen(false);
+			resolveReviewForm.resetFields();
+			refetch();
+		} catch (err) {
+			handleApiError(err, t('verifications.resolveReviewFailed'));
+		}
+	};
 
 	const handleOverride = async (values: { status: string; reason: string }) => {
 		try {
@@ -216,13 +272,15 @@ export default function VerificationDetailPage() {
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 180,
+			// A-262（W1e）：覆盖历史时间同族本地化
+			render: (v: string) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
 		},
 	];
 
 	return (
 		<div>
 			<div className="mb-4">
-				<Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+				<Button icon={<ArrowLeft size="1em" />} onClick={() => navigate(-1)}>
 					{t('verifications.actionBack')}
 				</Button>
 			</div>
@@ -237,12 +295,14 @@ export default function VerificationDetailPage() {
 							</Tag>
 						</div>
 						<div className="text-neutral-600 mt-1">
-							{t('verifications.detailCreatedAt')} {record.createdAt}
+							{/* A-262（W1e）：创建于 RFC3339 原样 → 本地化 */}
+							{t('verifications.detailCreatedAt')}{' '}
+							{record.createdAt ? new Date(record.createdAt).toLocaleString(i18n.language) : '-'}
 						</div>
 					</div>
 					<Space wrap>
 						<Button
-							icon={<EditOutlined />}
+							icon={<Pencil size="1em" />}
 							onClick={() => {
 								overrideForm.setFieldsValue({ status: record.status });
 								setOverrideModalOpen(true);
@@ -250,9 +310,28 @@ export default function VerificationDetailPage() {
 						>
 							{t('verifications.actionOverride')}
 						</Button>
+						{/* A-264（W1e）：转人工复核入口（manual_review 行不再重复触发） */}
+						{record.status !== 'manual_review' && (
+							<Button
+								icon={<UserCheck size="1em" />}
+								onClick={() => setManualReviewModalOpen(true)}
+							>
+								{t('verifications.actionManualReview')}
+							</Button>
+						)}
+						{/* A-264（W1e）：复核结论入口（仅 manual_review 状态可操作，与后端一致） */}
+						{record.status === 'manual_review' && (
+							<Button
+								type="primary"
+								icon={<UserCheck size="1em" />}
+								onClick={() => setResolveReviewModalOpen(true)}
+							>
+								{t('verifications.actionResolveReview')}
+							</Button>
+						)}
 						{record.status === 'rejected' && (
 							<Button
-								icon={<ReloadOutlined />}
+								icon={<RefreshCw size="1em" />}
 								onClick={handleResetRetry}
 								loading={resetRetryMutation.isPending}
 							>
@@ -288,16 +367,18 @@ export default function VerificationDetailPage() {
 							</Tag>
 						</Descriptions.Item>
 						<Descriptions.Item label={t('verifications.detailMethod')}>
-							{record.method || '-'}
+							{/* A-262（W1e）：three_element 等原样英文 → 词表（未收录回退原值） */}
+							{(record.method && methodLabelMap[record.method]) || record.method || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('verifications.detailProvider')}>
-							{record.provider || '-'}
+							{(record.provider && providerLabelMap[record.provider]) || record.provider || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('verifications.detailAgeGroup')}>
-							{record.ageGroup || '-'}
+							{(record.ageGroup && ageGroupLabelMap[record.ageGroup]) || record.ageGroup || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('verifications.detailVerifiedAt')}>
-							{record.verifiedAt || '-'}
+							{/* A-262（W1e）：认证时间 RFC3339 原样 → 本地化 */}
+							{record.verifiedAt ? new Date(record.verifiedAt).toLocaleString(i18n.language) : '-'}
 						</Descriptions.Item>
 					</Descriptions>
 				</Card>
@@ -320,7 +401,8 @@ export default function VerificationDetailPage() {
 							{record.dob || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('verifications.detailGender')}>
-							{record.gender || '-'}
+							{/* A-262（W1e）：male/female 原样英文 → 词表 */}
+							{(record.gender && genderLabelMap[record.gender]) || record.gender || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('verifications.detailConfidence')}>
 							{record.ocrConfidence != null ? `${(record.ocrConfidence * 100).toFixed(1)}%` : '-'}
@@ -377,6 +459,7 @@ export default function VerificationDetailPage() {
 				onOk={() => overrideForm.submit()}
 				confirmLoading={overrideMutation.isPending}
 				destroyOnHidden
+				closable={{ 'aria-label': t('common.close') }}
 				className="w-full max-w-[560px]"
 			>
 				<Form form={overrideForm} layout="vertical" onFinish={handleOverride}>
@@ -398,6 +481,77 @@ export default function VerificationDetailPage() {
 						<Input.TextArea
 							rows={3}
 							placeholder={t('verifications.overrideReasonPlaceholderTip')}
+						/>
+					</Form.Item>
+				</Form>
+			</Modal>
+
+			{/* A-264（W1e）：转人工复核（POST /manual-review；需 Step-up 二次认证） */}
+			<Modal
+				title={t('verifications.manualReviewTitle')}
+				open={manualReviewModalOpen}
+				onCancel={() => {
+					setManualReviewModalOpen(false);
+					manualReviewForm.resetFields();
+				}}
+				onOk={() => manualReviewForm.submit()}
+				confirmLoading={manualReviewMutation.isPending}
+				destroyOnHidden
+				closable={{ 'aria-label': t('common.close') }}
+				className="w-full max-w-[560px]"
+			>
+				<div className="mb-2 text-sm text-neutral-600">{t('verifications.manualReviewHint')}</div>
+				<Form form={manualReviewForm} layout="vertical" onFinish={handleManualReview}>
+					<Form.Item
+						name="reason"
+						label={t('verifications.manualReviewReasonLabel')}
+						rules={[{ required: true, message: t('verifications.manualReviewReasonRequired') }]}
+					>
+						<Input.TextArea
+							rows={3}
+							placeholder={t('verifications.manualReviewReasonPlaceholder')}
+						/>
+					</Form.Item>
+				</Form>
+			</Modal>
+
+			{/* A-264（W1e）：复核结论（POST /resolve-review；仅 manual_review 可操作；需 Step-up） */}
+			<Modal
+				title={t('verifications.resolveReviewTitle')}
+				open={resolveReviewModalOpen}
+				onCancel={() => {
+					setResolveReviewModalOpen(false);
+					resolveReviewForm.resetFields();
+				}}
+				onOk={() => resolveReviewForm.submit()}
+				confirmLoading={resolveReviewMutation.isPending}
+				destroyOnHidden
+				closable={{ 'aria-label': t('common.close') }}
+				className="w-full max-w-[560px]"
+			>
+				<div className="mb-2 text-sm text-neutral-600">{t('verifications.manualReviewHint')}</div>
+				<Form form={resolveReviewForm} layout="vertical" onFinish={handleResolveReview}>
+					<Form.Item
+						name="resolution"
+						label={t('verifications.resolveReviewResolutionLabel')}
+						rules={[{ required: true, message: t('verifications.resolveReviewResolutionRequired') }]}
+					>
+						<Select
+							options={[
+								{ value: 'approved', label: t('verifications.resolution.approved') },
+								{ value: 'rejected', label: t('verifications.resolution.rejected') },
+							]}
+							placeholder={t('verifications.resolveReviewResolutionPlaceholder')}
+						/>
+					</Form.Item>
+					<Form.Item
+						name="reason"
+						label={t('verifications.resolveReviewReasonLabel')}
+						rules={[{ required: true, message: t('verifications.resolveReviewReasonRequired') }]}
+					>
+						<Input.TextArea
+							rows={3}
+							placeholder={t('verifications.resolveReviewReasonPlaceholder')}
 						/>
 					</Form.Item>
 				</Form>

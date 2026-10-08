@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { Tag, Button, Modal, Form, Input, InputNumber, Space, Card, Descriptions, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	SearchOutlined,
-	StopOutlined,
-	DeleteOutlined,
-	EyeOutlined,
-} from '@ant-design/icons';
+	Ban,
+	Eye,
+	Plus,
+	Search,
+	Trash2,
+} from 'lucide-react';
 import {
 	useCreateCreditNote,
 	useCreditNote,
@@ -21,15 +21,36 @@ import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
 
 export default function BillingCreditNotesPage() {
 	const { t } = useTranslation();
+	usePageTitle(t('creditNotes.title'));
 	const [searchNumber, setSearchNumber] = useState('');
 	const [lookupNumber, setLookupNumber] = useState('');
 	const { data: creditNote, isLoading, error, refetch } = useCreditNote(lookupNumber);
 	const createMut = useCreateCreditNote();
 	const cancelMut = useCancelCreditNote();
 	const deleteMut = useDeleteCreditNote();
+
+	// A-431⑤：404 = 「未找到」（表内空态已表达）≠ 系统错误；后者才弹 PageError
+	const notFound = (error as { response?: { status?: number } } | null)?.response?.status === 404;
+
+	// A-431①③：状态标签/配色单点（表格与详情共用；`applied` 为虚构枚举已退场，domain 仅 issued/cancelled）
+	const statusColors: Record<string, string> = {
+		issued: 'processing',
+		cancelled: 'default',
+	};
+	const statusLabels: Record<string, string> = {
+		issued: t('creditNotes.status.issued'),
+		cancelled: t('creditNotes.status.cancelled'),
+	};
+	const renderStatus = (v?: string) =>
+		v ? <Tag color={statusColors[v] ?? 'default'}>{statusLabels[v] ?? v}</Tag> : '-';
+
+	// A-431④：amount=0 不因假值判定显 '-'；decimal 经 wire 为字符串（A-434 家族），先转 Number 再本地化
+	const renderAmount = (v?: string) =>
+		v === undefined || v === null || v === '' ? '-' : Number(v).toLocaleString('zh-CN');
 
 	const [createModal, setCreateModal] = useState(false);
 	const [createForm] = Form.useForm();
@@ -104,33 +125,21 @@ export default function BillingCreditNotesPage() {
 			dataIndex: 'amount',
 			key: 'amount',
 			width: 100,
-			render: (v: number) => (v ? `${v.toLocaleString()}` : '-'),
+			render: (v: string) => renderAmount(v),
 		},
 		{
 			title: t('creditNotes.column.status'),
 			dataIndex: 'status',
 			key: 'status',
 			width: 100,
-			render: (v: string) => {
-				const colorMap: Record<string, string> = {
-					issued: 'processing',
-					cancelled: 'default',
-					applied: 'success',
-				};
-				const labelMap: Record<string, string> = {
-					issued: t('creditNotes.status.issued'),
-					cancelled: t('creditNotes.status.cancelled'),
-					applied: t('creditNotes.status.applied'),
-				};
-				return <Tag color={colorMap[v] ?? 'default'}>{labelMap[v] ?? v}</Tag>;
-			},
+			render: (v: string) => renderStatus(v),
 		},
 		{
 			title: t('creditNotes.column.issuedAt'),
 			dataIndex: 'issuedAt',
 			key: 'issuedAt',
 			width: 160,
-			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+			render: (v: string) => (v ? new Date(v).toLocaleString('zh-CN') : '-'),
 		},
 		{
 			title: t('creditNotes.column.actions'),
@@ -141,7 +150,7 @@ export default function BillingCreditNotesPage() {
 					<Button
 						type="link"
 						size="small"
-						icon={<EyeOutlined />}
+						icon={<Eye size="1em" />}
 						onClick={() => {
 							setDetailModal(true);
 						}}
@@ -155,18 +164,26 @@ export default function BillingCreditNotesPage() {
 							okText={t('creditNotes.confirm')}
 							cancelText={t('creditNotes.cancel')}
 						>
-							<Button type="link" size="small" danger icon={<StopOutlined />}>
+							<Button type="link" size="small" danger icon={<Ban size="1em" />}>
 								{t('creditNotes.cancel')}
 							</Button>
 						</Popconfirm>
 					)}
+					{/* A-430：删除须先取消（服务端 IsTerminal 守卫 "must be cancelled first"）→ 非 cancelled 置灰 */}
 					<Popconfirm
 						title={t('creditNotes.confirmDelete')}
 						onConfirm={() => handleDelete(record.creditNoteNumber!)}
 						okText={t('creditNotes.confirm')}
 						cancelText={t('creditNotes.cancel')}
+						disabled={record.status !== 'cancelled'}
 					>
-						<Button type="link" size="small" danger icon={<DeleteOutlined />}>
+						<Button
+							type="link"
+							size="small"
+							danger
+							icon={<Trash2 size="1em" />}
+							disabled={record.status !== 'cancelled'}
+						>
 							{t('creditNotes.delete')}
 						</Button>
 					</Popconfirm>
@@ -181,14 +198,15 @@ export default function BillingCreditNotesPage() {
 				title={t('creditNotes.title')}
 				actions={
 					<>
-						<Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModal(true)}>
+						<Button type="primary" icon={<Plus size="1em" />} onClick={() => setCreateModal(true)}>
 							{t('creditNotes.create')}
 						</Button>
 					</>
 				}
 			/>
 
-			{error && (
+			{/* A-431⑤：404 由表内空态表达（未找到），不与 PageError 并置 */}
+			{error && !notFound && (
 				<PageError message={t('creditNotes.queryError')} retry={refetch} className="mb-4" />
 			)}
 
@@ -201,7 +219,7 @@ export default function BillingCreditNotesPage() {
 						className="w-60"
 						onPressEnter={() => setLookupNumber(searchNumber)}
 					/>
-					<Button icon={<SearchOutlined />} onClick={() => setLookupNumber(searchNumber)}>
+					<Button icon={<Search size="1em" />} onClick={() => setLookupNumber(searchNumber)}>
 						{t('creditNotes.search')}
 					</Button>
 					{lookupNumber && (
@@ -286,30 +304,20 @@ export default function BillingCreditNotesPage() {
 							{creditNote.invoiceNumber || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('creditNotes.column.amount')}>
-							{creditNote.amount?.toLocaleString() ?? '-'}
+							{renderAmount(creditNote.amount)}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('creditNotes.column.status')}>
-							<Tag
-								color={
-									creditNote.status === 'issued'
-										? 'processing'
-										: creditNote.status === 'cancelled'
-											? 'default'
-											: 'success'
-								}
-							>
-								{creditNote.status}
-							</Tag>
+							{renderStatus(creditNote.status)}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('creditNotes.reason')}>
 							{creditNote.reason || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('creditNotes.column.issuedAt')}>
-							{creditNote.issuedAt ? new Date(creditNote.issuedAt).toLocaleString() : '-'}
+							{creditNote.issuedAt
+								? new Date(creditNote.issuedAt).toLocaleString('zh-CN')
+								: '-'}
 						</Descriptions.Item>
-						<Descriptions.Item label={t('creditNotes.appliedAt')}>
-							{creditNote.appliedAt ? new Date(creditNote.appliedAt).toLocaleString() : '-'}
-						</Descriptions.Item>
+						{/* A-431②：appliedAt 死字段行移除（DTO 声明、domain 无此字段、mapper 不填） */}
 					</Descriptions>
 				)}
 			</Modal>

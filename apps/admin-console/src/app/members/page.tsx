@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useCurrentTenantIdOr } from '@autional/shared';
 import { Button, Space, Tag, Modal, Form, Input, Select, Empty, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMembers, useInviteMember, useUpdateMember, useRemoveMember } from '@/hooks/use-members';
 
 import { handleApiError } from '@/lib/error-handler';
@@ -135,7 +135,7 @@ export default function MembersPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditingMember(record);
 							editForm.setFieldsValue({ role: record.role });
@@ -151,7 +151,7 @@ export default function MembersPage() {
 						okButtonProps={{ danger: true }}
 						onConfirm={() => handleRemove(record.userId)}
 					>
-						<Button type="link" danger icon={<DeleteOutlined />}>
+						<Button type="link" danger icon={<Trash2 size="1em" />}>
 							{t('members.removeMember')}
 						</Button>
 					</Popconfirm>
@@ -170,7 +170,7 @@ export default function MembersPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								inviteForm.resetFields();
 								setInviteVisible(true);

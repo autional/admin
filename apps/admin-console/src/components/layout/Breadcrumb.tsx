@@ -53,6 +53,9 @@ export function Breadcrumb() {
 			'/security/policy': t('breadcrumb.securityPolicy'),
 			'/data-classification': t('breadcrumb.dataClassification'),
 			'/branding': t('breadcrumb.branding'),
+			// A-156 家族（A-161/A-169/A-172/A-176 同源）：/notifications 非真实路由（routes/config.tsx
+			// 无此段）→ 旧启发式把 13 字符段渲染成「详情」且 href 死链；补真实中文标签（导航落点见下方 buildHref）。
+			'/notifications': t('breadcrumb.notifications'),
 			'/notifications/templates': t('breadcrumb.notificationTemplates'),
 			'/notifications/announcements': t('breadcrumb.announcements'),
 			'/notifications/stats': t('breadcrumb.notificationStats'),
@@ -72,6 +75,8 @@ export function Breadcrumb() {
 			'/audit/reports': t('breadcrumb.auditReports'),
 			'/compliance': t('breadcrumb.compliance'),
 			'/compliance/policy': t('breadcrumb.compliancePolicy'),
+			// A-275（W1e）：补真实标签（旧启发式把 15 字符段渲染成「详情」；对照 A-73/A-156 家族）
+			'/compliance/legal-documents': t('breadcrumb.legalDocuments'),
 			'/compliance/minors': t('breadcrumb.minorsProtection'),
 			'/billing': t('breadcrumb.billing'),
 			'/storage': t('breadcrumb.storage'),
@@ -99,6 +104,11 @@ export function Breadcrumb() {
 			'/billing/credit-notes': t('breadcrumb.creditNotes'),
 			'/billing/credit-balance': t('breadcrumb.creditBalance'),
 			'/settings': t('breadcrumb.settings'),
+			// A-73：监控组三页补映射（旧缺失 → 共享启发式把 >8 字符段渲染成「详情」，
+			// 如 /request-logs 显示「仪表盘 / 详情」）。
+			'/logs': t('breadcrumb.logs'),
+			'/traces': t('breadcrumb.traces'),
+			'/request-logs': t('breadcrumb.requestLogs'),
 		}),
 		[t],
 	);
@@ -110,7 +120,17 @@ export function Breadcrumb() {
 			labels={breadcrumbMap}
 			home={{ label: t('breadcrumb.dashboard'), href: buildNavHref('/', tenantSlug) }}
 			detailLabel={t('breadcrumb.detail')}
-			buildHref={(path) => buildNavHref(path, tenantSlug)}
+			// A-156 家族：/notifications 为纯前缀段（非路由）→ 中间段可点但落点重指模板页，
+			// 避免死链（共享层将其渲染为可点中间段）。
+			buildHref={(path) => {
+				// A-405④：'/billing' 旧聚合页已从导航退场（billing/* 九子页为现行入口）→
+				// 中节点「计量与订阅」不再落孤儿页；返回 '' 使共享层渲染为纯文本（href 空 = 不可点）。
+				if (path === '/billing') return '';
+				return buildNavHref(
+					path === '/notifications' ? '/notifications/templates' : path,
+					tenantSlug,
+				);
+			}}
 		/>
 	);
 }

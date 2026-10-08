@@ -3,10 +3,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, Tabs, Form, Input, Button, Tag, Row, Col, Space, Spin, Statistic, Skeleton, Select, InputNumber } from 'antd';
 import { message } from '@/lib/antd-app';
-import { CheckCircleOutlined, SendOutlined, SwapRightOutlined } from '@ant-design/icons';
+import { CheckCircle2, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
 import {
-	useChannelStats,
 	useCommunicationDashboard,
 	useMessageLogs,
 	useCommunicationProviders,
@@ -40,14 +40,17 @@ const REDACTED_SENTINEL = '***REDACTED***';
 
 export default function CommunicationPage() {
 	const { t } = useTranslation();
+	// A-182：页面标题（与面包屑同源）
+	usePageTitle(t('communication.title'));
 	const [activeTab, setActiveTab] = useState('dashboard');
 	const [healthMap, setHealthMap] = useState<Record<string, HealthStatus>>({});
 	const [checkingHealth, setCheckingHealth] = useState<Record<string, boolean>>({});
 	const [savingChannel, setSavingChannel] = useState<string | null>(null);
+	// A-182：仪表盘统计窗口（7/30/90 天）——原实现恒取后端默认窗，无切换入口。
+	const [days, setDays] = useState(30);
 
-	const { data: dashboard, isLoading: dashLoading } = useCommunicationDashboard();
+	const { data: dashboard, isLoading: dashLoading } = useCommunicationDashboard(days);
 	const { data: logs = [], isLoading: logsLoading, error, refetch } = useMessageLogs();
-	const { data: stats } = useChannelStats();
 	const { data: providers = [] } = useCommunicationProviders();
 	const saveProviderMut = useSaveCommunicationProvider();
 
@@ -187,11 +190,31 @@ export default function CommunicationPage() {
 			key: 'status',
 			render: (v: string) => <Tag color={statusColors[v] || 'default'}>{statusLabels[v] || v}</Tag>,
 		},
-		{ title: t('communication.sendTime'), dataIndex: 'sentAt', key: 'sentAt' },
+		{
+			title: t('communication.sendTime'),
+			dataIndex: 'sentAt',
+			key: 'sentAt',
+			// A-179：失败行 sentAt 恒空（后端 SentAt omitempty）→ 回退显示 createdAt（创建/入队时刻）。
+			render: (v: string | undefined, r: { createdAt?: string }) => v || r.createdAt || '-',
+		},
 	];
 
 	const dashboardTab = (
 		<div>
+			{/* A-182：统计窗口切换（7/30/90 天；days 入 hook queryKey 与 wire） */}
+			<div className="mb-4 flex items-center justify-end gap-2">
+				<span className="text-sm text-neutral-600">{t('communication.windowDays')}</span>
+				<Select
+					value={days.toString()}
+					onChange={(v) => setDays(Number(v))}
+					options={[
+						{ label: t('notifications.stats.days7'), value: '7' },
+						{ label: t('notifications.stats.days30'), value: '30' },
+						{ label: t('notifications.stats.days90'), value: '90' },
+					]}
+					style={{ width: 120 }}
+				/>
+			</div>
 			<Row gutter={[16, 16]}>
 				<Col xs={24} sm={12} md={6}>
 					<Card>
@@ -199,9 +222,9 @@ export default function CommunicationPage() {
 							<Skeleton active paragraph={{ rows: 0 }} />
 						) : (
 							<Statistic
-								title={t('communication.totalSent30d')}
+								title={t('communication.totalSentDays').replace('{days}', String(days))}
 								value={dashboard?.totalSent ?? 0}
-								prefix={<SendOutlined className="text-info" />}
+								prefix={<Send size="1em" className="text-info" />}
 							/>
 						)}
 					</Card>
@@ -214,7 +237,7 @@ export default function CommunicationPage() {
 							<Statistic
 								title={t('communication.delivered')}
 								value={dashboard?.delivered ?? 0}
-								prefix={<CheckCircleOutlined className="text-success" />}
+								prefix={<CheckCircle2 size="1em" className="text-success" />}
 							/>
 						)}
 					</Card>
@@ -389,7 +412,7 @@ export default function CommunicationPage() {
 										{t('communication.saveConfig')}
 									</Button>
 									<Button
-										icon={<CheckCircleOutlined />}
+										icon={<CheckCircle2 size="1em" />}
 										onClick={() => handleCheckHealth(c.key)}
 										loading={checkingHealth[c.key]}
 									>

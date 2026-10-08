@@ -8,20 +8,19 @@ import React from 'react';
 // 这里只留四个门户里**真正不同**的那部分。
 import { useNavigate, useLocation } from 'react-router';
 import {
-	DashboardOutlined,
-	TeamOutlined,
-	SafetyOutlined,
-	SettingOutlined,
-	ApartmentOutlined,
-	FileSearchOutlined,
-	CreditCardOutlined,
-	DollarOutlined,
-	TransactionOutlined,
-	AppstoreOutlined,
-	IdcardOutlined,
-	KeyOutlined,
-	ApiOutlined,
-} from '@ant-design/icons';
+	CreditCard,
+	DollarSign,
+	FileSearch,
+	IdCard,
+	LayoutDashboard,
+	LayoutGrid,
+	Network,
+	Plug,
+	Receipt,
+	Settings,
+	ShieldCheck,
+	Users,
+} from 'lucide-react';
 import { Menu, Badge } from 'antd';
 import { useUIStore } from '@/stores/ui-store';
 import { usePermission, useTenantSlug, useCurrentTenantId } from '@autional/shared';
@@ -32,7 +31,6 @@ import { getPendingMembers } from '@/lib/api.generated';
 import { queryKeys } from '@/lib/query-keys';
 import { useFeatureGates } from '@/hooks/use-feature-gates';
 import { buildNavHref, stripTenantPrefix } from '@/lib/nav';
-
 
 interface MenuItem {
 	key: string;
@@ -114,13 +112,13 @@ export function NavMenu() {
 		() => [
 			{
 				key: '/',
-				icon: <DashboardOutlined />,
+				icon: <LayoutDashboard size="1em" />,
 				label: t('nav.dashboard'),
 				permission: 'tenant:dashboard:read',
 			},
 			{
 				key: 'user-permission',
-				icon: <TeamOutlined />,
+				icon: <Users size="1em" />,
 				label: t('nav.section.users'),
 				children: [
 					{ key: '/users', label: t('nav.users'), permission: 'tenant:user:read' },
@@ -141,7 +139,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'profiles-mgmt',
-				icon: <IdcardOutlined />,
+				icon: <IdCard size="1em" />,
 				label: t('nav.profilesSection'),
 				children: [
 					{ key: '/profiles', label: t('nav.profiles'), permission: 'tenant:profile:read' },
@@ -169,7 +167,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'org',
-				icon: <ApartmentOutlined />,
+				icon: <Network size="1em" />,
 				label: t('nav.section.org'),
 				children: [
 					{
@@ -193,7 +191,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'app-integration',
-				icon: <AppstoreOutlined />,
+				icon: <LayoutGrid size="1em" />,
 				label: t('nav.section.apps'),
 				children: [
 					{ key: '/applications', label: t('nav.applications'), permission: 'tenant:app:read' },
@@ -207,7 +205,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'developer',
-				icon: <ApiOutlined />,
+				icon: <Plug size="1em" />,
 				label: t('nav.section.developer'),
 				children: [
 					{ key: '/oauth-clients', label: t('nav.oauthClients'), permission: 'tenant:oauth:read' },
@@ -219,7 +217,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'logs-monitoring',
-				icon: <DashboardOutlined />,
+				icon: <LayoutDashboard size="1em" />,
 				label: t('nav.section.monitoring'),
 				children: [
 					{ key: '/status', label: t('nav.serviceStatus'), permission: 'tenant:monitor:read' },
@@ -230,7 +228,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'nhi',
-				icon: <AppstoreOutlined />,
+				icon: <LayoutGrid size="1em" />,
 				label: t('nav.section.nhi'),
 				permission: 'tenant:nhi:read',
 				featureGateKey: 'nhi',
@@ -263,7 +261,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'security',
-				icon: <SafetyOutlined />,
+				icon: <ShieldCheck size="1em" />,
 				label: t('nav.section.security'),
 				children: [
 					{ key: '/security/mfa', label: t('nav.mfaPolicy'), permission: 'tenant:mfa:read' },
@@ -302,7 +300,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'config',
-				icon: <SettingOutlined />,
+				icon: <Settings size="1em" />,
 				label: t('nav.section.config'),
 				children: [
 					{ key: '/branding', label: t('nav.branding'), permission: 'tenant:branding:read' },
@@ -355,7 +353,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'audit-compliance',
-				icon: <FileSearchOutlined />,
+				icon: <FileSearch size="1em" />,
 				label: t('nav.section.audit'),
 				children: [
 					{ key: '/audit-logs', label: t('nav.auditLogs'), permission: 'tenant:audit:read' },
@@ -402,7 +400,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'ops-finance',
-				icon: <CreditCardOutlined />,
+				icon: <CreditCard size="1em" />,
 				label: t('nav.section.ops'),
 				children: [
 					{ key: '/billing', label: t('nav.billing'), permission: 'tenant:billing:read' },
@@ -421,7 +419,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'wallet-mgmt',
-				icon: <DollarOutlined />,
+				icon: <DollarSign size="1em" />,
 				label: t('nav.walletSection'),
 				children: [
 					{ key: '/wallet/list', label: t('nav.walletList'), permission: 'tenant:wallet:read' },
@@ -452,7 +450,7 @@ export function NavMenu() {
 			},
 			{
 				key: 'billing-mgmt',
-				icon: <TransactionOutlined />,
+				icon: <Receipt size="1em" />,
 				label: t('nav.billingSection'),
 				children: [
 					{
@@ -505,7 +503,7 @@ export function NavMenu() {
 
 			{
 				key: '/settings',
-				icon: <SettingOutlined />,
+				icon: <Settings size="1em" />,
 				label: t('nav.settings'),
 				permission: 'self:profile:read',
 			},

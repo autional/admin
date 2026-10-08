@@ -4,20 +4,19 @@ import React, { useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select, Switch, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	CopyOutlined,
-	EyeOutlined,
-} from '@ant-design/icons';
+	Copy,
+	Pencil,
+	Plus,
+	Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
 import {
 	useCommunicationTemplates,
 	useCreateCommunicationTemplate,
 	useUpdateCommunicationTemplate,
 	useDeleteCommunicationTemplate,
 	useCloneCommunicationTemplate,
-	useCommunicationTemplateStats,
 } from '@/hooks/use-communication';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
@@ -46,14 +45,31 @@ const CHANNEL_COLORS: Record<string, string> = { sms: 'orange', email: 'green', 
 
 export default function CommunicationTemplatesPage() {
 	const { t } = useTranslation();
+	// A-187：页面标题（与面包屑同源；原 tab 恒默认站名）
+	usePageTitle(t('communication.templates.title'));
 	const [modalVisible, setModalVisible] = useState(false);
 	const [cloneModalVisible, setCloneModalVisible] = useState(false);
 	const [editing, setEditing] = useState<TemplateRecord | null>(null);
+	// A-186：服务端分页 + 筛选状态（channel/isActive/keyword；筛选变更一律回第 1 页）
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
+	const [filterChannel, setFilterChannel] = useState<string | undefined>();
+	const [filterIsActive, setFilterIsActive] = useState<boolean | undefined>();
+	const [keyword, setKeyword] = useState('');
 	const [form] = Form.useForm();
 	const [cloneForm] = Form.useForm();
 
-	const { data = [], isLoading, error, refetch } = useCommunicationTemplates();
-	const { data: stats = [] } = useCommunicationTemplateStats();
+	// A-185 [删]：原挂载即发的 template-stats 死取数（stats 变量渲染零引用）已删
+	// （hook useCommunicationTemplateStats + queryKeys.communication.templateStats 同步移除）。
+	const { data, isLoading, error, refetch } = useCommunicationTemplates({
+		page,
+		pageSize,
+		channel: filterChannel,
+		isActive: filterIsActive,
+		keyword: keyword || undefined,
+	});
+	const items = data?.items ?? [];
+	const total = data?.total ?? 0;
 	const createMut = useCreateCommunicationTemplate();
 	const updateMut = useUpdateCommunicationTemplate();
 	const deleteMut = useDeleteCommunicationTemplate();
@@ -100,12 +116,14 @@ export default function CommunicationTemplatesPage() {
 		}
 	};
 
-	const handleDelete = async (id: string) => {
+	// A-187：后端 DELETE 实为停用（is_active=false，可恢复）——UI 文案对齐「停用」而非「删除」
+	// （列表缺省不过滤停用行，停用后仍显示且可编辑重新启用）。
+	const handleDeactivate = async (id: string) => {
 		try {
 			await deleteMut.mutateAsync(id);
-			message.success(t('communication.templates.deleteSuccess'));
+			message.success(t('communication.templates.deactivateSuccess'));
 		} catch (err) {
-			handleApiError(err, t('communication.templates.deleteFailed'));
+			handleApiError(err, t('communication.templates.deactivateFailed'));
 		}
 	};
 
@@ -129,7 +147,15 @@ export default function CommunicationTemplatesPage() {
 			title: t('communication.channel'),
 			dataIndex: 'channel',
 			key: 'channel',
-			render: (v: string) => <Tag color={CHANNEL_COLORS[v] || 'default'}>{v?.toUpperCase()}</Tag>,
+			// A-187：渠道名走 i18n（原 `v?.toUpperCase()` 恒英文 EMAIL/PUSH，与表单本地化标签不一致）
+			render: (v: string) =>
+				v ? (
+					<Tag color={CHANNEL_COLORS[v] || 'default'}>
+						{t(`communication.templates.channel.${v}`, v)}
+					</Tag>
+				) : (
+					'-'
+				),
 		},
 		{
 			title: t('common.status'),
@@ -156,7 +182,7 @@ export default function CommunicationTemplatesPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
@@ -177,7 +203,7 @@ export default function CommunicationTemplatesPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<CopyOutlined />}
+						icon={<Copy size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							cloneForm.resetFields();
@@ -187,11 +213,11 @@ export default function CommunicationTemplatesPage() {
 						{t('communication.templates.cloneLanguage')}
 					</Button>
 					<Popconfirm
-						title={t('communication.templates.confirmDelete')}
-						onConfirm={() => record.id && handleDelete(record.id)}
+						title={t('communication.templates.confirmDeactivate')}
+						onConfirm={() => record.id && handleDeactivate(record.id)}
 					>
-						<Button type="text" danger size="small" icon={<DeleteOutlined />}>
-							{t('common.delete')}
+						<Button type="text" danger size="small" icon={<Trash2 size="1em" />}>
+							{t('communication.templates.deactivate')}
 						</Button>
 					</Popconfirm>
 				</Space>
@@ -207,7 +233,7 @@ export default function CommunicationTemplatesPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -220,6 +246,49 @@ export default function CommunicationTemplatesPage() {
 				}
 			/>
 
+			{/* A-186：服务端筛选三件套（channel/is_active/keyword；变量名 filterChannel 避与 CHANNEL_OPTIONS 语义混淆） */}
+			<div className="mb-4 flex flex-wrap items-center gap-3">
+				<Select
+					allowClear
+					placeholder={t('communication.templates.filterChannel')}
+					style={{ width: 160 }}
+					value={filterChannel}
+					onChange={(v) => {
+						setFilterChannel(v);
+						setPage(1);
+					}}
+					options={CHANNEL_OPTIONS}
+				/>
+				<Select
+					allowClear
+					placeholder={t('communication.templates.filterStatus')}
+					style={{ width: 160 }}
+					value={filterIsActive}
+					onChange={(v) => {
+						setFilterIsActive(v);
+						setPage(1);
+					}}
+					options={[
+						{ value: true, label: t('communication.templates.enabled') },
+						{ value: false, label: t('communication.templates.disabled') },
+					]}
+				/>
+				<Input.Search
+					allowClear
+					placeholder={t('communication.templates.searchPlaceholder')}
+					style={{ width: 240 }}
+					onSearch={(v) => {
+						setKeyword(v.trim());
+						setPage(1);
+					}}
+					onChange={(e) => {
+						if (!e.target.value) {
+							setKeyword('');
+							setPage(1);
+						}
+					}}
+				/>
+			</div>
 			{error && (
 				<PageError
 					message={t('communication.templates.loadError')}
@@ -230,9 +299,18 @@ export default function CommunicationTemplatesPage() {
 			<DataTable
 				rowKey="id"
 				columns={columns}
-				dataSource={data}
+				dataSource={items}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
+				pagination={{
+					current: page,
+					pageSize,
+					total,
+					showSizeChanger: true,
+					onChange: (p, ps) => {
+						setPage(p);
+						setPageSize(ps);
+					},
+				}}
 				scroll={{ x: 800 }}
 			/>
 
@@ -327,9 +405,11 @@ export default function CommunicationTemplatesPage() {
 						name="targetLocale"
 						label={t('communication.templates.targetLanguage')}
 						rules={[{ required: true }]}
+						extra={t('communication.templates.cloneContentHint')}
 					>
 						<Select placeholder={t('communication.templates.selectTargetLanguage')}>
-							<Option value="en-US">English (en-US)</Option>
+							{/* A-187：en-US 走 i18n（原硬编码 "English (en-US)"，其余三语言已有键） */}
+							<Option value="en-US">{t('communication.templates.langEnUS')}</Option>
 							<Option value="zh-CN">{t('communication.templates.langZhCN')}</Option>
 							<Option value="ja-JP">{t('communication.templates.langJaJP')}</Option>
 							<Option value="ko-KR">{t('communication.templates.langKoKR')}</Option>

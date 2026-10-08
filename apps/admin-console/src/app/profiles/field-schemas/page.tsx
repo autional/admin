@@ -6,7 +6,7 @@ import { DataTable } from '@autional/ui/antd';
 import { Button, Modal, Form, Input, Select, Switch, InputNumber, Space, Popconfirm } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { AppPageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
 import { apiClient, API_PATHS } from '@autional/shared';
 import {
@@ -115,14 +115,14 @@ export default function FieldSchemaPage() {
 			key: 'actions',
 			render: (_: any, r: any) => (
 				<Space>
-					<Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)}>
+					<Button size="small" icon={<Pencil size="1em" />} onClick={() => openEdit(r)}>
 						{t('profileFields.action.edit')}
 					</Button>
 					<Popconfirm
 						title={t('profileFields.deleteConfirm')}
 						onConfirm={() => handleDelete(r.fieldKey)}
 					>
-						<Button size="small" danger icon={<DeleteOutlined />}>
+						<Button size="small" danger icon={<Trash2 size="1em" />}>
 							{t('profileFields.action.delete')}
 						</Button>
 					</Popconfirm>
@@ -137,7 +137,7 @@ export default function FieldSchemaPage() {
 			<SectionCard>
 				<Button
 					type="primary"
-					icon={<PlusOutlined />}
+					icon={<Plus size="1em" />}
 					onClick={() => {
 						setEditing(null);
 						form.resetFields();

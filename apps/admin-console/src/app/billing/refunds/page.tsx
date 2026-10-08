@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Tag, Button, Modal, Form, Input, Select, Space, Card, Descriptions } from 'antd';
+import { Tag, Button, Modal, Form, Input, Select, Space, Card, Descriptions, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
-import { EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { Check, Eye, X } from 'lucide-react';
 import {
 	useBillingRefunds,
 	useApproveRefund,
@@ -15,9 +15,20 @@ import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
+
+// A-409③：状态标签/配色单点（表格与详情弹窗共用，杜绝详情裸显英文原文）
+const REFUND_STATUS_COLORS: Record<string, string> = {
+	pending: 'processing',
+	approved: 'warning',
+	rejected: 'error',
+	executed: 'success',
+	completed: 'success',
+};
 
 export default function BillingRefundsPage() {
 	const { t } = useTranslation();
+	usePageTitle(t('refunds2.title'));
 	const [filters, setFilters] = useState<Record<string, unknown>>({});
 	const { data: refunds = [], isLoading, error, refetch } = useBillingRefunds(filters);
 	const approveMut = useApproveRefund();
@@ -26,6 +37,22 @@ export default function BillingRefundsPage() {
 
 	const [detailModal, setDetailModal] = useState(false);
 	const [selected, setSelected] = useState<BillingRefundItem | null>(null);
+
+	// A-407：执行打款需收款用户（wire 必填 user_id）→ 二次确认弹窗（A-408）
+	const [executeTarget, setExecuteTarget] = useState<BillingRefundItem | null>(null);
+	const [executeForm] = Form.useForm();
+
+	const refundStatusLabels: Record<string, string> = {
+		pending: t('refunds2.status.pending'),
+		approved: t('refunds2.status.approved'),
+		rejected: t('refunds2.status.rejected'),
+		executed: t('refunds2.status.executed'),
+		completed: t('refunds2.status.completed'),
+	};
+
+	const renderRefundStatus = (v: string) => (
+		<Tag color={REFUND_STATUS_COLORS[v] ?? 'default'}>{refundStatusLabels[v] ?? v}</Tag>
+	);
 
 	const handleApprove = async (id: string) => {
 		try {
@@ -45,10 +72,17 @@ export default function BillingRefundsPage() {
 		}
 	};
 
-	const handleExecute = async (id: string) => {
+	const handleExecute = async (values: { userId: string }) => {
+		if (!executeTarget) return;
 		try {
-			await executeMut.mutateAsync({ id, data: {} });
+			// A-407：wire 必填 user_id（ExecuteRefundRequest dto.go:619-630）；旧空 body {} 必 400
+			await executeMut.mutateAsync({
+				id: executeTarget.id,
+				data: { userId: values.userId },
+			});
 			message.success(t('refunds2.executed'));
+			setExecuteTarget(null);
+			executeForm.resetFields();
 		} catch (err) {
 			handleApiError(err, t('refunds2.executeFailed'));
 		}
@@ -75,30 +109,15 @@ export default function BillingRefundsPage() {
 			dataIndex: 'amount',
 			key: 'amount',
 			width: 100,
-			render: (v: string) => `$${parseFloat(v).toFixed(2)}`,
+			// A-409④：wire 全 CNY → 币符 ¥（A-292 $ 家族）
+			render: (v: string) => `¥${parseFloat(v).toFixed(2)}`,
 		},
 		{
 			title: t('refunds2.column.status'),
 			dataIndex: 'status',
 			key: 'status',
 			width: 100,
-			render: (v: string) => {
-				const colorMap: Record<string, string> = {
-					pending: 'processing',
-					approved: 'warning',
-					rejected: 'error',
-					executed: 'success',
-					completed: 'success',
-				};
-				const labelMap: Record<string, string> = {
-					pending: t('refunds2.status.pending'),
-					approved: t('refunds2.status.approved'),
-					rejected: t('refunds2.status.rejected'),
-					executed: t('refunds2.status.executed'),
-					completed: t('refunds2.status.completed'),
-				};
-				return <Tag color={colorMap[v] ?? 'default'}>{labelMap[v] ?? v}</Tag>;
-			},
+			render: (v: string) => renderRefundStatus(v),
 		},
 		{ title: t('refunds2.column.reason'), dataIndex: 'reason', key: 'reason', ellipsis: true },
 		{
@@ -106,7 +125,8 @@ export default function BillingRefundsPage() {
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 160,
-			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+			// A-409⑤：时间本地化补 locale
+			render: (v: string) => (v ? new Date(v).toLocaleString('zh-CN') : '-'),
 		},
 		{
 			title: t('refunds2.column.actions'),
@@ -117,7 +137,7 @@ export default function BillingRefundsPage() {
 					<Button
 						type="link"
 						size="small"
-						icon={<EyeOutlined />}
+						icon={<Eye size="1em" />}
 						onClick={() => {
 							setSelected(record);
 							setDetailModal(true);
@@ -127,27 +147,38 @@ export default function BillingRefundsPage() {
 					</Button>
 					{record.status === 'pending' && (
 						<>
-							<Button
-								type="link"
-								size="small"
-								icon={<CheckOutlined />}
-								onClick={() => handleApprove(record.id)}
+							{/* A-408：资金/审批动作二次确认（旧一键直发不可逆） */}
+							<Popconfirm
+								title={t('refunds2.approveConfirm')}
+								onConfirm={() => handleApprove(record.id)}
+								okText={t('refunds2.confirmOk')}
+								cancelText={t('refunds2.confirmCancel')}
 							>
-								{t('refunds2.approve')}
-							</Button>
-							<Button
-								type="link"
-								size="small"
-								danger
-								icon={<CloseOutlined />}
-								onClick={() => handleReject(record.id)}
+								<Button type="link" size="small" icon={<Check size="1em" />}>
+									{t('refunds2.approve')}
+								</Button>
+							</Popconfirm>
+							<Popconfirm
+								title={t('refunds2.rejectConfirm')}
+								onConfirm={() => handleReject(record.id)}
+								okText={t('refunds2.confirmOk')}
+								cancelText={t('refunds2.confirmCancel')}
 							>
-								{t('refunds2.reject')}
-							</Button>
+								<Button type="link" size="small" danger icon={<X size="1em" />}>
+									{t('refunds2.reject')}
+								</Button>
+							</Popconfirm>
 						</>
 					)}
 					{record.status === 'approved' && (
-						<Button type="primary" size="small" onClick={() => handleExecute(record.id)}>
+						<Button
+							type="primary"
+							size="small"
+							onClick={() => {
+								setExecuteTarget(record);
+								executeForm.resetFields();
+							}}
+						>
 							{t('refunds2.executeRefund')}
 						</Button>
 					)}
@@ -174,6 +205,7 @@ export default function BillingRefundsPage() {
 							{ value: 'pending', label: t('refunds2.status.pending') },
 							{ value: 'approved', label: t('refunds2.status.approved') },
 							{ value: 'executed', label: t('refunds2.status.executed') },
+							{ value: 'completed', label: t('refunds2.status.completed') },
 							{ value: 'rejected', label: t('refunds2.status.rejected') },
 						]}
 					/>
@@ -207,12 +239,10 @@ export default function BillingRefundsPage() {
 							{selected.tenantId}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('refunds2.column.amount')}>
-							${parseFloat(selected.amount).toFixed(2)}
+							¥{parseFloat(selected.amount).toFixed(2)}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('refunds2.column.status')}>
-							<Tag color={selected.status === 'executed' ? 'success' : 'processing'}>
-								{selected.status}
-							</Tag>
+							{renderRefundStatus(selected.status)}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('refunds2.column.reason')}>
 							{selected.reason || '-'}
@@ -224,10 +254,33 @@ export default function BillingRefundsPage() {
 							{selected.approvedBy || '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('refunds2.column.createdAt')}>
-							{selected.createdAt ? new Date(selected.createdAt).toLocaleString() : '-'}
+							{selected.createdAt ? new Date(selected.createdAt).toLocaleString('zh-CN') : '-'}
 						</Descriptions.Item>
 					</Descriptions>
 				)}
+			</Modal>
+
+			{/* A-407/A-408：执行打款二次确认弹窗（收款用户必填 → user_id） */}
+			<Modal
+				title={t('refunds2.executeRefund')}
+				open={!!executeTarget}
+				onCancel={() => {
+					setExecuteTarget(null);
+					executeForm.resetFields();
+				}}
+				onOk={() => executeForm.submit()}
+				confirmLoading={executeMut.isPending}
+				className="w-full max-w-[560px]"
+			>
+				<Form form={executeForm} layout="vertical" onFinish={handleExecute}>
+					<Form.Item
+						name="userId"
+						label={t('refunds2.execute.userId')}
+						rules={[{ required: true }]}
+					>
+						<Input placeholder={t('refunds2.execute.userIdPlaceholder')} />
+					</Form.Item>
+				</Form>
 			</Modal>
 		</div>
 	);

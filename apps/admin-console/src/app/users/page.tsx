@@ -5,15 +5,15 @@ import { useNavigate } from 'react-router';
 import { Tag, Button, Input, Space, Popconfirm, Empty, Skeleton, Modal, Form, Checkbox } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	SearchOutlined,
-	PlusOutlined,
-	DeleteOutlined,
-	EditOutlined,
-	CheckOutlined,
-	WarningOutlined,
-	CloseOutlined,
-	LockOutlined,
-} from '@ant-design/icons';
+	AlertTriangle,
+	Check,
+	Lock,
+	Pencil,
+	Plus,
+	Search,
+	Trash2,
+	X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTenantSlug } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
@@ -157,25 +157,25 @@ export default function UsersPage() {
 				switch (status) {
 					case 'normal':
 						return (
-							<Tag icon={<CheckOutlined />} color="success">
+							<Tag icon={<Check size="1em" />} color="success">
 								{t('usersTable.passwordNormal')}
 							</Tag>
 						);
 					case 'expiring':
 						return (
-							<Tag icon={<WarningOutlined />} color="warning">
+							<Tag icon={<AlertTriangle size="1em" />} color="warning">
 								{t('usersTable.passwordExpiring')}
 							</Tag>
 						);
 					case 'expired':
 						return (
-							<Tag icon={<CloseOutlined />} color="error">
+							<Tag icon={<X size="1em" />} color="error">
 								{t('usersTable.passwordExpired')}
 							</Tag>
 						);
 					case 'must_change':
 						return (
-							<Tag icon={<LockOutlined />} color="processing">
+							<Tag icon={<Lock size="1em" />} color="processing">
 								{t('usersTable.passwordMustChange')}
 							</Tag>
 						);
@@ -196,7 +196,7 @@ export default function UsersPage() {
 					<Button
 						type="link"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditingUser(record);
 							editForm.setFieldsValue({ username: record.username, email: record.email });
@@ -226,7 +226,7 @@ export default function UsersPage() {
 				title={t('nav.users')}
 				actions={
 					<>
-						<Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalOpen(true)}>
+						<Button type="primary" icon={<Plus size="1em" />} onClick={() => setCreateModalOpen(true)}>
 							{t('users.createUser')}
 						</Button>
 					</>
@@ -243,7 +243,7 @@ export default function UsersPage() {
 						<Input.Search
 							placeholder={t('users.searchPlaceholder')}
 							allowClear
-							enterButton={<SearchOutlined />}
+							enterButton={<Search size="1em" />}
 							value={keyword}
 							onChange={(e) => {
 								setKeyword(e.target.value);
@@ -265,7 +265,7 @@ export default function UsersPage() {
 								title={t('users.batchDeleteConfirm', { count: selectedRowKeys.length })}
 								onConfirm={handleBatchDelete}
 							>
-								<Button danger icon={<DeleteOutlined />}>
+								<Button danger icon={<Trash2 size="1em" />}>
 									{t('users.batchDelete', { count: selectedRowKeys.length })}
 								</Button>
 							</Popconfirm>

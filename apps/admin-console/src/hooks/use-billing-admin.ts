@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList, extractItem } from '@autional/shared';
+import { extractList, extractItem, extractListResult } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Generated from '@autional/shared/generated/api';
@@ -99,7 +99,6 @@ export interface BillingAlertItem {
 	thresholdPercent: number;
 	status: string;
 	notificationChannels?: string;
-	appId?: string;
 	tenantId?: string;
 	lastTriggeredAt?: string;
 	createdAt: string;
@@ -150,6 +149,9 @@ export function useBillingSubscriptions(params?: Record<string, unknown>) {
 			);
 			return extractList<SubscriptionItem>(res);
 		},
+		// A-405⑤：403（入口平面门禁）不重试 —— 避免无意义二次请求放大报错噪音。
+		retry: (count, err) =>
+			count < 1 && (err as { response?: { status?: number } })?.response?.status !== 403,
 	});
 }
 
@@ -284,12 +286,13 @@ export function alertChannelsFromCsv(csv?: string): string[] {
 }
 
 // U316：用量告警读写改接 admin 面（user 面在 admin 平面被入口平面门禁拒 403）
+// A-426③：extractListResult 透出 pagination（page/page_size 上行 → 受控分页控件；此前本地分页仅切当前页）
 export function useBillingAlerts(params?: Record<string, unknown>) {
 	return useQuery({
 		queryKey: queryKeys.billingAdmin.alerts(params),
 		queryFn: async () => {
 			const res = await Generated.adminBillingAlerts(params);
-			return extractList<BillingAlertItem>(res);
+			return extractListResult<BillingAlertItem>(res);
 		},
 	});
 }
@@ -333,11 +336,11 @@ export function useDeleteBillingAlert() {
 export interface CreditNoteItem {
 	creditNoteNumber?: string;
 	invoiceNumber?: string;
-	amount?: number;
+	// A-434：小数经 Go decimal 序列化为字符串（实测 `"amount":"12.34"`），此前 number 型与 wire 不符
+	amount?: string;
 	status?: string;
 	reason?: string;
 	issuedAt?: string;
-	appliedAt?: string;
 }
 
 export function useCreditNote(number: string) {
@@ -383,7 +386,8 @@ export function useDeleteCreditNote() {
 
 export interface CreditBalanceItem {
 	tenantId?: string;
-	balance?: number;
+	// A-434：decimal 序列化为字符串（实测 `"balance":"0"`）；number 型致 `.toLocaleString()` 无效
+	balance?: string;
 	currency?: string;
 	updatedAt?: string;
 }
@@ -402,8 +406,9 @@ export function useCreditBalance(tenantId: string) {
 export interface CreditTransactionItem {
 	id?: string;
 	tenantId?: string;
-	amount?: number;
-	balance?: number;
+	// A-434：decimal 序列化为字符串（同 CreditBalanceItem.balance）
+	amount?: string;
+	balance?: string;
 	source?: string;
 	sourceId?: string;
 	remark?: string;

@@ -1,52 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Input, Button, Empty } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Empty } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { message } from '@/lib/antd-app';
 import { AppPageHeader } from '@autional/ui';
 
 export default function TracesPage() {
 	const { t } = useTranslation();
-	const [search, setSearch] = useState('');
 
-	// ADM-007: 后端无 admin 域可用的 traces 端点，不再发起 404 请求，
-	// 显示明确的"功能不可用"降级态
-	const unavailable = true;
-
-	const handleUnavailable = () => {
-		message.info(t('traces.unavailable', 'Tracing endpoint not configured for this portal'));
-	};
-
+	// A-71：假搜索框/刷新按钮已移除（旧实现点击仅弹 toast、零请求 = 假可供性）。
+	// A-70（BFF 补挂 developer/traces 四路由）未落地前不再提供假交互，仅保留明确降级说明。
 	return (
 		<div>
-			<AppPageHeader
-				title={t('traces.title')}
-				actions={
-					<>
-						<div className="flex gap-2">
-							<Input.Search
-								placeholder={t('traces.search')}
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								onSearch={handleUnavailable}
-								style={{ width: 300 }}
-								enterButton={<SearchOutlined />}
-							/>
-							<Button icon={<ReloadOutlined />} onClick={handleUnavailable}>
-								{t('common.refresh')}
-							</Button>
-						</div>
-					</>
-				}
-			/>
+			<AppPageHeader title={t('traces.title')} />
 
-			{unavailable && (
-				<Empty
-					description={t('traces.unavailable', 'Tracing endpoint not configured for this portal')}
-				/>
-			)}
+			<Empty
+				description={t('traces.unavailable', 'Tracing endpoint not configured for this portal')}
+			/>
 		</div>
 	);
 }

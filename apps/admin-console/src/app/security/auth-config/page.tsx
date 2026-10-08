@@ -16,7 +16,7 @@ import {
 	Tag,
 } from 'antd';
 import { message } from '@/lib/antd-app';
-import { SaveOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { BadgeCheck, Save } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getAuthConfig, updateAuthConfig } from '@/lib/api.generated';
 
@@ -77,7 +77,19 @@ export default function AuthConfigPage() {
 	});
 
 	React.useEffect(() => {
-		if (config) form.setFieldsValue(config);
+		if (config) {
+			const cfg = config as Record<string, unknown>;
+			// A-119（并入 A-109 回显键映射）：响应 camel 键 → 表单 name 对齐，消除「已启用项呈未启用」。
+			// requireUpper/requireLower ← DTO json tag require_upper/require_lower（dto/policy.go:37-38）；
+			// passwordTransmission/checkBreachedPasswords 为响应侧键名（password_transmission/check_breached_passwords）。
+			form.setFieldsValue({
+				...cfg,
+				requireUppercase: cfg.requireUpper,
+				requireLowercase: cfg.requireLower,
+				transmissionMethod: cfg.passwordTransmission,
+				breachCheckEnabled: cfg.checkBreachedPasswords,
+			});
+		}
 	}, [config, form]);
 
 	const onFinish = async (values: any) => {
@@ -127,7 +139,7 @@ export default function AuthConfigPage() {
 			{/* Compliance Profile Selector */}
 			<Card size="small" className="mb-4 border-info-soft bg-info-soft">
 				<div className="flex items-center gap-3">
-					<SafetyCertificateOutlined className="text-info text-lg" />
+					<BadgeCheck size="1em" className="text-info text-lg" />
 					<span className="font-medium text-info-text">{t('authConfig.complianceProfile')}:</span>
 					<Select
 						value={selectedProfile}
@@ -182,7 +194,9 @@ export default function AuthConfigPage() {
 								<InputNumber min={4} max={128} className="w-full" />
 							</Form.Item>
 							<Form.Item name="maxLength" label={t('authConfig.maxLength')} className="flex-1">
-								<InputNumber min={8} max={256} className="w-full" />
+								{/* A-115：三层边界同源 —— UI 上限对齐 DTO（UpdateAuthConfigRequest.Validate
+								    max_length ≤128，dto/policy.go:157-159；旧 UI 256 → 129-256 区间保存必 400） */}
+								<InputNumber min={8} max={128} className="w-full" />
 							</Form.Item>
 						</div>
 						<Form.Item label={t('authConfig.characterRequirements')}>
@@ -419,7 +433,7 @@ export default function AuthConfigPage() {
 
 				<Button
 					type="primary"
-					icon={<SaveOutlined />}
+					icon={<Save size="1em" />}
 					htmlType="submit"
 					loading={updateMut.isPending}
 					size="large"

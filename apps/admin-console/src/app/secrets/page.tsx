@@ -4,14 +4,14 @@ import React, { useState, useMemo } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select, Descriptions, Typography, Tooltip, Empty } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	SyncOutlined,
-	StopOutlined,
-	EyeOutlined,
-	KeyOutlined,
-} from '@ant-design/icons';
+	Ban,
+	Eye,
+	KeyRound,
+	Pencil,
+	Plus,
+	RefreshCw,
+	Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
@@ -255,7 +255,7 @@ export default function SecretsPage() {
 			key: 'key',
 			render: (v: string, record: SecretRecord) => (
 				<Button type="link" onClick={() => setDetailKey(record.key!)} className="p-0">
-					<code className="text-xs bg-neutral-200 px-2 py-0.5 rounded">{v}</code>
+					<code className="text-xs bg-neutral-200 px-2 py-0.5 rounded-xs">{v}</code>
 				</Button>
 			),
 		},
@@ -291,12 +291,12 @@ export default function SecretsPage() {
 			width: 300,
 			render: (_: any, record: SecretRecord) => (
 				<Space size="small">
-					<Button type="link" icon={<EyeOutlined />} onClick={() => setDetailKey(record.key!)}>
+					<Button type="link" icon={<Eye size="1em" />} onClick={() => setDetailKey(record.key!)}>
 						{t('common.viewDetail')}
 					</Button>
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue(record);
@@ -307,7 +307,7 @@ export default function SecretsPage() {
 					</Button>
 					<Button
 						type="link"
-						icon={<SyncOutlined />}
+						icon={<RefreshCw size="1em" />}
 						disabled={record.status === 'revoked'}
 						onClick={() => {
 							setRotatingTarget(record);
@@ -320,13 +320,13 @@ export default function SecretsPage() {
 					<Button
 						type="link"
 						danger
-						icon={<StopOutlined />}
+						icon={<Ban size="1em" />}
 						disabled={record.status === 'revoked'}
 						onClick={() => handleRevoke(record)}
 					>
 						{t('secrets.action.revoke')}
 					</Button>
-					<Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+					<Button type="link" danger icon={<Trash2 size="1em" />} onClick={() => handleDelete(record)}>
 						{t('secrets.action.delete')}
 					</Button>
 				</Space>
@@ -348,10 +348,10 @@ export default function SecretsPage() {
 						<Space>
 							{selectedRowKeys.length > 0 && (
 								<>
-									<Button danger icon={<StopOutlined />} onClick={handleBatchRevoke}>
+									<Button danger icon={<Ban size="1em" />} onClick={handleBatchRevoke}>
 										{t('secrets.batchRevokeCount', { count: selectedRowKeys.length })}
 									</Button>
-									<Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+									<Button danger icon={<Trash2 size="1em" />} onClick={handleBatchDelete}>
 										{t('secrets.batchDeleteCount', { count: selectedRowKeys.length })}
 									</Button>
 								</>
@@ -363,11 +363,11 @@ export default function SecretsPage() {
 										: ''
 								}
 							>
-								<Button icon={<KeyOutlined />}>{encryptionKeys?.current ?? '...'}</Button>
+								<Button icon={<KeyRound size="1em" />}>{encryptionKeys?.current ?? '...'}</Button>
 							</Tooltip>
 							<Button
 								type="primary"
-								icon={<PlusOutlined />}
+								icon={<Plus size="1em" />}
 								onClick={() => {
 									setEditing(null);
 									form.resetFields();

@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select } from 'antd';
 import { message } from '@/lib/antd-app';
-import { CloseOutlined } from '@ant-design/icons';
+import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useRoleActivations, useRevokeActivation } from '@/hooks/use-role-activations';
 import type { RoleActivation } from '@/hooks/use-role-activations';
 import { handleApiError } from '@/lib/error-handler';
+import { usePageTitle } from '@autional/shared';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 
@@ -20,17 +21,29 @@ const STATUS_MAP: Record<string, { color: string }> = {
 };
 
 export default function RoleActivationsPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	usePageTitle(t('roleActivations.title')); // A-146：tab 标题（旧实现恒「Autional 管理控制台」）
 	const [statusFilter, setStatusFilter] = useState<string>('all');
 	const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
 	const [form] = Form.useForm();
 
+	// A-144：服务端分页状态（旧实现 hook 无分页参 → 后端默认 page_size=20 截断，21+ 永不可达；
+	// 前端本地 15/页与后端 20 不同源 → 收敛为服务端分页驱动；筛选变更回落第 1 页）。
+	const [page, setPage] = useState(1);
+	const [pageSize] = useState(10);
+
 	const {
-		data = [],
+		data,
 		isLoading,
 		error,
 		refetch,
-	} = useRoleActivations(statusFilter !== 'all' ? statusFilter : undefined);
+	} = useRoleActivations({
+		status: statusFilter !== 'all' ? statusFilter : undefined,
+		page,
+		pageSize,
+	});
+	const rows = data?.items ?? [];
+	const total = data?.total ?? 0;
 	const revokeMut = useRevokeActivation();
 
 	const statusLabels: Record<string, string> = {
@@ -66,7 +79,7 @@ export default function RoleActivationsPage() {
 			key: 'userId',
 			width: 200,
 			render: (v: string) => (
-				<code className="text-xs bg-neutral-200 px-1 rounded">{truncate(v)}</code>
+				<code className="text-xs bg-neutral-200 px-1 rounded-xs">{truncate(v)}</code>
 			),
 		},
 		{
@@ -75,7 +88,7 @@ export default function RoleActivationsPage() {
 			key: 'roleId',
 			width: 200,
 			render: (v: string) => (
-				<code className="text-xs bg-neutral-200 px-1 rounded">{truncate(v)}</code>
+				<code className="text-xs bg-neutral-200 px-1 rounded-xs">{truncate(v)}</code>
 			),
 		},
 		{
@@ -99,14 +112,15 @@ export default function RoleActivationsPage() {
 			dataIndex: 'expireAt',
 			key: 'expireAt',
 			width: 140,
-			render: (v: string) => (v ? new Date(v).toLocaleDateString('zh-CN') : '-'),
+			// A-146：日期随 UI 语言本地化（旧实现硬编码 'zh-CN' → EN 模式日期仍中文格式）
+			render: (v: string) => (v ? new Date(v).toLocaleDateString(i18n.language) : '-'),
 		},
 		{
 			title: t('roleActivations.columnCreatedAt'),
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 140,
-			render: (v: string) => (v ? new Date(v).toLocaleDateString('zh-CN') : '-'),
+			render: (v: string) => (v ? new Date(v).toLocaleDateString(i18n.language) : '-'),
 		},
 		{
 			title: t('common.actions'),
@@ -118,7 +132,7 @@ export default function RoleActivationsPage() {
 						<Button
 							type="link"
 							danger
-							icon={<CloseOutlined />}
+							icon={<X size="1em" />}
 							loading={revokeMut.isPending}
 							onClick={() => confirmRevoke(record.id)}
 						>
@@ -141,7 +155,10 @@ export default function RoleActivationsPage() {
 				<Select
 					placeholder={t('common.status')}
 					value={statusFilter}
-					onChange={setStatusFilter}
+					onChange={(v) => {
+						setStatusFilter(v);
+						setPage(1); // A-144：筛选变更回落第 1 页（防越界空白页）
+					}}
 					options={[
 						{ label: t('common.all'), value: 'all' },
 						{ label: t('roleActivations.statusActive'), value: 'active' },
@@ -155,9 +172,15 @@ export default function RoleActivationsPage() {
 			<DataTable
 				rowKey="id"
 				columns={columns}
-				dataSource={data as RoleActivation[]}
+				dataSource={rows}
 				loading={isLoading}
-				pagination={{ pageSize: 15 }}
+				pagination={{
+					current: page,
+					pageSize,
+					total,
+					showSizeChanger: false,
+					onChange: (p) => setPage(p),
+				}}
 				scroll={{ x: 800 }}
 			/>
 

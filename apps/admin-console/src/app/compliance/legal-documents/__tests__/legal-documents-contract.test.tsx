@@ -9,6 +9,8 @@
 //        （旧缺陷 = doc_type 恒 undefined + 编辑态 disabled + required ⇒ 校验必败、字段被禁）；
 //     ③ PUT body = 4 字段 {title,lang,content,effectiveAt}（AC-008，wire snake 后键集精确，
 //        不含 doc_type/version/status —— 后端 Update 契约不可变）。
+//   W4-01（fix-admin-b3-write-path / F2-01）：content 落 jsonb 列——前端提交前置 JSON 校验
+//     （非法 JSON 本地拦截不发请求，服务端另有 json.Valid 400 兜底）；fixture content 须为合法 JSON。
 //
 // 断言口径 = **最终 wire 请求/响应**：捕获器装在 shared apiClient 的 axios adapter（请求拦截器之后
 // 最末环），跑真实链路 page → apiClient → 拦截器（camel→snake / snake→camel 深转）→ adapter；
@@ -31,6 +33,9 @@ vi.mock('@/lib/antd-app', () => ({
 const LIST_URL = '/compliance/api/v1/admin/compliance/legal-documents';
 const DOC_ID = 'ld_01J8ZQ4T5X6Y7Z8A9B0C1D2E3F';
 
+/** W4-01：content 为 jsonb 载体 —— 合法 JSON 数组串（元素含 title/body，与页面 hint 口径一致）。 */
+const CONTENT_FIXTURE = '[{"title":"第一条","body":"……"}]';
+
 /** wire 形状（snake）：LegalDocument 契约经响应拦截器深 camel 化（doc_type/effective_at = 本 TASK 收敛键）。 */
 const RAW_DOCS = [
 	{
@@ -40,7 +45,7 @@ const RAW_DOCS = [
 		title: '服务条款正文',
 		lang: 'zh-CN',
 		status: 'draft',
-		content: '第一条……',
+		content: CONTENT_FIXTURE,
 		effective_at: '2026-01-15T10:00:00Z',
 	},
 ];
@@ -154,7 +159,11 @@ describe('legal-documents 契约收敛（A-274 / AC-AB1-41）', () => {
 		expect(screen.getByText('服务条款')).toBeTruthy();
 		expect(screen.getByText('简体中文')).toBeTruthy();
 		expect(screen.getByText('草稿')).toBeTruthy();
-		expect(screen.getByText('2026-01-15T10:00:00Z')).toBeTruthy();
+		// A-278②（W1e）：生效时间列已本地化（旧 = 裸显 RFC3339）→ 断言改为本地化渲染值
+		// （期望值同进程动态计算，时区无关；i18n.language=zh-CN 见 test/setup.ts）
+		expect(screen.getByText(new Date('2026-01-15T10:00:00Z').toLocaleString('zh-CN'))).toBeTruthy();
+		// 旧形态（RFC3339 原文）零命中
+		expect(screen.queryByText('2026-01-15T10:00:00Z')).toBeNull();
 		// 旧缺陷残留（伪 key / 空占位）零命中
 		expect(screen.queryByText(/docType\.undefined|effectiveAt\.undefined/)).toBeNull();
 		expect(screen.queryByText('—')).toBeNull();
@@ -200,5 +209,21 @@ describe('legal-documents 契约收敛（A-274 / AC-AB1-41）', () => {
 		// effectiveAt 经 camel 回填（DatePicker 持有 dayjs）→ 提交序列化为 ISO 串（旧缺陷 = null）
 		expect(typeof put.body!.effective_at).toBe('string');
 		expect(String(put.body!.effective_at)).toMatch(/^2026-01-15T/);
+	});
+
+	it('W4-01：编辑态 content 非合法 JSON → 本地校验拦截（不发 PUT）+ 可读提示', async () => {
+		seedSession('admin');
+		render(<LegalDocumentsPage />);
+		expect(await screen.findByText('服务条款正文')).toBeTruthy();
+
+		fireEvent.click(screen.getByText('编辑条款'));
+
+		const contentArea = await screen.findByDisplayValue(CONTENT_FIXTURE);
+		fireEvent.change(contentArea, { target: { value: '第一条……（非 JSON 自由文本）' } });
+		clickModalOk();
+
+		// 校验失败文案可见 + 无任何 PUT 发出（jsonb 载体不会被非法值触达）
+		expect(await screen.findByText(/正文不是合法 JSON/)).toBeTruthy();
+		expect(putCalls()).toHaveLength(0);
 	});
 });

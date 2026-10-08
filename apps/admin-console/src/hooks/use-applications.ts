@@ -6,6 +6,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	getApplications,
+	getAppTypes,
 	createApplication,
 	updateApplication,
 	deleteApplication,
@@ -17,12 +18,18 @@ export interface AppRecord {
 	id: string;
 	code: string;
 	name: string;
-	type: 'oidc' | 'saml' | 'custom';
+	type: string;
 	clientId: string;
 	status: string;
-	redirectUris: string[];
 	description?: string;
 	createdAt?: string;
+}
+
+/** A-43：租户自定义应用类型（GET /tenants/{id}/app-types）。 */
+export interface AppTypeRecord {
+	code: string;
+	name: string;
+	description?: string;
 }
 
 export function useApplications(tenantId: string) {
@@ -32,6 +39,19 @@ export function useApplications(tenantId: string) {
 		queryFn: async () => {
 			const res = await getApplications(tenantId);
 			return extractList<AppRecord>(res);
+		},
+		enabled: !!tenantId,
+	});
+}
+
+/** A-43：应用类型数据源（列表 type 回显名称 + 表单 Select 追加自定义类型）。 */
+export function useAppTypes(tenantId: string) {
+	return useQuery({
+		queryKey: queryKeys.applications.appTypes(tenantId),
+		staleTime: 300000,
+		queryFn: async () => {
+			const res = await getAppTypes(tenantId);
+			return extractList<AppTypeRecord>(res);
 		},
 		enabled: !!tenantId,
 	});

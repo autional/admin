@@ -4,15 +4,15 @@ import React, { useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select, Descriptions, Popconfirm, Empty, Spin, Tabs, Statistic, Card, Row, Col, Typography } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	KeyOutlined,
-	ReloadOutlined,
-	EyeOutlined,
-	StopOutlined,
-	CopyOutlined,
-} from '@ant-design/icons';
+	Ban,
+	Copy,
+	Eye,
+	KeyRound,
+	Pencil,
+	Plus,
+	RefreshCw,
+	Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
 	useOAuthClients,
@@ -37,6 +37,13 @@ import { AppPageHeader } from '@autional/ui';
 
 const { Option } = Select;
 const { Text } = Typography;
+
+/** A-48：OAuth 客户端状态 → Tag 颜色（值域见 service-share micro-share/auth/oauth_client.go:22-24）。 */
+const OAUTH_STATUS_COLORS: Record<string, string> = {
+	active: 'success',
+	suspended: 'warning',
+	inactive: 'default',
+};
 
 export default function OAuthClientsPage() {
 	const { t } = useTranslation();
@@ -130,11 +137,12 @@ export default function OAuthClientsPage() {
 			key: 'clientId',
 			render: (v: string) => (
 				<Space size="small">
-					<code className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded">{v}</code>
+					<code className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded-xs">{v}</code>
 					<Button
 						type="text"
 						size="small"
-						icon={<CopyOutlined />}
+						icon={<Copy size="1em" />}
+						aria-label={t('oauthClients.copyClientId')}
 						onClick={() => {
 							navigator.clipboard.writeText(v);
 							message.success(t('oauthClients.copied'));
@@ -154,7 +162,9 @@ export default function OAuthClientsPage() {
 			dataIndex: 'status',
 			key: 'status',
 			render: (status: string) => (
-				<Tag color={status === 'active' ? 'success' : 'default'}>{status}</Tag>
+				<Tag color={OAUTH_STATUS_COLORS[status] ?? 'default'}>
+					{t(`oauthClients.status.${status}`, { defaultValue: status })}
+				</Tag>
 			),
 		},
 		{
@@ -165,7 +175,7 @@ export default function OAuthClientsPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<KeyOutlined />}
+						icon={<KeyRound size="1em" />}
 						onClick={() => setSecretDrawerClient(record)}
 					>
 						{t('oauthClients.manageSecrets')}
@@ -173,7 +183,7 @@ export default function OAuthClientsPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<EyeOutlined />}
+						icon={<Eye size="1em" />}
 						onClick={() => setDetailClient(record)}
 					>
 						{t('oauthClients.detail')}
@@ -181,7 +191,8 @@ export default function OAuthClientsPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
+						aria-label={t('common.edit')}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
@@ -196,7 +207,13 @@ export default function OAuthClientsPage() {
 						title={t('oauthClients.confirmDelete')}
 						onConfirm={() => handleDelete(record.clientId)}
 					>
-						<Button type="text" size="small" danger icon={<DeleteOutlined />} />
+						<Button
+							type="text"
+							size="small"
+							danger
+							icon={<Trash2 size="1em" />}
+							aria-label={t('common.delete')}
+						/>
 					</Popconfirm>
 				</Space>
 			),
@@ -215,7 +232,7 @@ export default function OAuthClientsPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -304,7 +321,8 @@ export default function OAuthClientsPage() {
 									<Button
 										type="text"
 										size="small"
-										icon={<CopyOutlined />}
+										icon={<Copy size="1em" />}
+										aria-label={t('oauthClients.copyClientId')}
 										onClick={() => {
 											navigator.clipboard.writeText(detailClient.clientId);
 											message.success(t('oauthClients.copied'));
@@ -313,14 +331,16 @@ export default function OAuthClientsPage() {
 								</Space>
 							</Descriptions.Item>
 							<Descriptions.Item label={t('common.status')}>
-								<Tag color={detailClient.status === 'active' ? 'success' : 'default'}>
-									{detailClient.status}
+								<Tag color={OAUTH_STATUS_COLORS[detailClient.status] ?? 'default'}>
+									{t(`oauthClients.status.${detailClient.status}`, {
+										defaultValue: detailClient.status,
+									})}
 								</Tag>
 							</Descriptions.Item>
 							<Descriptions.Item label={t('oauthClients.column.grantTypes')}>
 								{(detailClient.grantTypes || []).join(', ')}
 							</Descriptions.Item>
-							<Descriptions.Item label={t('oauthClients.form.redirectUris')}>
+							<Descriptions.Item label={t('oauthClients.detailRedirectUris')}>
 								{(detailClient.redirectUris || []).join(', ') || '-'}
 							</Descriptions.Item>
 						</Descriptions>
@@ -355,10 +375,10 @@ export default function OAuthClientsPage() {
 				size="sm"
 				extra={
 					<Space>
-						<Button icon={<ReloadOutlined />} onClick={handleRotateSecret}>
+						<Button icon={<RefreshCw size="1em" />} onClick={handleRotateSecret}>
 							{t('oauthClients.rotateSecret')}
 						</Button>
-						<Button type="primary" icon={<PlusOutlined />} onClick={handleCreateSecret}>
+						<Button type="primary" icon={<Plus size="1em" />} onClick={handleCreateSecret}>
 							{t('oauthClients.addSecret')}
 						</Button>
 					</Space>
@@ -419,7 +439,12 @@ export default function OAuthClientsPage() {
 														})
 													}
 												>
-													<Button type="text" size="small" icon={<StopOutlined />} />
+													<Button
+														type="text"
+														size="small"
+														icon={<Ban size="1em" />}
+														aria-label={t('oauthClients.deactivateSecret')}
+													/>
 												</Popconfirm>
 												<Popconfirm
 													title={t('oauthClients.confirmDeleteSecret')}
@@ -430,7 +455,13 @@ export default function OAuthClientsPage() {
 														})
 													}
 												>
-													<Button type="text" size="small" danger icon={<DeleteOutlined />} />
+													<Button
+														type="text"
+														size="small"
+														danger
+														icon={<Trash2 size="1em" />}
+														aria-label={t('oauthClients.deleteSecret')}
+													/>
 												</Popconfirm>
 											</Space>
 										),

@@ -78,7 +78,7 @@ export default defineConfig({
         // 用户就要把整个 antd 重下一遍。
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router'],
-          'vendor-ui': ['antd', '@ant-design/icons'],
+          'vendor-ui': ['antd', 'lucide-react'],
           'vendor-charts': ['recharts'],
           'vendor-query': ['@tanstack/react-query'],
           'vendor-i18n': ['i18next', 'react-i18next'],

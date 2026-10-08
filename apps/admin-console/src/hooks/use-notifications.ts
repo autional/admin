@@ -1,6 +1,6 @@
 'use client';
 
-import { extractItem, extractList } from '@autional/shared';
+import { extractItem, extractList, fromPageResult, toPageParams } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 import type {
 	NotificationStatsResponse,
@@ -55,13 +55,30 @@ export function useNotificationStats() {
 	});
 }
 
-export function useNotificationTemplates() {
+/** 查询入参（camel 书面；分页键经 toPageParams 单点转 wire snake）。
+ *  wire 锚：adminNotificationsTemplates({include_inactive?, type?, page?, page_size?})。 */
+export interface NotificationTemplatesQuery {
+	includeInactive?: boolean;
+	type?: string;
+	page?: number;
+	pageSize?: number;
+}
+
+// A-156：服务端分页接线（原实现无参调用 → 后端默认 page_size=20 截断，21 条起不可达）。
+// 返回 {items,total}（fromPageResult 归一）；queryKey 用 list 子键（前缀仍命中 all → 失效广播成立）。
+export function useNotificationTemplates(params?: NotificationTemplatesQuery) {
 	return useQuery({
-		queryKey: queryKeys.notifications.all,
+		queryKey: queryKeys.notifications.list(params),
 		staleTime: 60000,
 		queryFn: async () => {
-			const res = await getNotificationTemplates();
-			return extractList<NotificationTemplateRecord>(res);
+			const res = await getNotificationTemplates({
+				...toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+				...(params?.includeInactive !== undefined
+					? { include_inactive: params.includeInactive }
+					: {}),
+				...(params?.type ? { type: params.type } : {}),
+			});
+			return fromPageResult<NotificationTemplateRecord>(res);
 		},
 	});
 }
@@ -83,7 +100,11 @@ export function useCreateNotificationTemplate() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: createNotificationTemplate,
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+			// A-155：本租户创建改变 /available 的 source/isCustomized 视图，同刷新。
+			queryClient.invalidateQueries({ queryKey: queryKeys.notifications.availableTemplates });
+		},
 	});
 }
 

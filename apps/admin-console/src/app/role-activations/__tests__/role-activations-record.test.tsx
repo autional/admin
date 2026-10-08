@@ -89,7 +89,11 @@ function renderPage() {
 describe('角色激活页「激活记录」语义（A-141f / AC-B2-028）', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockedUseRoleActivations.mockReturnValue(queryResult({ data: ROWS }) as any);
+		// W1c-23（A-144 连带面）：hook 返回形状收口为服务端分页 {items,total}（旧裸数组）；
+		// 本用例五条断言语义零改动，仅 mock 形状适配。
+		mockedUseRoleActivations.mockReturnValue(
+			queryResult({ data: { items: ROWS, total: ROWS.length } }) as any,
+		);
 		mockedUseRevokeActivation.mockReturnValue(mutationResult() as any);
 	});
 

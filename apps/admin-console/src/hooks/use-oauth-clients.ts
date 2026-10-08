@@ -96,7 +96,14 @@ export function useRotateOAuthClientSecret() {
 export function useOAuthClientSecrets(clientId: string) {
 	return useQuery({
 		queryKey: queryKeys.oauthClients.secrets(clientId),
-		queryFn: () => getOAuthClientSecrets(clientId),
+		// RC-B4-02（A-44）：wire 形状是命名包裹键 `{ secrets: [...] }`（oauth admin 面），
+		// extractList 只认 items/data 会误判（对象直落 DataTable → 崩溃）。此处显式映射 —— 禁用 extractList。
+		queryFn: async (): Promise<OAuthClientSecretRecord[]> => {
+			const res = (await getOAuthClientSecrets(clientId)) as
+				| { secrets?: OAuthClientSecretRecord[] }
+				| undefined;
+			return res?.secrets ?? [];
+		},
 		enabled: !!clientId,
 	});
 }

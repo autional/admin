@@ -183,11 +183,14 @@ export const FinanceRoutes = (
 			}
 		/>
 
+		{/* A-400③：billing/* 九子路由补本地 ErrorBoundary（与旧 /billing L51-60 同构，崩溃不再全站白屏） */}
 		<Route
 			path="billing/plans"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingPlansPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingPlansPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -195,7 +198,9 @@ export const FinanceRoutes = (
 			path="billing/subscriptions"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingSubscriptionsPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingSubscriptionsPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -203,7 +208,9 @@ export const FinanceRoutes = (
 			path="billing/refunds"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingRefundsPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingRefundsPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -211,7 +218,9 @@ export const FinanceRoutes = (
 			path="billing/revenue"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingRevenuePage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingRevenuePage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -219,7 +228,9 @@ export const FinanceRoutes = (
 			path="billing/dunning"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingDunningPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingDunningPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -227,7 +238,9 @@ export const FinanceRoutes = (
 			path="billing/tax-export"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingTaxExportPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingTaxExportPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -235,7 +248,9 @@ export const FinanceRoutes = (
 			path="billing/alerts"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingAlertsPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingAlertsPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -243,7 +258,9 @@ export const FinanceRoutes = (
 			path="billing/credit-notes"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingCreditNotesPage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingCreditNotesPage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>
@@ -251,7 +268,9 @@ export const FinanceRoutes = (
 			path="billing/credit-balance"
 			element={
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<BillingCreditBalancePage />
+					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
+						<BillingCreditBalancePage />
+					</ErrorBoundary>
 				</RequireAuth>
 			}
 		/>

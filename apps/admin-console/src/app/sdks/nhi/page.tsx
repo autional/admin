@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, Button, Typography, List, Tag, Space } from 'antd';
-import { DownloadOutlined, SafetyOutlined } from '@ant-design/icons';
+import { Download, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppPageHeader } from '@autional/ui';
 
@@ -15,7 +15,7 @@ export default function NhiSdkPage() {
 		<div>
 			<div className="mb-6">
 				<div className="flex items-center gap-2">
-					<SafetyOutlined style={{ fontSize: 24, color: 'var(--color-success)' }} />
+					<ShieldCheck size={24} style={{ color: 'var(--color-success)' }} />
 					<AppPageHeader title={t('sdks.nhiTitle')} />
 				</div>
 				<Paragraph className="mt-2 text-neutral-600">{t('sdks.nhiDescription')}</Paragraph>
@@ -31,7 +31,7 @@ export default function NhiSdkPage() {
 					renderItem={(item) => (
 						<List.Item
 							actions={[
-								<Button type="primary" icon={<DownloadOutlined />} key="download">
+								<Button type="primary" icon={<Download size="1em" />} key="download">
 									{t('sdks.download')}
 								</Button>,
 							]}

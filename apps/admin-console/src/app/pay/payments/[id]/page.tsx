@@ -3,23 +3,22 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Card, Descriptions, Tag, Button, Spin, Tabs } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeft } from 'lucide-react';
 import {
 	usePayPaymentDetail,
 	usePayReceipt,
 	usePayRefunds,
 	type PaymentItem,
 	type Receipt,
-	type RefundRecord,
 } from '@/hooks/use-pay';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader, SectionCard } from '@autional/ui';
-import { useTenantSlug } from '@autional/shared';
+import { useTenantSlug, usePageTitle } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { useTranslation } from 'react-i18next';
 
 export default function PayPaymentDetailPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const tenantSlug = useTenantSlug();
@@ -29,6 +28,31 @@ export default function PayPaymentDetailPage() {
 	const { data: receipt, isLoading: rcptLoading } = usePayReceipt(id ?? '');
 	const { data: refunds = [], isLoading: refundsLoading } = usePayRefunds({ payment_id: id });
 
+	// A-344④：tab 标题（旧实现恒「Autional 管理控制台」）
+	usePageTitle(
+		payment?.paymentId
+			? `${payment.paymentId} - ${t('paymentDetail.title')}`
+			: t('paymentDetail.title'),
+	);
+
+	// A-344①：404 = 支付不存在（非系统错误）；旧实现 error 早退把 notFound 分支遮蔽，
+	// 且未找到时整页替换连返回键/标题一起消失。
+	const notFound = (error as { response?: { status?: number } } | null)?.response?.status === 404;
+
+	const header = (
+		<>
+			<Button
+				type="link"
+				icon={<ArrowLeft size="1em" />}
+				onClick={() => navigate(buildNavHref('/pay/payments', tenantSlug))}
+				className="mb-4 pl-0"
+			>
+				{t('paymentDetail.backToList')}
+			</Button>
+			<AppPageHeader title={t('paymentDetail.title')} />
+		</>
+	);
+
 	if (isLoading) {
 		return (
 			<div className="flex justify-center py-12">
@@ -37,12 +61,18 @@ export default function PayPaymentDetailPage() {
 		);
 	}
 
-	if (error) {
+	if (error && !notFound) {
 		return <PageError message={t('paymentDetail.loadError')} retry={refetch} />;
 	}
 
 	if (!payment) {
-		return <PageError message={t('paymentDetail.notFound')} />;
+		// A-344①：未找到态保留整页骨架（返回键 + 标题），不再整页替换
+		return (
+			<div>
+				{header}
+				<PageError message={t('paymentDetail.notFound')} />
+			</div>
+		);
 	}
 
 	const statusColorMap: Record<string, string> = {
@@ -68,18 +98,16 @@ export default function PayPaymentDetailPage() {
 		CNY: t('paymentDetail.currency.cny'),
 		USD: t('paymentDetail.currency.usd'),
 	};
+	// A-344⑦：targetType 原值裸英文（order…）⇒ 词表本地化，未知值原样兜底（与列表页共用键）
+	const targetTypeLabels: Record<string, string> = {
+		order: t('payPayments.targetType.order'),
+		wallet_recharge: t('payPayments.targetType.walletRecharge'),
+		billing_record: t('payPayments.targetType.billingRecord'),
+	};
 
 	return (
 		<div>
-			<Button
-				type="link"
-				icon={<ArrowLeftOutlined />}
-				onClick={() => navigate(buildNavHref('/pay/payments', tenantSlug))}
-				className="mb-4 pl-0"
-			>
-				{t('paymentDetail.backToList')}
-			</Button>
-			<AppPageHeader title={t('paymentDetail.title')} />
+			{header}
 
 			<Tabs
 				activeKey={activeTab}
@@ -113,7 +141,7 @@ export default function PayPaymentDetailPage() {
 										{channelLabels[payment.channelCode] ?? payment.channelCode}
 									</Descriptions.Item>
 									<Descriptions.Item label={t('paymentDetail.targetType')}>
-										{payment.targetType || '-'}
+										{targetTypeLabels[payment.targetType] ?? (payment.targetType || '-')}
 									</Descriptions.Item>
 									<Descriptions.Item label={t('paymentDetail.targetId')}>
 										{payment.targetId || '-'}
@@ -128,10 +156,10 @@ export default function PayPaymentDetailPage() {
 										{payment.itemDescription || '-'}
 									</Descriptions.Item>
 									<Descriptions.Item label={t('paymentDetail.createdAt')}>
-										{payment.createdAt ? new Date(payment.createdAt).toLocaleString() : '-'}
+										{payment.createdAt ? new Date(payment.createdAt).toLocaleString(i18n.language) : '-'}
 									</Descriptions.Item>
 									<Descriptions.Item label={t('paymentDetail.paidAt')}>
-										{payment.paidAt ? new Date(payment.paidAt).toLocaleString() : '-'}
+										{payment.paidAt ? new Date(payment.paidAt).toLocaleString(i18n.language) : '-'}
 									</Descriptions.Item>
 								</Descriptions>
 							</SectionCard>
@@ -162,7 +190,7 @@ export default function PayPaymentDetailPage() {
 											{receipt.itemDescription || '-'}
 										</Descriptions.Item>
 										<Descriptions.Item label={t('paymentDetail.issuedAt')}>
-											{receipt.createdAt ? new Date(receipt.createdAt).toLocaleString() : '-'}
+											{receipt.createdAt ? new Date(receipt.createdAt).toLocaleString(i18n.language) : '-'}
 										</Descriptions.Item>
 									</Descriptions>
 								) : (
@@ -176,16 +204,16 @@ export default function PayPaymentDetailPage() {
 						label: t('paymentDetail.refunds'),
 						children: (
 							<DataTable
-								rowKey="refundId"
+								rowKey="id"
 								dataSource={refunds}
 								loading={refundsLoading}
 								pagination={{ pageSize: 10 }}
 								scroll={{ x: 800 }}
 								columns={[
 									{
-										title: t('paymentDetail.refundId'),
-										dataIndex: 'refundId',
-										key: 'refundId',
+										title: t('paymentDetail.refundRecordId'),
+										dataIndex: 'id',
+										key: 'id',
 										ellipsis: true,
 									},
 									{
@@ -219,7 +247,7 @@ export default function PayPaymentDetailPage() {
 										title: t('paymentDetail.time'),
 										dataIndex: 'createdAt',
 										key: 'createdAt',
-										render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+										render: (v: string) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
 									},
 								]}
 							/>

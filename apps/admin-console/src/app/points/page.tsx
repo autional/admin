@@ -4,17 +4,17 @@ import React, { useState } from 'react';
 import { Tabs, Card, Tag, Button, Space, Modal, Form, Input, Select, InputNumber, Popconfirm } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	CalculatorOutlined,
-	GiftOutlined,
-	LockOutlined,
-	UnlockOutlined,
-	ClockCircleOutlined,
-	SwapOutlined,
-	SyncOutlined,
-} from '@ant-design/icons';
+	ArrowLeftRight,
+	Calculator,
+	Clock,
+	Gift,
+	Lock,
+	Pencil,
+	Plus,
+	RefreshCw,
+	Trash2,
+	Unlock,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
 	usePointRules,
@@ -51,8 +51,11 @@ interface PointAccount {
 	userId: string;
 	userName?: string;
 	balance: number;
+	// A-327①：wire 键 frozen_balance/status 补型（旧接口缺键 ⇒ 冻结额与账户状态无列可渲）
+	frozenBalance?: number;
 	totalEarned: number;
 	totalSpent: number;
+	status?: string;
 }
 
 interface PointTestResult {
@@ -84,6 +87,12 @@ export default function PointsPage() {
 	const [txModalUserId, setTxModalUserId] = useState<string>('');
 	const [configForm] = Form.useForm();
 
+	// A-327②：账户/交易服务端分页（旧零参上行 ⇒ 服务端默认 20/页 vs 本地 10/页截断潜伏）
+	const [accountsPage, setAccountsPage] = useState(1);
+	const [accountsPageSize, setAccountsPageSize] = useState(10);
+	const [txPage, setTxPage] = useState(1);
+	const [txPageSize, setTxPageSize] = useState(10);
+
 	const [freezeModal, setFreezeModal] = useState(false);
 	const [freezeForm] = Form.useForm();
 	const [actionUserId, setActionUserId] = useState<string>('');
@@ -92,14 +101,27 @@ export default function PointsPage() {
 
 	const [transferModal, setTransferModal] = useState(false);
 	const [transferForm] = Form.useForm();
+	// A-331：页签内转赠表单独立实例（旧复用 modal 的 transferForm ⇒ 两处 resetFields 互相清空、串扰）
+	const [transferTabForm] = Form.useForm();
 	const [transferMode, setTransferMode] = useState<'standalone' | 'account'>('standalone');
 
 	const [exchangeModal, setExchangeModal] = useState(false);
 	const [exchangeForm] = Form.useForm();
 
 	const { data: rules = [], isLoading: rulesLoading, error, refetch } = usePointRules();
-	const { data: accounts = [], isLoading: accountsLoading } = usePointAccounts();
-	const { data: transactions = [], isLoading: txsLoading } = usePointTransactions(txModalUserId);
+	// A-327②：消费服务端分页元数据（items + pagination.total）
+	const { data: accountsResult, isLoading: accountsLoading } = usePointAccounts({
+		page: accountsPage,
+		pageSize: accountsPageSize,
+	});
+	const accounts = accountsResult?.items ?? [];
+	const accountsTotal = accountsResult?.pagination?.total ?? 0;
+	const { data: txResult, isLoading: txsLoading } = usePointTransactions(txModalUserId, {
+		page: txPage,
+		pageSize: txPageSize,
+	});
+	const transactions = txResult?.items ?? [];
+	const txTotal = txResult?.pagination?.total ?? 0;
 	const { data: tenantConfig, isLoading: configLoading } = useTenantConfig();
 	const updateConfigMut = useUpdateTenantConfig();
 	const createMut = useCreatePointRule();
@@ -326,7 +348,7 @@ export default function PointsPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditingRule(record);
 							ruleForm.setFieldsValue(record);
@@ -337,7 +359,7 @@ export default function PointsPage() {
 					</Button>
 					<Button
 						type="link"
-						icon={<CalculatorOutlined />}
+						icon={<Calculator size="1em" />}
 						onClick={() => {
 							testForm.setFieldsValue({ ruleId: record.id });
 							setTestResult(null);
@@ -349,7 +371,7 @@ export default function PointsPage() {
 					<Button
 						type="link"
 						danger
-						icon={<DeleteOutlined />}
+						icon={<Trash2 size="1em" />}
 						onClick={() => handleDeleteRule(record.id)}
 					>
 						{t('points.delete')}
@@ -368,8 +390,25 @@ export default function PointsPage() {
 			render: (_: any, r: PointAccount) => r.userName || '-',
 		},
 		{ title: t('points.balance'), dataIndex: 'balance', key: 'balance' },
+		// A-327①：冻结积分列（wire frozen_balance；FreezePoints 实移动 Balance→FrozenBalance）
+		{ title: t('points.frozenBalance'), dataIndex: 'frozenBalance', key: 'frozenBalance' },
 		{ title: t('points.totalEarned'), dataIndex: 'totalEarned', key: 'totalEarned' },
 		{ title: t('points.totalSpent'), dataIndex: 'totalSpent', key: 'totalSpent' },
+		// A-327①：账户状态列（wire status：active/suspended/closed）
+		{
+			title: t('points.status'),
+			dataIndex: 'status',
+			key: 'status',
+			render: (v: string) => {
+				const statusMap: Record<string, { color: string; label: string }> = {
+					active: { color: 'success', label: t('points.activeStatus') },
+					suspended: { color: 'warning', label: t('points.statusSuspended') },
+					closed: { color: 'default', label: t('points.statusClosed') },
+				};
+				const item = statusMap[v] || { color: 'default', label: v || '-' };
+				return <Tag color={item.color}>{item.label}</Tag>;
+			},
+		},
 		{
 			title: t('points.riskScore'),
 			dataIndex: 'userId',
@@ -390,29 +429,36 @@ export default function PointsPage() {
 						okText={t('points.confirm')}
 						cancelText={t('points.cancel')}
 					>
-						<Button size="small" icon={<LockOutlined />} type="link" danger>
+						<Button size="small" icon={<Lock size="1em" />} type="link" danger>
 							{t('points.freeze')}
+						</Button>
+					</Popconfirm>
+					{/* A-332：解冻/过期补二次确认（旧仅冻结有 Popconfirm；过期比冻结更不可逆） */}
+					<Popconfirm
+						title={t('points.confirmUnfreeze')}
+						description={t('points.unfreezeUserMsg', { user: record.userName || record.userId })}
+						onConfirm={() => openActionModal(record, 'unfreeze')}
+						okText={t('points.confirm')}
+						cancelText={t('points.cancel')}
+					>
+						<Button size="small" icon={<Unlock size="1em" />} type="link">
+							{t('points.unfreeze')}
+						</Button>
+					</Popconfirm>
+					<Popconfirm
+						title={t('points.confirmExpire')}
+						description={t('points.expireUserMsg', { user: record.userName || record.userId })}
+						onConfirm={() => openActionModal(record, 'expire')}
+						okText={t('points.confirm')}
+						cancelText={t('points.cancel')}
+					>
+						<Button size="small" icon={<Clock size="1em" />} type="link">
+							{t('points.expire')}
 						</Button>
 					</Popconfirm>
 					<Button
 						size="small"
-						icon={<UnlockOutlined />}
-						type="link"
-						onClick={() => openActionModal(record, 'unfreeze')}
-					>
-						{t('points.unfreeze')}
-					</Button>
-					<Button
-						size="small"
-						icon={<ClockCircleOutlined />}
-						type="link"
-						onClick={() => openActionModal(record, 'expire')}
-					>
-						{t('points.expire')}
-					</Button>
-					<Button
-						size="small"
-						icon={<SwapOutlined />}
+						icon={<ArrowLeftRight size="1em" />}
 						type="link"
 						onClick={() => openTransferModal(record)}
 					>
@@ -420,7 +466,7 @@ export default function PointsPage() {
 					</Button>
 					<Button
 						size="small"
-						icon={<SyncOutlined />}
+						icon={<RefreshCw size="1em" />}
 						type="link"
 						onClick={() => openExchangeModal(record)}
 					>
@@ -430,6 +476,17 @@ export default function PointsPage() {
 			),
 		},
 	];
+
+	// A-328：金额着色按交易类型判色（wire amount 恒正数存储 ⇒ 旧按符号判色则消费/过期亦绿）
+	const txAmountKind: Record<string, 'debit' | 'credit'> = {
+		spend: 'debit',
+		expire: 'debit',
+		freeze: 'debit',
+		confirm_deduction: 'debit',
+		earn: 'credit',
+		refund: 'credit',
+		unfreeze: 'credit',
+	};
 
 	const txColumns = [
 		{ title: t('points.userId'), dataIndex: 'userId', key: 'userId', ellipsis: true, width: 160 },
@@ -466,9 +523,17 @@ export default function PointsPage() {
 			dataIndex: 'amount',
 			key: 'amount',
 			width: 100,
-			render: (v: number) => (
-				<span className={v > 0 ? 'text-success-text' : 'text-danger-text'}>{v?.toLocaleString()}</span>
-			),
+			render: (v: number, r: { type?: string }) => {
+				// A-328：类型判色（debit=红 / credit=绿 / 方向不明=中性）
+				const kind = txAmountKind[r.type ?? ''];
+				const cls =
+					kind === 'debit'
+						? 'text-danger-text'
+						: kind === 'credit'
+							? 'text-success-text'
+							: 'text-neutral-900';
+				return <span className={cls}>{v?.toLocaleString()}</span>;
+			},
 		},
 		{ title: t('points.source'), dataIndex: 'source', key: 'source', width: 100 },
 		{
@@ -496,7 +561,7 @@ export default function PointsPage() {
 								<div className="flex justify-end mb-4">
 									<Button
 										type="primary"
-										icon={<PlusOutlined />}
+										icon={<Plus size="1em" />}
 										onClick={() => {
 											setEditingRule(null);
 											ruleForm.resetFields();
@@ -532,7 +597,7 @@ export default function PointsPage() {
 								<div className="flex justify-end mb-4">
 									<Button
 										type="primary"
-										icon={<GiftOutlined />}
+										icon={<Gift size="1em" />}
 										onClick={() => {
 											batchForm.resetFields();
 											setBatchModal(true);
@@ -546,7 +611,17 @@ export default function PointsPage() {
 									columns={accountColumns}
 									dataSource={accounts}
 									loading={accountsLoading}
-									pagination={{ pageSize: 10 }}
+									pagination={{
+										// A-327②：服务端分页受控（旧本地 pageSize:10 ⇒ 服务端默认 20/页第 11 行起不可达）
+										current: accountsPage,
+										pageSize: accountsPageSize,
+										total: accountsTotal,
+										showSizeChanger: true,
+										onChange: (p, ps) => {
+											setAccountsPage(p);
+											setAccountsPageSize(ps);
+										},
+									}}
 									scroll={{ x: 800 }}
 								/>
 							</>
@@ -560,7 +635,10 @@ export default function PointsPage() {
 								<div className="mb-4">
 									<Input.Search
 										placeholder={t('points.searchUserTx')}
-										onSearch={(val) => setTxModalUserId(val)}
+										onSearch={(val) => {
+											setTxModalUserId(val);
+											setTxPage(1);
+										}}
 										enterButton
 										className="max-w-[400px]"
 									/>
@@ -571,7 +649,17 @@ export default function PointsPage() {
 										columns={txColumns}
 										dataSource={transactions}
 										loading={txsLoading}
-										pagination={{ pageSize: 10 }}
+										pagination={{
+											// A-327②：同上（交易表）
+											current: txPage,
+											pageSize: txPageSize,
+											total: txTotal,
+											showSizeChanger: true,
+											onChange: (p, ps) => {
+												setTxPage(p);
+												setTxPageSize(ps);
+											},
+										}}
 										size="small"
 										scroll={{ x: 800 }}
 									/>
@@ -725,7 +813,8 @@ export default function PointsPage() {
 						children: (
 							<div className="max-w-lg">
 								<Card title={t('points.transferPoints')}>
-									<Form form={transferForm} layout="vertical" onFinish={handleTransfer}>
+									{/* A-331：页签表单独立实例（旧与行转账 Modal 共用 transferForm ⇒ 双向 resetFields 串扰） */}
+									<Form form={transferTabForm} layout="vertical" onFinish={handleTransfer}>
 										<Form.Item
 											name="fromUserId"
 											label={t('points.transfer.fromUserId')}
@@ -773,7 +862,7 @@ export default function PointsPage() {
 											type="primary"
 											htmlType="submit"
 											loading={transferMut.isPending}
-											icon={<SwapOutlined />}
+											icon={<ArrowLeftRight size="1em" />}
 										>
 											{t('points.transfer.confirm')}
 										</Button>
@@ -1022,7 +1111,16 @@ export default function PointsPage() {
 
 function RiskScoreCell({ userId }: { userId: string }) {
 	const { t } = useTranslation();
-	const { data, isLoading } = usePointRiskScore(userId);
+	// A-329：懒载（旧每行一 useQuery ⇒ 10 行 10 请求 N+1）；点击该行后才发起请求
+	const [requested, setRequested] = useState(false);
+	const { data, isLoading } = usePointRiskScore(requested ? userId : '');
+	if (!requested) {
+		return (
+			<Button type="link" size="small" onClick={() => setRequested(true)}>
+				{t('points.viewRiskScore')}
+			</Button>
+		);
+	}
 	if (isLoading) return <span className="text-neutral-300">...</span>;
 	if (!data) return <span className="text-neutral-600">-</span>;
 	const riskData = data as PointRiskScoreData | undefined;

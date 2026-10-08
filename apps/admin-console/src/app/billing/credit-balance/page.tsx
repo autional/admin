@@ -2,15 +2,23 @@
 
 import React, { useState } from 'react';
 import { Tag, Button, Input, Space, Card, Descriptions, Spin, Select } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Search } from 'lucide-react';
 import { useCreditBalance, useCreditTransactions } from '@/hooks/use-billing-admin';
-import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
+
+// A-434：wire decimal 为字符串（dto.go:1146/:1156 decimal.Decimal → `"balance":"0"`）；
+// 旧 number 型致 `.toLocaleString()` 恒等空转（String.prototype 规范行为）→ Number 转换后本地化。
+function formatDecimal(v?: string): string {
+	if (v === undefined || v === null || v === '') return '-';
+	return Number(v).toLocaleString('zh-CN');
+}
 
 export default function BillingCreditBalancePage() {
 	const { t } = useTranslation();
+	usePageTitle(t('creditBalance.title'));
 	const [tenantId, setTenantId] = useState('');
 	const [lookupId, setLookupId] = useState('');
 	const [sourceFilter, setSourceFilter] = useState<string | undefined>();
@@ -33,18 +41,27 @@ export default function BillingCreditBalancePage() {
 
 	const transactions = txData?.items ?? [];
 	const total = txData?.total ?? 0;
+	const balanceText = formatDecimal(balance?.balance);
 
+	// A-435：403（跨租户/入口门禁）与网络错分流（旧统一"加载失败"）
+	const forbidden = (e: unknown) =>
+		(e as { response?: { status?: number } } | null)?.response?.status === 403;
+
+	// A-436①②：来源枚举补第五值 invoice_payment（domain.go:173 五值），列标题校正为「来源」
+	// （wire `type` credit/debit 零消费，此前标题「类型」实渲染 source）
 	const sourceColorMap: Record<string, string> = {
 		proration: 'blue',
 		refund: 'orange',
 		promo: 'green',
 		manual_adjust: 'purple',
+		invoice_payment: 'cyan',
 	};
 	const sourceLabelMap: Record<string, string> = {
 		proration: t('creditBalance.source.proration'),
 		refund: t('creditBalance.source.refund'),
 		promo: t('creditBalance.source.promo'),
 		manual_adjust: t('creditBalance.source.manualAdjust'),
+		invoice_payment: t('creditBalance.source.invoicePayment'),
 	};
 
 	const txColumns = [
@@ -53,10 +70,10 @@ export default function BillingCreditBalancePage() {
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 170,
-			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+			render: (v: string) => (v ? new Date(v).toLocaleString('zh-CN') : '-'),
 		},
 		{
-			title: t('creditBalance.column.type'),
+			title: t('creditBalance.column.source'),
 			dataIndex: 'source',
 			key: 'source',
 			width: 100,
@@ -69,19 +86,23 @@ export default function BillingCreditBalancePage() {
 			dataIndex: 'amount',
 			key: 'amount',
 			width: 120,
-			render: (v: number) => (
-				<span className={v > 0 ? 'text-success-text' : 'text-danger-text'}>
-					{v > 0 ? '+' : ''}
-					{v?.toLocaleString() ?? '-'}
-				</span>
-			),
+			render: (v: string) => {
+				if (v === undefined || v === null || v === '') return '-';
+				const num = Number(v);
+				return (
+					<span className={num > 0 ? 'text-success-text' : 'text-danger-text'}>
+						{num > 0 ? '+' : ''}
+						{num.toLocaleString('zh-CN')}
+					</span>
+				);
+			},
 		},
 		{
 			title: t('creditBalance.column.balance'),
 			dataIndex: 'balance',
 			key: 'balance',
 			width: 120,
-			render: (v: number) => v?.toLocaleString() ?? '-',
+			render: (v: string) => formatDecimal(v),
 		},
 		{ title: t('creditBalance.column.remark'), dataIndex: 'remark', key: 'remark', ellipsis: true },
 		{
@@ -115,7 +136,7 @@ export default function BillingCreditBalancePage() {
 						/>
 					</div>
 					<Button
-						icon={<SearchOutlined />}
+						icon={<Search size="1em" />}
 						onClick={() => {
 							setLookupId(tenantId);
 							setPage(1);
@@ -130,15 +151,18 @@ export default function BillingCreditBalancePage() {
 				<div className="text-neutral-600 py-8 text-center">{t('creditBalance.enterTenantIdHint')}</div>
 			) : (
 				<>
-					{balanceError && (
+					{/* A-435：错误态短路（不与 notFound 并置）；403 与网络错分流 */}
+					{balanceError ? (
 						<PageError
-							message={t('creditBalance.balanceLoadError')}
+							message={
+								forbidden(balanceError)
+									? t('creditBalance.forbidden')
+									: t('creditBalance.balanceLoadError')
+							}
 							retry={balanceRefetch}
 							className="mb-4"
 						/>
-					)}
-
-					{balanceLoading ? (
+					) : balanceLoading ? (
 						<div className="flex justify-center py-8">
 							<Spin />
 						</div>
@@ -148,7 +172,7 @@ export default function BillingCreditBalancePage() {
 								<Descriptions column={1} size="small">
 									<Descriptions.Item label={t('creditBalance.availableBalance')}>
 										<span className="text-lg font-semibold text-success-text">
-											{balance.balance?.toLocaleString() ?? 0} {balance.currency || ''}
+											{balanceText === '-' ? 0 : balanceText} {balance.currency || ''}
 										</span>
 									</Descriptions.Item>
 								</Descriptions>
@@ -159,7 +183,9 @@ export default function BillingCreditBalancePage() {
 										{balance.tenantId || lookupId}
 									</Descriptions.Item>
 									<Descriptions.Item label={t('creditBalance.updatedAt')}>
-										{balance.updatedAt ? new Date(balance.updatedAt).toLocaleString() : '-'}
+										{balance.updatedAt
+											? new Date(balance.updatedAt).toLocaleString('zh-CN')
+											: '-'}
 									</Descriptions.Item>
 								</Descriptions>
 							</Card>
@@ -170,7 +196,11 @@ export default function BillingCreditBalancePage() {
 
 					{txError && (
 						<PageError
-							message={t('creditBalance.txLoadError')}
+							message={
+								forbidden(txError)
+									? t('creditBalance.forbidden')
+									: t('creditBalance.txLoadError')
+							}
 							retry={txRefetch}
 							className="mb-4"
 						/>
@@ -192,6 +222,10 @@ export default function BillingCreditBalancePage() {
 									{ value: 'refund', label: t('creditBalance.source.refund') },
 									{ value: 'promo', label: t('creditBalance.source.promo') },
 									{ value: 'manual_adjust', label: t('creditBalance.source.manualAdjust') },
+									{
+										value: 'invoice_payment',
+										label: t('creditBalance.source.invoicePayment'),
+									},
 								]}
 							/>
 						</Space>

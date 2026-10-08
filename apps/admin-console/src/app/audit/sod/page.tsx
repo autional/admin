@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Select, Button, Spin, Descriptions, Tag } from 'antd';
 import { message } from '@/lib/antd-app';
-import { SaveOutlined, ReloadOutlined, SafetyOutlined } from '@ant-design/icons';
+import { RefreshCw, Save, ShieldCheck } from 'lucide-react';
 import { extractItem, useCurrentTenantId } from '@autional/shared';
 
 import { apiClient, API_PATHS } from '@autional/shared';
@@ -66,20 +66,20 @@ export default function SodConfigPage() {
 
 	if (!tenantId) {
 		return (
-			<div className="p-6">
+			<div>
 				<PageError message={t('common.noTenant')} />
 			</div>
 		);
 	}
 
 	return (
-		<div className="p-6 max-w-2xl">
+		<div className="max-w-2xl">
 			<div className="flex items-center justify-between mb-6">
 				<div className="flex items-center gap-2">
-					<SafetyOutlined className="text-xl" />
+					<ShieldCheck size="1em" className="text-xl" />
 					<AppPageHeader title={t('sod.title')} />
 				</div>
-				<Button icon={<ReloadOutlined />} onClick={fetchConfig} loading={loading}>
+				<Button icon={<RefreshCw size="1em" />} onClick={fetchConfig} loading={loading}>
 					{t('common.refresh')}
 				</Button>
 			</div>
@@ -96,7 +96,7 @@ export default function SodConfigPage() {
 						</Descriptions.Item>
 					</Descriptions>
 
-					<div className="mb-4 p-3 bg-info-soft rounded text-sm text-info-text">
+					<div className="mb-4 p-3 bg-info-soft rounded-xs text-sm text-info-text">
 						<strong>{t('sod.whatIs')}</strong>
 						<ul className="mt-1 ml-4 list-disc space-y-1">
 							<li>
@@ -126,7 +126,7 @@ export default function SodConfigPage() {
 						</Form.Item>
 
 						<Form.Item>
-							<Button type="primary" htmlType="submit" loading={saving} icon={<SaveOutlined />}>
+							<Button type="primary" htmlType="submit" loading={saving} icon={<Save size="1em" />}>
 								{t('common.save')}
 							</Button>
 						</Form.Item>

@@ -57,6 +57,8 @@ export const queryKeys = {
 	featureGates: (tenantId: string) => ['feature-gates', tenantId] as const,
 	applications: {
 		all: (tenantId: string) => ['applications', tenantId] as const,
+		// A-43：租户自定义应用类型（列表 type 回显 + 表单选项）
+		appTypes: (tenantId: string) => ['applications', tenantId, 'app-types'] as const,
 	},
 	webhooks: {
 		all: (tenantId: string) => ['webhooks', tenantId] as const,
@@ -75,11 +77,11 @@ export const queryKeys = {
 	},
 	auditAlerts: {
 		all: (tenantId: string, params?: unknown) => ['audit-alerts', tenantId, { params }] as const,
-		detail: (tenantId: string, id: string) => ['audit-alerts', tenantId, id] as const,
+		// A-205（W1e）：detail 死键已删（useAlertDetail 死链同步删，证据见 w1e-record）
 	},
 	auditAnomalies: {
 		all: (tenantId: string, params?: unknown) => ['audit-anomalies', tenantId, { params }] as const,
-		detail: (tenantId: string, id: string) => ['audit-anomalies', tenantId, id] as const,
+		// A-214（W1e）：detail 死键已删（useAnomalyDetail 死链同步删，证据见 w1e-record）
 		timeline: (tenantId: string, id: string) =>
 			['audit-anomalies', tenantId, id, 'timeline'] as const,
 		related: (tenantId: string, id: string) =>
@@ -97,6 +99,8 @@ export const queryKeys = {
 	},
 	notifications: {
 		all: ['notification-templates'] as const,
+		// A-156：服务端分页入键（page/pageSize 变化 → 独立缓存条目；前缀仍命中 all → 失效广播成立）
+		list: (params?: unknown) => ['notification-templates', { params }] as const,
 		// A-164（TASK-AB1-26）：选择器专用数据源（/available twin），与列表 all 键分槽防缓存互踩
 		availableTemplates: ['notification-templates-available'] as const,
 		stats: ['notification-stats'] as const,
@@ -110,12 +114,13 @@ export const queryKeys = {
 		notificationStats: ['platform-notification-stats'] as const,
 	},
 	communication: {
-		dashboard: ['communication-dashboard'] as const,
+		// A-182：days 入键（时间窗切换 → 独立缓存条目，避免跨窗互踩）
+		dashboard: (days?: number) => ['communication-dashboard', { days }] as const,
 		logs: ['message-logs'] as const,
-		stats: ['channel-stats'] as const,
+		// A-181/A-185（[删]）：stats/templateStats 死键已删（死取数 useChannelStats /
+		// useCommunicationTemplateStats 同步删，证据见 w1d-record）
 		providers: ['communication', 'providers'] as const,
 		templates: (params?: unknown) => ['communication', 'templates', { params }] as const,
-		templateStats: ['communication', 'template-stats'] as const,
 	},
 	announcements: {
 		all: ['announcements'] as const,
@@ -125,8 +130,14 @@ export const queryKeys = {
 	},
 	points: {
 		rules: ['point-rules'] as const,
-		accounts: ['point-accounts'] as const,
-		transactions: (userId: string) => ['point-transactions', userId] as const,
+		// A-327②：账户分页入键（page/page_size 变化 → 独立缓存条目；all 前缀失效广播）
+		accounts: {
+			all: ['point-accounts'] as const,
+			list: (params?: unknown) => ['point-accounts', { params }] as const,
+		},
+		// A-327②：交易分页入键（受控切页 → 独立条目）
+		transactions: (userId: string, params?: unknown) =>
+			['point-transactions', userId, { params }] as const,
 		riskScore: (userId: string) => ['point-risk-score', userId] as const,
 		config: ['point-tenant-config'] as const,
 	},
@@ -136,7 +147,9 @@ export const queryKeys = {
 		summary: (tenantId: string) => ['wallets', 'summary', tenantId] as const,
 		transactions: (tenantId: string, params?: unknown) =>
 			['wallets', 'transactions', tenantId, { params }] as const,
-		disputes: (tenantId: string) => ['wallets', 'disputes', tenantId] as const,
+		// A-374④/A-375①：status 筛选 + 分页入键（切换 → 独立缓存条目；resolve 失效仍按 tenantId 前缀广播）
+		disputes: (tenantId: string, params?: unknown) =>
+			['wallets', 'disputes', tenantId, { params }] as const,
 		coupons: ['wallets', 'coupons'] as const,
 		fraudRules: ['wallets', 'fraud-rules'] as const,
 		reconciliation: (params?: unknown) => ['wallets', 'reconciliation', { params }] as const,
@@ -145,7 +158,11 @@ export const queryKeys = {
 		files: (params?: unknown) => ['files', { params }] as const,
 		quota: ['storage', 'quota'] as const,
 		stats: ['storage', 'stats'] as const,
-		trash: ['storage', 'trash'] as const,
+		// A-301：回收站分页入键（page/page_size 变化 → 独立缓存条目；all 前缀失效广播）
+		trash: {
+			all: ['storage', 'trash'] as const,
+			list: (params?: unknown) => ['storage', 'trash', { params }] as const,
+		},
 	},
 	billing: {
 		all: (tenantId: string) => ['billing', tenantId] as const,
@@ -154,7 +171,11 @@ export const queryKeys = {
 		statistics: (tenantId: string) => ['billing', 'statistics', tenantId] as const,
 		records: (tenantId: string) => ['billing', 'records', tenantId] as const,
 		plans: ['billing', 'plans'] as const,
-		paymentGateways: ['billing', 'payment-gateways'] as const,
+		// A-290：服务端分页入键（page/page_size 变化 → 独立缓存条目；all 前缀失效广播）
+		paymentGateways: {
+			all: ['billing', 'payment-gateways'] as const,
+			list: (params?: unknown) => ['billing', 'payment-gateways', { params }] as const,
+		},
 		refundApprovals: ['billing', 'refund-approvals'] as const,
 		dunningSettings: (tenantId: string) => ['billing', 'dunning-settings', tenantId] as const,
 	},
@@ -229,9 +250,13 @@ export const queryKeys = {
 	},
 	abacPolicies: {
 		all: (tenantId: string) => ['abac-policies', tenantId] as const,
+		// A-136：服务端分页入键（page/pageSize 变化 → 独立缓存条目，前缀仍命中 all → 失效广播成立）
+		list: (tenantId: string, params?: unknown) => ['abac-policies', tenantId, { params }] as const,
 	},
 	roleActivations: {
 		all: ['role-activations'] as const,
+		// A-144：服务端分页入键（status/page/pageSize 变化 → 独立缓存条目，前缀仍命中 all）
+		list: (params?: unknown) => ['role-activations', { params }] as const,
 	},
 	approvalRequests: {
 		all: (tenantId: string) => ['approval-requests', tenantId] as const,

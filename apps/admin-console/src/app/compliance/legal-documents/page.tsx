@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button, DatePicker, Empty, Form, Input, Modal, Select, Space, Tag } from 'antd';
 
-import { PlusOutlined } from '@ant-design/icons';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { message, modal } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
@@ -18,6 +18,7 @@ import {
 	fromPageResult,
 	toPageParams,
 	useCurrentTenantIdOr,
+	usePageTitle,
 } from '@autional/shared';
 import dayjs from 'dayjs';
 
@@ -50,7 +51,9 @@ const PAGE_SIZE = 20;
 const FETCH_LIMIT = 50;
 
 export default function LegalDocumentsPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	// A-278③（W1e）：无 usePageTitle（第 16 例，实测 tab 恒"Autional 管理控制台"）→ 挂载
+	usePageTitle(t('legalDocuments.title'));
 	const tenantId = useCurrentTenantIdOr('default-tenant');
 
 	/** status → Tag 颜色映射（AC-004） */
@@ -205,6 +208,18 @@ export default function LegalDocumentsPage() {
 		}
 	};
 
+	// W4-01（F2-01）：content 在服务端落入 jsonb 列——非法 JSON 会在 DB 层 22P02 → 500。
+	// 本地前置校验（提交前拦截，不发请求）：JSON.parse 失败给可读提示；required/max 由既有规则承担。
+	const validateContentJson = (_: unknown, value?: string) => {
+		if (!value) return Promise.resolve();
+		try {
+			JSON.parse(value);
+			return Promise.resolve();
+		} catch {
+			return Promise.reject(new Error(t('legalDocuments.contentJsonInvalid')));
+		}
+	};
+
 	const handlePublish = async (id: string) => {
 		try {
 			await apiClient.post(API_PATHS.COMPLIANCE.ADMIN_LEGAL_DOCUMENT_PUBLISH(id));
@@ -235,7 +250,7 @@ export default function LegalDocumentsPage() {
 		});
 	};
 
-	/** 归档确认（AC-009：仅 published 行可触发） */
+	/** 归档确认（A-276：draft（作废草稿）与 published 行均可触发） */
 	const confirmArchive = (record: LegalDocumentItem) => {
 		modal.confirm({
 			title: t('legalDocuments.archiveConfirmTitle'),
@@ -288,7 +303,8 @@ export default function LegalDocumentsPage() {
 			dataIndex: 'effectiveAt',
 			key: 'effectiveAt',
 			width: 190,
-			render: (v: string | null) => v || '\u2014',
+			// A-278\u2461\uff08W1e\uff09\uff1a\u751f\u6548\u65f6\u95f4\u5217\u96f6\u683c\u5f0f\u5316\uff08\u88f8\u663e RFC3339\uff09\u2192 \u672c\u5730\u5316\u65f6\u95f4
+			render: (v: string | null) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
 		},
 		{
 			title: t('legalDocuments.column.actions'),
@@ -304,7 +320,9 @@ export default function LegalDocumentsPage() {
 							{t('legalDocuments.publish')}
 						</Button>
 					)}
-					{record.status === 'published' && (
+					{/* A-276（W1e）：弃用草稿无归档路径（旧仅 published 行）→ draft 亦可直接归档，
+					    避免"发布（effective_at 空时置 now）→归档"绕行造成的非预期短时上线风险 */}
+					{(record.status === 'draft' || record.status === 'published') && (
 						<Button type="link" size="small" danger onClick={() => confirmArchive(record)}>
 							{t('legalDocuments.archive')}
 						</Button>
@@ -321,7 +339,7 @@ export default function LegalDocumentsPage() {
 					<h2 className="mb-1">{t('legalDocuments.title')}</h2>
 					<p className="text-sm text-neutral-600">{t('legalDocuments.subtitle')}</p>
 				</div>
-				<Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+				<Button type="primary" icon={<Plus size="1em" />} onClick={openCreateModal}>
 					{t('legalDocuments.create')}
 				</Button>
 			</div>
@@ -406,7 +424,7 @@ export default function LegalDocumentsPage() {
 						<Select
 							options={DOC_TYPE_OPTIONS}
 							disabled={!!editingDoc}
-							placeholder={t('legalDocuments.filter.docType')}
+							placeholder={t('legalDocuments.form.docTypePlaceholder')}
 						/>
 					</Form.Item>
 					<Form.Item
@@ -429,14 +447,15 @@ export default function LegalDocumentsPage() {
 						label={t('legalDocuments.column.lang')}
 						rules={[{ required: true }]}
 					>
-						<Select options={LANG_OPTIONS} placeholder={t('legalDocuments.filter.lang')} />
+						<Select options={LANG_OPTIONS} placeholder={t('legalDocuments.form.langPlaceholder')} />
 					</Form.Item>
 					<Form.Item
 						name="content"
 						label={t('legalDocuments.column.content')}
-						rules={[{ required: true }, { max: 100000 }]}
+						rules={[{ required: true }, { max: 100000 }, { validator: validateContentJson }]}
+						extra={t('legalDocuments.contentJsonHint')}
 					>
-						{/* content 为纯文本 TextArea（防 XSS，禁富文本渲染器） */}
+						{/* content 为纯文本 TextArea（防 XSS，禁富文本渲染器）；W4-01：须为合法 JSON */}
 						<Input.TextArea rows={10} maxLength={100000} showCount />
 					</Form.Item>
 					<Form.Item name="effectiveAt" label={t('legalDocuments.column.effectiveAt')}>

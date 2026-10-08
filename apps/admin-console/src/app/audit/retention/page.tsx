@@ -7,10 +7,10 @@ import {
 	Form,
 	Input,
 	InputNumber,
+	Select,
 	Switch,
 	Spin,
 	Descriptions,
-	Modal,
 	Statistic,
 	Popconfirm,
 	Row as AntRow,
@@ -18,13 +18,7 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { message } from '@/lib/antd-app';
-import {
-	EditOutlined,
-	SaveOutlined,
-	CloseOutlined,
-	CloudUploadOutlined,
-	CloudDownloadOutlined,
-} from '@ant-design/icons';
+import { DownloadCloud, Pencil, Save, X } from 'lucide-react';
 import { useRetentionPolicy, useSaveRetentionPolicy } from '@/hooks/use-retention-policy';
 import type { RetentionPolicy } from '@/hooks/use-retention-policy';
 import type * as Types from '@autional/shared/generated/types';
@@ -37,10 +31,12 @@ import {
 	adminAuditLogs,
 } from '@autional/shared/generated/api';
 import { AppPageHeader } from '@autional/ui';
+import { usePageTitle } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 
 export default function RetentionPolicyPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	usePageTitle(t('auditRetention.title'));
 	const [editing, setEditing] = useState(false);
 	const [form] = Form.useForm();
 
@@ -62,7 +58,7 @@ export default function RetentionPolicyPage() {
 			const res = await adminAuditArchiveStatus();
 			setArchiveStatus(extractItem(res));
 		} catch (err) {
-			handleApiError(err, 'Failed to load archive status');
+			handleApiError(err, t('auditRetention.archiveStatusLoadFailed'));
 		} finally {
 			setArchiveLoading(false);
 		}
@@ -93,10 +89,10 @@ export default function RetentionPolicyPage() {
 				before: archiveBefore ?? dayjs().unix(),
 			});
 			const count = extractItem(res)?.archivedCount || 0;
-			message.success(`Archive completed — ${count} records archived`);
+			message.success(t('auditRetention.archiveSuccess', { count }));
 			fetchArchiveStatus();
 		} catch (err) {
-			handleApiError(err, 'Archive failed');
+			handleApiError(err, t('auditRetention.archiveFailed'));
 		} finally {
 			setArchiveNowLoading(false);
 		}
@@ -115,10 +111,10 @@ export default function RetentionPolicyPage() {
 				bucket: values.bucket,
 			};
 			await saveMut.mutateAsync(payload);
-			message.success('Policy saved');
+			message.success(t('auditRetention.saveSuccess'));
 			setEditing(false);
 		} catch (err) {
-			handleApiError(err, 'Save failed');
+			handleApiError(err, t('auditRetention.saveFailed'));
 		}
 	};
 
@@ -159,7 +155,7 @@ export default function RetentionPolicyPage() {
 				actions={
 					<>
 						{!editing && (
-							<Button icon={<EditOutlined />} onClick={startEdit}>
+							<Button icon={<Pencil size="1em" />} onClick={startEdit}>
 								{t('auditRetention.edit')}
 							</Button>
 						)}
@@ -173,8 +169,19 @@ export default function RetentionPolicyPage() {
 						<Form.Item name="days" label={t('auditRetention.form.retentionDays')} rules={[{ required: true }]}>
 							<InputNumber min={1} max={3650} className="w-full md:w-64" />
 						</Form.Item>
+						{/* W4-03（A-219）：archiveTo 后端 oneof minio/cos/oss/空（dto.go Validate / domain.IsValidArchiveTarget）
+						    —— 自由文本输其它值即 400，改 Select 收敛合法集（allowClear = 空合法）。 */}
 						<Form.Item name="archiveTo" label={t('auditRetention.form.archiveTarget')}>
-							<Input placeholder={t('auditRetention.form.archiveTargetPlaceholder')} className="w-full md:w-64" />
+							<Select
+								allowClear
+								placeholder={t('auditRetention.form.archiveTargetPlaceholder')}
+								className="w-full md:w-64"
+								options={[
+									{ value: 'minio', label: 'MinIO' },
+									{ value: 'cos', label: 'COS' },
+									{ value: 'oss', label: 'OSS' },
+								]}
+							/>
 						</Form.Item>
 						<Form.Item name="bucket" label={t('auditRetention.form.archiveBucket')}>
 							<Input placeholder={t('auditRetention.form.archiveBucketPlaceholder')} className="w-full md:w-64" />
@@ -186,12 +193,12 @@ export default function RetentionPolicyPage() {
 							<Button
 								type="primary"
 								htmlType="submit"
-								icon={<SaveOutlined />}
+								icon={<Save size="1em" />}
 								loading={saveMut.isPending}
 							>
 								{t('common.save')}
 							</Button>
-							<Button icon={<CloseOutlined />} onClick={() => setEditing(false)}>
+							<Button icon={<X size="1em" />} onClick={() => setEditing(false)}>
 								{t('common.cancel')}
 							</Button>
 						</div>
@@ -239,7 +246,7 @@ export default function RetentionPolicyPage() {
 						cancelText={t('common.cancel')}
 						okButtonProps={{ danger: true }}
 					>
-						<Button icon={<CloudDownloadOutlined />} loading={archiveNowLoading}>
+						<Button icon={<DownloadCloud size="1em" />} loading={archiveNowLoading}>
 							{t('auditRetention.archiveNow')}
 						</Button>
 					</Popconfirm>
@@ -268,14 +275,15 @@ export default function RetentionPolicyPage() {
 								value={
 									neverArchived
 										? t('auditRetention.neverArchived')
-										: new Date(lastArchiveNum).toLocaleString()
+										: new Date(lastArchiveNum).toLocaleString(i18n.language)
 								}
 							/>
 						</Col>
 						<Col span={8}>
+							{/* W4-03（A-219）：days 缺失成态——旧 `?? 0` 把缺数据伪装成「0 天」真值。 */}
 							<Statistic
 								title={t('auditRetention.desc.retentionDays')}
-								value={archiveStatus.days ?? 0}
+								value={archiveStatus.days ?? '-'}
 							/>
 						</Col>
 					</AntRow>

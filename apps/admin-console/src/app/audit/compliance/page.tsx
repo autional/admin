@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { DataTable, PageError } from '@autional/ui/antd';
 import { Tabs, Button, Modal, Form, Input, Select, Space, Tag, Typography, InputNumber, Switch } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Plus, RefreshCw } from 'lucide-react';
 import { AppPageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
-import { apiClient, API_PATHS } from '@autional/shared';
+import { apiClient, API_PATHS, usePageTitle } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -126,7 +126,7 @@ function CrudTab({
 			{!readOnly && (
 				<Button
 					type="primary"
-					icon={<PlusOutlined />}
+					icon={<Plus size="1em" />}
 					onClick={() => {
 						form.resetFields();
 						setModalOpen(true);
@@ -136,7 +136,7 @@ function CrudTab({
 					{t('common.create')}
 				</Button>
 			)}
-			<Button icon={<ReloadOutlined />} onClick={fetchData} className="mb-4 ml-2">
+			<Button icon={<RefreshCw size="1em" />} onClick={fetchData} className="mb-4 ml-2">
 				{t('common.refresh')}
 			</Button>
 			{!readOnly && (
@@ -159,6 +159,8 @@ function CrudTab({
 					form.resetFields();
 				}}
 				onOk={() => form.submit()}
+				// A-225（W1e）：Modal 关闭按钮 a11y 名 "Close" 未本地化 → 中文「关闭」
+				closable={{ 'aria-label': t('common.close') }}
 				confirmLoading={saving}
 				width={640}
 				className="w-full max-w-[640px]"
@@ -426,8 +428,9 @@ const cleanupFormFields = (t: TFunction) => (
 const tagRender = (colors: Record<string, string>) => (v: string) => (
 	<Tag color={colors[v] || 'default'}>{v}</Tag>
 );
-const tsRender = (v: string | number) =>
-	v ? new Date(typeof v === 'number' ? v * 1000 : v).toLocaleString() : '-';
+// A-225（W1e）：toLocaleString 无 locale 参数 → 按当前语言本地化（locale 由调用点传入）
+const tsRender = (v: string | number, locale?: string) =>
+	v ? new Date(typeof v === 'number' ? v * 1000 : v).toLocaleString(locale) : '-';
 /** A-224：数组列渲染（roles_a/roles_b 等）→ 逗号连接；空数组/非数组 → '-'。 */
 const listRender = (v: unknown) => (Array.isArray(v) && v.length > 0 ? v.join(', ') : '-');
 
@@ -618,17 +621,25 @@ const TABS: TabConfig[] = [
 ];
 
 export default function CompliancePage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	// A-225（W1e）：tab 恒"Autional 管理控制台" → 挂载页面标题
+	usePageTitle(t('compliance.audit.title'));
 	const tabItems = TABS.map((tab) => {
 		const cols = tab.columns.map((col: any) => ({
 			...col,
 			title: t(col.title),
-			render: col.render
-				? (v: any, r: any) => {
-						const out = col.render(v, r);
-						return typeof out === 'string' && out.startsWith('compliance.audit.') ? t(out) : out;
-				  }
-				: undefined,
+			// A-225（W1e）：时间列按当前语言本地化（tsRender 单一判定点，恒经此分流）
+			render:
+				col.render === tsRender
+					? (v: any) => tsRender(v, i18n.language)
+					: col.render
+						? (v: any, r: any) => {
+								const out = col.render(v, r);
+								return typeof out === 'string' && out.startsWith('compliance.audit.')
+									? t(out)
+									: out;
+						  }
+						: undefined,
 		}));
 		return {
 			key: tab.key,

@@ -1,27 +1,42 @@
 'use client';
-// @generated-api-exempt: 2 key(s) [IDENTITY.ADMIN_DEVICE, IDENTITY.ADMIN_DEVICES] lack generated func
 
 import React, { useState } from 'react';
 import { DataTable } from '@autional/ui/antd';
 import { Button, Space, Modal, Form, Input, Select, Popconfirm, Skeleton } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+	usePageTitle,
+	useTenantSlug,
+	useCurrentTenantId,
+	extractItem,
+	toPageParams,
+	fromPageResult,
+} from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { AppPageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, API_PATHS, extractItem, extractList } from '@autional/shared';
 import type { DeviceInfo } from '@autional/shared/generated/types';
+import {
+	adminIots,
+	adminIotsPost,
+	adminIotsByIotsDelete,
+} from '@autional/shared/generated/api';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
+import { useOwnerDisplay } from '@/hooks/use-owner-display';
+import { DEVICE_STATUS_VARIANT, statusVariantOf } from '@/lib/nhi';
 
+// W1b（A-93）：常量收敛 —— 旧实现直连 api-paths 三同 URL 常量（ADMIN_DEVICES/ADMIN_DEVICE/ADMIN_IOT）
+// 并挂 generated-api 豁免标记；现改 generated api 单点（adminIots*），豁免标记随之移除（本页零豁免）。
 
 // TASK-AB1-27（RC-5 契约收敛）：契约类型直读（generated types，键名 camel）。
 // wire 锚：service-identity device/domain/device.go:86-89（workload_subtype/hardware_id/firmware_ver snake json tag）
 // 经响应拦截器深 camel 化；主键 = identityId（契约无 id）。
-type DeviceRecord = DeviceInfo;
+// W1b（A-89）：owner_principal_id 为 additive 增量键（generated 快照未含）→ 局部增强类型。
+type DeviceRecord = DeviceInfo & { ownerPrincipalId?: string };
 
 const TYPE_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
 	pet: 'info',
@@ -34,32 +49,40 @@ function typeVariant(s: string): 'success' | 'warning' | 'danger' | 'info' | 'ne
 	return TYPE_VARIANT[s] || 'neutral';
 }
 
-const TYPE_LABELS: Record<string, string> = {
-	pet: 'Pet',
-	smart_home: 'Smart Home',
-	office: 'Office',
-	sensor: 'Sensor',
-	iot: 'IoT',
-};
+/** device 状态选项 = 后端 DeviceStatus 实际可写入全量（device/domain/device.go:22-28）。 */
+const DEVICE_STATUS_OPTIONS = ['unpaired', 'active', 'transferring'] as const;
 
 function formatDate(iso: string): string {
 	if (!iso) return '-';
 	return new Date(iso).toLocaleDateString('zh-CN');
 }
 
-async function fetchDevices(): Promise<DeviceRecord[]> {
-	const res = await apiClient.get(API_PATHS.IDENTITY.ADMIN_DEVICES);
-	// 列表归一单点 = extractList（信封 items 分支；键名已由拦截器 camel）
-	return extractList<DeviceRecord>(res.data);
+interface DevicesQuery {
+	page: number;
+	pageSize: number;
+	status?: string;
+}
+
+async function fetchDevices(
+	params: DevicesQuery,
+): Promise<{ items: DeviceRecord[]; total: number }> {
+	// A-90：服务端分页契约（toPageParams 单点转 wire page/page_size + status 透传；
+	// 旧实现无参调用 → 后端默认 page_size=20 截断，21 条起永不可达）。
+	const res = await adminIots({
+		...toPageParams({ page: params.page, pageSize: params.pageSize }),
+		...(params.status ? { status: params.status } : {}),
+	});
+	const paged = fromPageResult<DeviceRecord>(res);
+	return { items: paged.items, total: paged.total };
 }
 
 async function createDevice(values: Record<string, unknown>): Promise<DeviceRecord> {
-	const res = await apiClient.post(API_PATHS.IDENTITY.ADMIN_DEVICES, values);
-	return extractItem(res.data) ?? ({} as DeviceRecord);
+	const res = await adminIotsPost(values);
+	return extractItem(res) ?? ({} as DeviceRecord);
 }
 
 async function deleteDevice(id: string): Promise<void> {
-	await apiClient.delete(API_PATHS.IDENTITY.ADMIN_DEVICE(id));
+	await adminIotsByIotsDelete(id);
 }
 
 export default function DevicesPage() {
@@ -72,16 +95,27 @@ export default function DevicesPage() {
 	const [modalVisible, setModalVisible] = useState(false);
 	const [form] = Form.useForm();
 
+	// A-90：服务端分页 + 状态筛选状态
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
+	const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+	const queryParams: DevicesQuery = { page, pageSize, status: statusFilter };
+
+	// A-89：owner_principal_id → 成员显示名解析（列表/详情共用单点 hook）
+	const { resolve: resolveOwner } = useOwnerDisplay();
+
 	const {
-		data: devices = [],
+		data,
 		isLoading,
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: queryKeys.devices.all(tenantId),
-		queryFn: fetchDevices,
+		queryKey: queryKeys.devices.list(tenantId, queryParams),
+		queryFn: () => fetchDevices(queryParams),
 		staleTime: 300000,
 	});
+	const devices = data?.items ?? [];
+	const total = data?.total ?? 0;
 
 	const createMut = useMutation({
 		mutationFn: createDevice,
@@ -130,15 +164,27 @@ export default function DevicesPage() {
 			key: 'workloadSubtype',
 			render: (v: string) => (
 				<StatusBadge variant={typeVariant(v)}>
-					{t(`devices.type.${v}`, { defaultValue: TYPE_LABELS[v] || v }) || '-'}
+					{t(`devices.type.${v}`, { defaultValue: v || '-' })}
 				</StatusBadge>
 			),
 		},
 		{
+			// A-90：补状态列（unpaired/active/transferring 此前不可见）
+			title: t('common.status'),
+			dataIndex: 'status',
+			key: 'status',
+			render: (v: string) => (
+				<StatusBadge variant={statusVariantOf(DEVICE_STATUS_VARIANT, v)}>
+					{t(`devices.status.${v}`, { defaultValue: v || '-' })}
+				</StatusBadge>
+			),
+		},
+		{
+			// A-89：owner 显示名（owner_principal_id 优先；历史行回退 owner_id；均无 → '-'）
 			title: t('devices.column.owner'),
-			dataIndex: 'ownerId',
-			key: 'ownerId',
-			render: (v: string) => v || '-',
+			key: 'owner',
+			render: (_: unknown, record: DeviceRecord) =>
+				resolveOwner(record.ownerPrincipalId, record.ownerId),
 		},
 		{
 			title: t('devices.column.hardwareId'),
@@ -165,7 +211,7 @@ export default function DevicesPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={(e) => {
 							e.stopPropagation();
 							navigate(buildNavHref(`/devices/${record.identityId ?? ''}`, tenantSlug));
@@ -184,7 +230,7 @@ export default function DevicesPage() {
 						<Button
 							type="link"
 							danger
-							icon={<DeleteOutlined />}
+							icon={<Trash2 size="1em" />}
 							onClick={(e) => e.stopPropagation()}
 						>
 							{t('common.delete')}
@@ -196,21 +242,38 @@ export default function DevicesPage() {
 	];
 
 	return (
-		<div className="p-6">
+		<div>
 			<AppPageHeader
 				title={t('devices.title')}
 				description={t('devices.subtitle')}
 				actions={
-					<Button
-						type="primary"
-						icon={<PlusOutlined />}
-						onClick={() => {
-							form.resetFields();
-							setModalVisible(true);
-						}}
-					>
-						{t('devices.createBtn')}
-					</Button>
+					<Space>
+						{/* A-90：状态筛选（后端 ListDevices status 过滤接线；旧实现无筛选） */}
+						<Select
+							allowClear
+							placeholder={t('devices.filter.status')}
+							value={statusFilter}
+							onChange={(v) => {
+								setStatusFilter(v);
+								setPage(1);
+							}}
+							className="w-40"
+							options={DEVICE_STATUS_OPTIONS.map((s) => ({
+								label: t(`devices.status.${s}`),
+								value: s,
+							}))}
+						/>
+						<Button
+							type="primary"
+							icon={<Plus size="1em" />}
+							onClick={() => {
+								form.resetFields();
+								setModalVisible(true);
+							}}
+						>
+							{t('devices.createBtn')}
+						</Button>
+					</Space>
 				}
 			/>
 
@@ -230,20 +293,9 @@ export default function DevicesPage() {
 				/>
 			)}
 
+			{/* A-93：删空态重复 CTA（页头 CTA 已同屏可复用） */}
 			{!isLoading && !error && devices.length === 0 && (
-				<div className="flex flex-col items-center gap-4">
-					<EmptyState title={t('devices.emptyTitle')} description={t('devices.emptyDesc')} />
-					<Button
-						type="primary"
-						icon={<PlusOutlined />}
-						onClick={() => {
-							form.resetFields();
-							setModalVisible(true);
-						}}
-					>
-						{t('devices.createBtn')}
-					</Button>
-				</div>
+				<EmptyState title={t('devices.emptyTitle')} description={t('devices.emptyDesc')} />
 			)}
 
 			{!isLoading && !error && devices.length > 0 && (
@@ -251,8 +303,17 @@ export default function DevicesPage() {
 					rowKey="identityId"
 					columns={columns}
 					dataSource={devices}
-					pagination={{ pageSize: 10 }}
-					scroll={{ x: 800 }}
+					pagination={{
+						current: page,
+						pageSize,
+						total,
+						showSizeChanger: false,
+						onChange: (p, ps) => {
+							setPage(p);
+							setPageSize(ps);
+						},
+					}}
+					scroll={{ x: 960 }}
 					onRow={(record) => ({
 						onClick: () => navigate(buildNavHref(`/devices/${record.identityId ?? ''}`, tenantSlug)),
 						style: { cursor: 'pointer' },
@@ -280,12 +341,14 @@ export default function DevicesPage() {
 						name="workloadSubtype"
 						label={t('devices.form.subtype')}
 						rules={[{ required: true }]}
-						initialValue="sensor"
+						// A-92：缺省口径对齐后端（CreateDevice 空值缺省 smart_home，device_service.go:73-75；
+						// 旧前端默认 sensor 与后端双缺省漂移）
+						initialValue="smart_home"
 					>
 						<Select
 							options={[
 								{ value: 'pet', label: t('devices.type.pet') },
-								{ value: 'smart_home', label: t('devices.type.smartHome') },
+								{ value: 'smart_home', label: t('devices.type.smart_home') },
 								{ value: 'office', label: t('devices.type.office') },
 								{ value: 'sensor', label: t('devices.type.sensor') },
 							]}

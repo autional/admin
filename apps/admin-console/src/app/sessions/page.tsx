@@ -3,20 +3,41 @@
 import React, { useState } from 'react';
 import { Card, Tag, Button, Popconfirm, Empty } from 'antd';
 import { message } from '@/lib/antd-app';
-import { DeleteOutlined } from '@ant-design/icons';
+import { Trash2 } from 'lucide-react';
 import { useSessions, useActiveSessionCount, useDeleteSession } from '@/hooks/use-sessions';
 import type { SessionRecord } from '@/hooks/use-sessions';
 import { handleApiError } from '@/lib/error-handler';
-import { PageError, DataTable } from '@autional/ui/antd';
+import { DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
+import { classifyQueryState } from '@autional/shared';
 import { useTranslation } from 'react-i18next';
+import { QueryStateFallback } from '@/components/common/QueryStateFallback';
 
 export default function SessionsPage() {
 	const { t } = useTranslation();
 	const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
 	const { data, isLoading, error, refetch } = useSessions();
-	const { data: activeCount } = useActiveSessionCount();
+	// RC-B4-01：activeCount 调用点消费 error/loading —— 403/失败时统计卡成态，不显 0（假 0 根因锁）。
+	const {
+		data: activeCount,
+		isLoading: activeCountLoading,
+		error: activeCountError,
+	} = useActiveSessionCount();
+	const activeCountState = classifyQueryState({
+		isLoading: activeCountLoading,
+		error: activeCountError,
+		data: activeCount,
+	});
+	const activeCountText =
+		activeCountState === 'forbidden'
+			? t('common.forbidden')
+			: activeCountState === 'error'
+				? t('common.loadError')
+				: activeCountState === 'loading'
+					? '…'
+					: String(activeCount ?? 0);
+	const activeCountReady = activeCountState === 'ready' || activeCountState === 'empty';
 	const deleteSessionMutation = useDeleteSession();
 
 	const handleDelete = async (id: string) => {
@@ -130,7 +151,7 @@ export default function SessionsPage() {
 								title={t('sessions.batchRevokeConfirm', { count: selectedRowKeys.length })}
 								onConfirm={handleBatchDelete}
 							>
-								<Button type="primary" danger icon={<DeleteOutlined />}>
+								<Button type="primary" danger icon={<Trash2 size="1em" />}>
 									{t('sessions.batchRevoke', { count: selectedRowKeys.length })}
 								</Button>
 							</Popconfirm>
@@ -139,13 +160,20 @@ export default function SessionsPage() {
 				}
 			/>
 
-			{error && <PageError message={t('sessions.loadError')} retry={refetch} className="mb-4" />}
+			<QueryStateFallback
+				error={error}
+				onRetry={refetch}
+				errorMessage={t('sessions.loadError')}
+				className="mb-4"
+			/>
 			<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 				<Card>
 					<div className="text-neutral-600 text-sm">
-						{t('sessions.activeCount', { count: activeCount || 0 })}
+						{activeCountReady
+							? t('sessions.activeCount', { count: activeCount ?? 0 })
+							: t('sessions.activeCountLabel')}
 					</div>
-					<div className="text-2xl font-bold mt-1">{activeCount || 0}</div>
+					<div className="text-2xl font-bold mt-1">{activeCountText}</div>
 				</Card>
 				<Card>
 					<div className="text-neutral-600 text-sm">{t('sessions.highRisk')}</div>

@@ -35,10 +35,12 @@ export interface AuditLogRecord {
 	metadata?: Record<string, unknown>;
 }
 
-export interface AuditStats {
-	alerts?: number;
-	pending?: number;
-}
+/**
+ * 后端 /audit/stats 直通（snake_case 实键：total_logs/by_module/by_action/…）。
+ * F2（批 5 补修）幻影契约根因锁：原 alerts/pending 两键后端不存在（恒 undefined → 假 0），已删；
+ * dashboard「待处理审计告警」改读告警列表 status=open 的 total（app/page.tsx）。
+ */
+export type AuditStats = Record<string, unknown>;
 
 export type AuditLogDetail = Record<string, unknown>;
 

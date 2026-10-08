@@ -14,18 +14,26 @@ import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiClient, useAuthStore } from '@autional/shared';
 
+// W4-01（A-244）：列表 hook 返回契约改为 PageResult 形状（{items,total}——页面消费 result.items/result.total）；
+// 自评分/策略卡两查询（A-245）随页面改经 useComplianceScore/useCompliancePolicy 出数，此处以字面量注入
+// （vi.mock 工厂变量提升，不可引用外层 const——TDZ）。
 vi.mock('@/hooks/use-compliance', () => ({
 	useDSARs: () => ({
-		data: [
-			{
-				id: 'd1',
-				userId: 'usr-d1',
-				type: 'access',
-				status: 'pending',
-				createdAt: '2026-01-01',
-			},
-		],
+		data: {
+			items: [
+				{
+					id: 'd1',
+					userId: 'usr-d1',
+					type: 'access',
+					status: 'pending',
+					createdAt: '2026-01-01',
+				},
+			],
+			total: 1,
+		},
 		isLoading: false,
+		error: null,
+		refetch: vi.fn(),
 	}),
 	useUpdateDSAR: () => ({ mutateAsync: vi.fn() }),
 	// TASK-AB2-26：新增擦除请求 Tab（列表 + 创建）；DSAR 行「执行删除」改「发起擦除」（A-234）。
@@ -33,40 +41,61 @@ vi.mock('@/hooks/use-compliance', () => ({
 	useCreateErasure: () => ({ mutateAsync: vi.fn() }),
 	useExecuteErasure: () => ({ mutateAsync: vi.fn() }),
 	useRetentionPolicies: () => ({
-		data: [
-			{
-				// TASK-AB2-27：留存 wire 键（dto.go:411-418）——name/actionAfterExpiry 后端不返回。
-				policyId: 'p1',
-				dataType: 'audit_logs',
-				retentionPeriodDays: 365,
-				purpose: '安全审计',
-				legalBasis: '合同义务',
-				status: 'active',
-			},
-		],
+		data: {
+			items: [
+				{
+					// TASK-AB2-27：留存 wire 键（dto.go:411-418）——name/actionAfterExpiry 后端不返回。
+					policyId: 'p1',
+					dataType: 'audit_logs',
+					retentionPeriodDays: 365,
+					purpose: '安全审计',
+					legalBasis: '合同义务',
+					status: 'active',
+				},
+			],
+			total: 1,
+		},
 		isLoading: false,
 		error: null,
 		refetch: vi.fn(),
 	}),
-	useSODRules: () => ({ data: [], isLoading: false }),
-	useISOControls: () => ({ data: [], isLoading: false }),
+	useSODRules: () => ({ data: { items: [], total: 0 }, isLoading: false, error: null, refetch: vi.fn() }),
+	useISOControls: () => ({ data: { items: [], total: 0 }, isLoading: false, error: null, refetch: vi.fn() }),
 	useCreateRetentionPolicy: () => ({ mutateAsync: vi.fn() }),
 	useUpdateRetentionPolicy: () => ({ mutateAsync: vi.fn() }),
 	useConsents: () => ({
-		data: [
-			{
-				// TASK-AB2-28：同意 wire 键（dto.go:188-197 / consent.go:50-53）——scope/ip/version 后端不返回。
-				id: 'c1',
-				userId: 'u1',
-				purpose: 'marketing',
-				granted: true,
-				grantedAt: '2026-01-01T00:00:00Z',
-			},
-		],
+		data: {
+			items: [
+				{
+					// TASK-AB2-28：同意 wire 键（dto.go:188-197 / consent.go:50-53）——scope/ip/version 后端不返回。
+					id: 'c1',
+					userId: 'u1',
+					purpose: 'marketing',
+					granted: true,
+					grantedAt: '2026-01-01T00:00:00Z',
+				},
+			],
+			total: 1,
+		},
 		isLoading: false,
+		error: null,
+		refetch: vi.fn(),
 	}),
 	useCreateConsent: () => ({ mutateAsync: vi.fn() }),
 	useRevokeConsent: () => ({ mutateAsync: vi.fn() }),
+	// A-245（W4-01）：自评分 / 策略框架两卡查询（字面量 87 与 7 项，与下方断言常量同值）。
+	useComplianceScore: () => ({
+		data: { overallScore: 87, grade: 'B' },
+		isLoading: false,
+		error: null,
+		refetch: vi.fn(),
+	}),
+	useCompliancePolicy: () => ({
+		data: { standards: [{ id: 's1' }, { id: 's2' }, { id: 's3' }, { id: 's4' }, { id: 's5' }, { id: 's6' }, { id: 's7' }] },
+		isLoading: false,
+		error: null,
+		refetch: vi.fn(),
+	}),
 }));
 
 import CompliancePage from '../page';

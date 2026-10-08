@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useCurrentTenantId } from '@autional/shared';
-import { Tag, Select, Space, Card, Row, Col, Statistic, Button } from 'antd';
-import { RetweetOutlined } from '@ant-design/icons';
+import React, { useRef, useState } from 'react';
+import { useCurrentTenantId, usePageTitle } from '@autional/shared';
+import { Tag, Select, Space, Card, Row, Col, Statistic, Button, Popconfirm } from 'antd';
+import { Repeat2, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { message } from '@/lib/antd-app';
+import { handleApiError } from '@/lib/error-handler';
 
 import {
 	usePayReconciliation,
 	useRunPayReconciliation,
+	useDeletePayReconciliation,
 	type ReconciliationRecord,
 } from '@/hooks/use-pay';
 import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
@@ -23,7 +26,8 @@ type ReconFilters = {
 };
 
 export default function PayReconciliationPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	usePageTitle(t('payReconciliation.title')); // A-351①：tab 标题（旧实现恒「Autional 管理控制台」，第 22 例）
 	const tenantId = useCurrentTenantId() ?? '';
 	const [filters, setFilters] = useState<ReconFilters>({});
 	const dateRange: DateRangeValue =
@@ -38,11 +42,30 @@ export default function PayReconciliationPage() {
 
 	const { data: records = [], isLoading, error, refetch } = usePayReconciliation(tenantId, params);
 	const { mutate: runReconciliation, isPending: isRunning } = useRunPayReconciliation();
+	const deleteMut = useDeletePayReconciliation();
 
+	// A-349：后端 Reconcile 无幂等（对同一支付重复 INSERT 重复行）⇒ 执行中双击防护；
+	// ref 覆盖 Button loading 生效前的同 tick 窗口（loading 仅挡渲染后点击）。
+	const runningRef = useRef(false);
 	const handleRunReconciliation = () => {
+		if (runningRef.current) return;
+		runningRef.current = true;
 		runReconciliation(params, {
 			onSuccess: () => refetch(),
+			onSettled: () => {
+				runningRef.current = false;
+			},
 		});
+	};
+
+	// A-349：删除 UI（DELETE 端点 router.go:135 早已存在、零 UI 入口）
+	const handleDelete = async (id: string) => {
+		try {
+			await deleteMut.mutateAsync(id);
+			message.success(t('payReconciliation.deleteSuccess'));
+		} catch (err) {
+			handleApiError(err, t('payReconciliation.deleteFailed'));
+		}
 	};
 
 	const stats = {
@@ -51,6 +74,9 @@ export default function PayReconciliationPage() {
 		mismatched: records.filter((r) => r.status === 'mismatched').length,
 		missing: records.filter((r) => r.status === 'missing').length,
 	};
+
+	// A-351④：从未对账 vs 筛选无果同为「暂无数据」——补条件化空态
+	const hasFilters = !!(filters.channel || filters.startDate || filters.endDate);
 
 	const channelLabels: Record<string, string> = {
 		wechat: t('payReconciliation.channel.wechat'),
@@ -132,7 +158,25 @@ export default function PayReconciliationPage() {
 			dataIndex: 'reconciledAt',
 			key: 'reconciledAt',
 			width: 160,
-			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+			// A-351②：toLocaleString 无 locale（旧恒跑宿主默认）
+			render: (v: string) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
+		},
+		{
+			title: t('payReconciliation.actions'),
+			key: 'action',
+			width: 80,
+			render: (_: unknown, record: ReconciliationRecord) => (
+				<Popconfirm
+					title={t('payReconciliation.confirmDelete')}
+					onConfirm={() => handleDelete(record.id)}
+					okText={t('payReconciliation.ok')}
+					cancelText={t('payReconciliation.cancel')}
+				>
+					<Button type="link" danger icon={<Trash2 size="1em" />}>
+						{t('payReconciliation.delete')}
+					</Button>
+				</Popconfirm>
+			),
 		},
 	];
 
@@ -179,6 +223,9 @@ export default function PayReconciliationPage() {
 				</Col>
 			</Row>
 
+			{/* A-349：四卡 = 当前筛选范围内历史累计行数（非「当前状况」）——口径标注防误读 */}
+			<div className="text-neutral-600 text-sm mb-4 -mt-2">{t('payReconciliation.statsCumulativeNote')}</div>
+
 			<Card size="small" className="mb-4">
 				<Space wrap>
 					<Select
@@ -206,7 +253,7 @@ export default function PayReconciliationPage() {
 					/>
 					<Button
 						type="primary"
-						icon={<RetweetOutlined />}
+						icon={<Repeat2 size="1em" />}
 						loading={isRunning}
 						onClick={handleRunReconciliation}
 					>
@@ -222,6 +269,8 @@ export default function PayReconciliationPage() {
 				loading={isLoading}
 				pagination={{ pageSize: 10 }}
 				scroll={{ x: 1100 }}
+				// A-351④：从未对账 vs 筛选无果区分（旧同为「暂无数据」）
+				locale={{ emptyText: hasFilters ? t('payReconciliation.emptyFiltered') : t('payReconciliation.emptyNever') }}
 			/>
 		</div>
 	);

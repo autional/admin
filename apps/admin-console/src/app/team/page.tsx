@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select, Popconfirm, Empty, Spin } from 'antd';
-import { PlusOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
+import { Plus, Trash2 } from 'lucide-react';
 import { message } from '@/lib/antd-app';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -92,7 +92,7 @@ export default function TeamPage() {
 			key: 'action',
 			render: (_: any, record: TeamMember) => (
 				<Popconfirm title={t('team.confirmRemove')} onConfirm={() => removeMut.mutate(record.id)}>
-					<Button type="text" danger size="small" icon={<DeleteOutlined />}>
+					<Button type="text" danger size="small" icon={<Trash2 size="1em" />}>
 						{t('team.remove')}
 					</Button>
 				</Popconfirm>
@@ -110,7 +110,7 @@ export default function TeamPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setModalVisible(true);
 								form.resetFields();

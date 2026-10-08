@@ -133,7 +133,9 @@ describe('logs 页服务端分页契约（A-66）', () => {
 		renderPage(<LogsPage />);
 
 		// ① 首屏渲染：snake 行经拦截器 camel 化后出表
-		expect(await screen.findByText('LOGIN')).toBeTruthy();
+		// W1b（A-69）：action 经 i18n 归一渲染（LOGIN → logs.action.login =「登录」）；
+		// 未收录动作仍回退原值（admin_list_keys）
+		expect(await screen.findByText('登录')).toBeTruthy();
 		expect(screen.getByText('admin_list_keys')).toBeTruthy();
 
 		// ② 请求参数：恰含 page/page_size（旧缺陷不传分页参数 → 后端默认截断）

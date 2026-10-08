@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, Row, Col, Statistic, Spin, Empty, Button } from 'antd';
-import { ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { statusOverview } from '@autional/shared/generated/api';
@@ -44,7 +44,7 @@ export default function StatusPage() {
 				title={t('status.title')}
 				actions={
 					<>
-						<Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+						<Button icon={<RefreshCw size="1em" />} onClick={() => refetch()}>
 							{t('common.refresh')}
 						</Button>
 					</>
@@ -66,9 +66,9 @@ export default function StatusPage() {
 								value={overallText}
 								prefix={
 									data.overallStatus === 'operational' ? (
-										<CheckCircleOutlined style={{ color: 'var(--color-success)' }} />
+										<CheckCircle2 size="1em" style={{ color: 'var(--color-success)' }} />
 									) : (
-										<CloseCircleOutlined style={{ color: 'var(--color-danger)' }} />
+										<XCircle size="1em" style={{ color: 'var(--color-danger)' }} />
 									)
 								}
 							/>

@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { Tag, Input, Select, Space, Button, Card } from 'antd';
-import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
+import { Eye, Search } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional/shared';
+import { useTenantSlug, usePageTitle } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { usePayPayments, type PaymentItem } from '@/hooks/use-pay';
 import { PageError, DataTable, DateRangeFilter } from '@autional/ui/antd';
@@ -21,16 +21,20 @@ type PaymentFilters = {
 };
 
 export default function PayPaymentsPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	usePageTitle(t('payPayments.title')); // A-344④：tab 标题（旧实现恒「Autional 管理控制台」，第 21 例）
 	const navigate = useNavigate();
 	const tenantSlug = useTenantSlug();
 	const [filters, setFilters] = useState<PaymentFilters>({});
 	const dateRange: DateRangeValue =
 		filters.startDate && filters.endDate ? [filters.startDate, filters.endDate] : null;
 	const [searchText, setSearchText] = useState('');
+	// A-341：服务端分页受控（服务端默认 page_size=20 + 旧本地 10/页伪全量 ⇒ >20 条静默丢失）
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
 
 	const params = useMemo(() => {
-		const p: Record<string, unknown> = {};
+		const p: Record<string, unknown> = { page, pageSize };
 		// TASK-AB1-27（RC-5 契约收敛）：查询参数 camel 书面写（拦截器 snake 化上 wire）。
 		// wire 锚：service-pay/internal/handler/dto/dto.go:152（channel_code）/ :159-160（form start_date/end_date）
 		if (filters.status) p.status = filters.status;
@@ -39,14 +43,23 @@ export default function PayPaymentsPage() {
 		if (filters.endDate) p.endDate = filters.endDate;
 		if (searchText) p.search = searchText;
 		return p;
-	}, [filters, searchText]);
+	}, [filters, searchText, page, pageSize]);
 
-	const { data: payments = [], isLoading, error, refetch } = usePayPayments(params);
+	const { data: result, isLoading, error, refetch } = usePayPayments(params);
+	const payments = result?.items ?? [];
+	const total = result?.pagination?.total ?? 0;
 
 	const channelLabels: Record<string, string> = {
 		wechat: t('payPayments.channel.wechat'),
 		alipay: t('payPayments.channel.alipay'),
 		stripe: t('payPayments.channel.stripe'),
+	};
+
+	// A-344⑦：targetType 原值裸英文（order…）⇒ 词表本地化，未知值原样兜底
+	const targetTypeLabels: Record<string, string> = {
+		order: t('payPayments.targetType.order'),
+		wallet_recharge: t('payPayments.targetType.walletRecharge'),
+		billing_record: t('payPayments.targetType.billingRecord'),
 	};
 
 	const columns = [
@@ -104,7 +117,13 @@ export default function PayPaymentsPage() {
 				return <Tag color={colorMap[v] ?? 'default'}>{labelMap[v] ?? v}</Tag>;
 			},
 		},
-		{ title: t('payPayments.targetType'), dataIndex: 'targetType', key: 'targetType', width: 100 },
+		{
+			title: t('payPayments.targetType'),
+			dataIndex: 'targetType',
+			key: 'targetType',
+			width: 100,
+			render: (v: string) => targetTypeLabels[v] ?? v,
+		},
 		{
 			title: t('payPayments.gatewayReference'),
 			dataIndex: 'gatewayReference',
@@ -117,7 +136,7 @@ export default function PayPaymentsPage() {
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 160,
-			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
+			render: (v: string) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
 		},
 		{
 			title: t('payPayments.actions'),
@@ -126,7 +145,7 @@ export default function PayPaymentsPage() {
 			render: (_: unknown, record: PaymentItem) => (
 				<Button
 					type="link"
-					icon={<EyeOutlined />}
+					icon={<Eye size="1em" />}
 					onClick={() => navigate(buildNavHref(`/pay/payments/${record.paymentId}`, tenantSlug))}
 				>
 					{t('payPayments.detail')}
@@ -145,7 +164,7 @@ export default function PayPaymentsPage() {
 				<Space wrap>
 					<Input
 						placeholder={t('payPayments.searchPlaceholder')}
-						prefix={<SearchOutlined />}
+						prefix={<Search size="1em" />}
 						value={searchText}
 						onChange={(e) => setSearchText(e.target.value)}
 						onPressEnter={() => refetch()}
@@ -199,7 +218,15 @@ export default function PayPaymentsPage() {
 				columns={columns}
 				dataSource={payments}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
+				pagination={{
+					current: page,
+					pageSize,
+					total,
+					onChange: (p, ps) => {
+						setPage(p);
+						setPageSize(ps);
+					},
+				}}
 				scroll={{ x: 1200 }}
 			/>
 		</div>

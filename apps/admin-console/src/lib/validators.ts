@@ -52,7 +52,8 @@ export const createDepartmentSchema = z.object({
 export const createApplicationSchema = z.object({
 	name: z.string().min(1, '应用名称不能为空'),
 	code: z.string().min(1, '应用代码不能为空'),
-	type: z.enum(['oidc', 'saml', 'custom'], { message: '无效的应用类型' }),
+	// A-43：类型放宽为任意非空字符串（支持租户自定义应用类型，内置 oidc/saml/custom 仍是合法值）
+	type: z.string().min(1, '无效的应用类型'),
 	description: z.string().optional(),
 });
 

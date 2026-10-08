@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { DataTable } from '@autional/ui/antd';
 import { Button, Modal, Input, Space, message, Tag } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppPageHeader, EmptyState, LoadingScreen, SectionCard } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -118,7 +118,7 @@ export default function ApprovalPage() {
 						<Button
 							size="small"
 							type="primary"
-							icon={<CheckOutlined />}
+							icon={<Check size="1em" />}
 							onClick={() => handleApprove(r.id)}
 							loading={approveMut.isPending}
 						>
@@ -127,7 +127,7 @@ export default function ApprovalPage() {
 						<Button
 							size="small"
 							danger
-							icon={<CloseOutlined />}
+							icon={<X size="1em" />}
 							onClick={() => setRejectModal({ open: true, id: r.id })}
 						>
 							{t('profileApproval.reject')}

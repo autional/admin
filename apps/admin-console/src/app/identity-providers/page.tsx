@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { Tag, Button, Space, Modal, Form, Input, Select, Popconfirm, Upload } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	CheckCircleOutlined,
-	ApiOutlined,
-} from '@ant-design/icons';
+	CheckCircle2,
+	Pencil,
+	Plug,
+	Plus,
+	Trash2,
+} from 'lucide-react';
 import {
 	useIdentityProviders,
 	useCreateIdentityProvider,
@@ -44,6 +44,15 @@ const TYPE_LABELS: Record<string, string> = {
 	ldap: 'LDAP',
 };
 
+/**
+ * A-37：未配置 LDAP 时后端返回 503（ErrCodeLDAPNotConfigured=61001801，
+ * service-identity errors.go:143-144/353-354），区别于其他健康检查失败。
+ */
+function isLdapNotConfigured(err: unknown): boolean {
+	const e = err as { response?: { status?: number; data?: { code?: number } } } | undefined;
+	return e?.response?.status === 503 || e?.response?.data?.code === 61001801;
+}
+
 export default function IdentityProvidersPage() {
 	const { t } = useTranslation();
 	const [modalVisible, setModalVisible] = useState(false);
@@ -64,7 +73,11 @@ export default function IdentityProvidersPage() {
 	const testMut = useTestIdentityProvider();
 
 	// LDAP hooks
-	const { data: ldapHealth = [], isLoading: ldapHealthLoading } = useLdapHealth();
+	const {
+		data: ldapHealth = [],
+		isLoading: ldapHealthLoading,
+		error: ldapHealthError,
+	} = useLdapHealth();
 	const testConnMut = useTestLdapConnection();
 
 	const STATUS_LABELS: Record<string, string> = {
@@ -242,7 +255,7 @@ export default function IdentityProvidersPage() {
 					<Button
 						type="link"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => openModal(record)}
 					>
 						{t('common.edit')}
@@ -250,14 +263,14 @@ export default function IdentityProvidersPage() {
 					<Button
 						type="link"
 						size="small"
-						icon={<CheckCircleOutlined />}
+						icon={<CheckCircle2 size="1em" />}
 						loading={testingId === record.id}
 						onClick={() => handleTest(record.id)}
 					>
 						{t('idp.testConnection')}
 					</Button>
 					<Popconfirm title={t('idp.confirmDelete')} onConfirm={() => handleDelete(record.id)}>
-						<Button type="link" size="small" danger icon={<DeleteOutlined />}>
+						<Button type="link" size="small" danger icon={<Trash2 size="1em" />}>
 							{t('common.delete')}
 						</Button>
 					</Popconfirm>
@@ -274,14 +287,15 @@ export default function IdentityProvidersPage() {
 				title={t('idp.title')}
 				actions={
 					<>
-						<Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+						<Button type="primary" icon={<Plus size="1em" />} onClick={() => openModal()}>
 							{t('idp.createBtn')}
 						</Button>
 					</>
 				}
 			/>
 
-			{/* LDAP Health Status Section */}
+			{/* LDAP Health Status Section（A-37 三态：加载中不渲染 / 有健康数据渲染列表 /
+			    未配置（503/61001801）渲染中性块 / 其他错误渲染失败块） */}
 			{!ldapHealthLoading && ldapHealth.length > 0 && (
 				<div className="mb-4">
 					<div className="text-sm font-medium text-neutral-700 mb-2">
@@ -305,6 +319,18 @@ export default function IdentityProvidersPage() {
 							/>
 						))}
 					</Space>
+				</div>
+			)}
+			{!ldapHealthLoading && ldapHealth.length === 0 && ldapHealthError && (
+				<div className="mb-4">
+					<Alert
+						variant={isLdapNotConfigured(ldapHealthError) ? 'info' : 'danger'}
+						title={
+							isLdapNotConfigured(ldapHealthError)
+								? t('idp.ldapNotConfigured', 'No LDAP directory configured')
+								: t('idp.ldapHealthError', 'Failed to load LDAP health status')
+						}
+					/>
 				</div>
 			)}
 
@@ -436,7 +462,7 @@ export default function IdentityProvidersPage() {
 							{/* Test Connection button */}
 							<Form.Item>
 								<Button
-									icon={<ApiOutlined />}
+									icon={<Plug size="1em" />}
 									loading={testingConnection}
 									onClick={handleTestLdapConnection}
 								>

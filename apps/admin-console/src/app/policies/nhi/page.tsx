@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Form, InputNumber, Select, Button, Card, Skeleton } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Form, InputNumber, Select, Button, Skeleton, Typography } from 'antd';
+import { Save } from 'lucide-react';
 import { usePageTitle } from '@autional/shared';
 import { AppPageHeader, ErrorState, SectionCard } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, extractItem } from '@autional/shared';
+import { extractItem } from '@autional/shared';
 import { adminPoliciesNhi, adminPoliciesNhiPut } from '@autional/shared/generated/api';
 import type { NHIPolicyRequest } from '@autional/shared/generated/types';
 import { message } from '@/lib/antd-app';
@@ -17,8 +17,14 @@ import { useTranslation } from 'react-i18next';
 /**
  * TASK-AB1-20 / A-94：表单契约 = 生成类型 NHIPolicyRequest（camel 书面键）。
  * Form.Item name 与契约键对齐 —— setFieldsValue(响应 camel) 回显命中；提交 camel 经拦截器 snake 化上 wire。
+ * A-97：updated_at 随响应下发（快照未含）→ 局部增强类型承载。
  */
-type NhiPolicy = NHIPolicyRequest;
+type NhiPolicy = NHIPolicyRequest & { updatedAt?: string };
+
+function formatDateTime(iso: string): string {
+	if (!iso) return '-';
+	return new Date(iso).toLocaleString('zh-CN');
+}
 
 async function fetchNhiPolicy(): Promise<NhiPolicy> {
 	const res = await adminPoliciesNhi();
@@ -73,7 +79,7 @@ export default function NhiPolicyPage() {
 
 	if (isLoading) {
 		return (
-			<div className="p-6 space-y-3">
+			<div className="space-y-3">
 				<Skeleton active />
 				<Skeleton active />
 				<Skeleton active />
@@ -83,7 +89,7 @@ export default function NhiPolicyPage() {
 
 	if (error && !policy) {
 		return (
-			<div className="p-6">
+			<div>
 				<ErrorState
 					title={t('nhiPolicy.loadError')}
 					message={t('nhiPolicy.loadErrorHint')}
@@ -94,7 +100,7 @@ export default function NhiPolicyPage() {
 	}
 
 	return (
-		<div className="p-6">
+		<div>
 			<div className="mb-6">
 				<AppPageHeader title={t('nhiPolicy.title')} description={t('nhiPolicy.subtitle')} />
 			</div>
@@ -104,9 +110,11 @@ export default function NhiPolicyPage() {
 				layout="vertical"
 				onFinish={handleSave}
 				initialValues={{
+					// A-96：全表与后端缺省/边界同源 —— agentMaxCount 100（nhi_policy.go gorm default）、
+					// robotMaxCount 100（同上；旧 50 系前端漂移）、rotationDaysDefault 90（同上）。
 					agentMaxCount: 100,
 					agentDefaultTtl: '1h',
-					robotMaxCount: 50,
+					robotMaxCount: 100,
 					deviceMaxPerOwner: 10,
 					rotationDaysDefault: 90,
 				}}
@@ -162,20 +170,27 @@ export default function NhiPolicyPage() {
 						label={t('nhiPolicy.rotationDaysDefault')}
 						rules={[{ required: true, message: t('nhiPolicy.required') }]}
 					>
-						<InputNumber min={1} max={365} className="w-50" />
+						{/* A-96：上限对齐后端 Validate [1,3650]（dto/policy.go:222-223；旧 UI 365 系漂移） */}
+						<InputNumber min={1} max={3650} className="w-50" />
 					</Form.Item>
 				</SectionCard>
 
-				<div className="mt-6">
+				<div className="mt-6 flex items-center gap-4">
 					<Button
 						type="primary"
 						htmlType="submit"
-						icon={<SaveOutlined />}
+						icon={<Save size="1em" />}
 						loading={saveMut.isPending}
 						size="large"
 					>
 						{t('nhiPolicy.savePolicy')}
 					</Button>
+					{/* A-97：updated_at 展示（旧实现响应有值但界面零展示，管理员看不到上次修改时间） */}
+					{policy?.updatedAt && (
+						<Typography.Text type="secondary">
+							{t('nhiPolicy.lastUpdated')}: {formatDateTime(policy.updatedAt)}
+						</Typography.Text>
+					)}
 				</div>
 			</Form>
 		</div>

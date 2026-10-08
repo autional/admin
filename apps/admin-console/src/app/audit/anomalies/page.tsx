@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Tag, Button, Select, Space, Row, Col, Modal, Input, Descriptions, Divider, Timeline, Empty, Spin } from 'antd';
 
 import { message } from '@/lib/antd-app';
-import { SecurityScanOutlined, LinkOutlined, WarningOutlined } from '@ant-design/icons';
+import { AlertTriangle, Link2, Shield } from 'lucide-react';
 import {
 	useAnomalies,
 	useUpdateAnomalyStatus,
@@ -18,9 +18,10 @@ import {
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
 import type { DataTablePagination } from '@autional/ui/antd';
-import { useIsAuditRestricted, AuditStatsOnly, extractItem } from '@autional/shared';
+import { useIsAuditRestricted, AuditStatsOnly, extractItem, usePageTitle } from '@autional/shared';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
+import { useOwnerDisplay } from '@/hooks/use-owner-display';
 
 const SEVERITY_COLORS: Record<string, string> = {
 	low: 'blue',
@@ -48,7 +49,11 @@ const LEVEL_COLORS: Record<string, string> = {
 const DEFAULT_TIME_RANGE = '24h';
 
 export default function AuditAnomaliesPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	// A-214（W1e）：tab 恒"Autional 管理控制台" → 挂载页面标题（术语与菜单/面包屑「异常检测」对齐）
+	usePageTitle(t('auditAnomalies.title'));
+	// A-212（W1e）：评论作者 ULID → 成员显示名解析（本租户成员表）
+	const { resolve: resolveOwner } = useOwnerDisplay();
 
 	const SEVERITY_OPTIONS = [
 		{ label: t('auditAnomalies.severity.low'), value: 'low' },
@@ -80,6 +85,10 @@ export default function AuditAnomaliesPage() {
 
 	const statusLabel = (value: string) =>
 		STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+	// A-213（W1e）：Type 值域为 snake_case 枚举（brute_force/...，dto 契约），i18n 键为 camelCase
+	// （与下方 TYPE_OPTIONS 同源）——t(`...type.${wireValue}`) 会全量 miss 回退英文原值；
+	// 经词表（OPTIONS 单点）按值取标签，未收录值回退原值。
+	const typeLabel = (value: string) => TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value;
 
 	const [severity, setSeverity] = useState<string | undefined>();
 	const [status, setStatus] = useState<string | undefined>();
@@ -148,7 +157,12 @@ export default function AuditAnomaliesPage() {
 	}, []);
 
 	const handleAssignConfirm = useCallback(async () => {
-		if (!assignTargetId || !assigneeName.trim()) return;
+		if (!assignTargetId) return;
+		// A-211（W1e）：空/纯空白输入不再静默 return —— 显式拦截提示（确定按钮同步禁用）
+		if (!assigneeName.trim()) {
+			message.warning(t('auditAnomalies.assigneeRequired'));
+			return;
+		}
 		try {
 			await assignMut.mutateAsync({ id: assignTargetId, data: { assignee: assigneeName.trim() } });
 			message.success(t('auditAnomalies.assigned'));
@@ -181,7 +195,12 @@ export default function AuditAnomaliesPage() {
 	const handleAddComment = useCallback(async () => {
 		if (!newComment.trim() || !currentRecord?.id) return;
 		try {
-			await commentMut.mutateAsync({ id: currentRecord.id, content: newComment.trim() });
+			// A-212（W1e）：接口返回整条更新后的异常（含新评论）——回写抽屉，免关重开
+			const res = await commentMut.mutateAsync({ id: currentRecord.id, content: newComment.trim() });
+			const updated = extractItem<any>(res);
+			if (updated?.comments) {
+				setCurrentRecord((prev: any) => ({ ...prev, ...updated }));
+			}
 			message.success(t('auditAnomalies.commentAdded'));
 			setNewComment('');
 			refetch();
@@ -218,7 +237,8 @@ export default function AuditAnomaliesPage() {
 		// API 返回毫秒时间戳（1786025431157），直接 new Date(ts)；若为秒级则放大
 		const num = Number(ts);
 		const ms = num > 1e12 ? num : num * 1000; // 纳秒/微秒安全：毫秒 ~1.7e12
-		return new Date(ms).toISOString();
+		// A-213（W1e）：ISO UTC 原样 → 按当前语言本地化
+		return new Date(ms).toLocaleString(i18n.language);
 	};
 
 	const columns = [
@@ -227,14 +247,20 @@ export default function AuditAnomaliesPage() {
 			dataIndex: 'severity',
 			key: 'severity',
 			width: 100,
-			render: (v: string) => <Tag color={SEVERITY_COLORS[v] || 'default'}>{v}</Tag>,
+			// A-213（W1e）：英文原值 → 词表中文（未收录值回退原值）
+			render: (v: string) => (
+				<Tag color={SEVERITY_COLORS[v] || 'default'}>
+					{t(`auditAnomalies.severity.${v}`, { defaultValue: v })}
+				</Tag>
+			),
 		},
 		{
 			title: t('auditAnomalies.column.type'),
 			dataIndex: 'type',
 			key: 'type',
 			width: 130,
-			render: (v: string) => <Tag>{v}</Tag>,
+			// A-213（W1e）：词表按值取标签（wire snake 值 ≠ camelCase 键，直插模板必 miss）
+			render: (v: string) => <Tag>{typeLabel(v)}</Tag>,
 		},
 		{
 			title: t('auditAnomalies.column.description'),
@@ -247,7 +273,8 @@ export default function AuditAnomaliesPage() {
 			dataIndex: 'status',
 			key: 'status',
 			width: 140,
-			render: (v: string) => <Tag color={STATUS_COLORS[v] || 'default'}>{v}</Tag>,
+			// A-213（W1e）：词表按值取标签（false_positive 为 snake 值 ≠ camelCase 键）
+			render: (v: string) => <Tag color={STATUS_COLORS[v] || 'default'}>{statusLabel(v)}</Tag>,
 		},
 		{
 			title: t('auditAnomalies.column.user'),
@@ -294,7 +321,7 @@ export default function AuditAnomaliesPage() {
 						<Button
 							type="link"
 							size="small"
-							icon={<WarningOutlined />}
+							icon={<AlertTriangle size="1em" />}
 							onClick={() => handleStatusChange(record.id, 'false_positive')}
 						>
 							{t('auditAnomalies.actions.falsePositive')}
@@ -306,7 +333,7 @@ export default function AuditAnomaliesPage() {
 					<Button
 						type="link"
 						size="small"
-						icon={<LinkOutlined />}
+						icon={<Link2 size="1em" />}
 						onClick={() => handleLinkCaseClick(record.id)}
 					>
 						{t('auditAnomalies.actions.linkCase')}
@@ -334,7 +361,7 @@ export default function AuditAnomaliesPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<SecurityScanOutlined />}
+							icon={<Shield size="1em" />}
 							loading={detectMut.isPending}
 							onClick={handleDetect}
 						>
@@ -431,15 +458,17 @@ export default function AuditAnomaliesPage() {
 							<Descriptions.Item label={t('common.id')}>{currentRecord.id}</Descriptions.Item>
 							<Descriptions.Item label={t('auditAnomalies.column.severity')}>
 								<Tag color={SEVERITY_COLORS[currentRecord.severity] || 'default'}>
-									{currentRecord.severity}
+									{t(`auditAnomalies.severity.${currentRecord.severity}`, {
+										defaultValue: currentRecord.severity,
+									})}
 								</Tag>
 							</Descriptions.Item>
 							<Descriptions.Item label={t('auditAnomalies.column.type')}>
-								<Tag>{currentRecord.type}</Tag>
+								<Tag>{typeLabel(currentRecord.type)}</Tag>
 							</Descriptions.Item>
 							<Descriptions.Item label={t('auditAnomalies.column.status')}>
 								<Tag color={STATUS_COLORS[currentRecord.status] || 'default'}>
-									{currentRecord.status}
+									{statusLabel(currentRecord.status)}
 								</Tag>
 							</Descriptions.Item>
 							<Descriptions.Item label={t('auditAnomalies.column.description')} span={2}>
@@ -500,7 +529,7 @@ export default function AuditAnomaliesPage() {
 							)}
 							{(currentRecord.status === 'open' || currentRecord.status === 'investigating') && (
 								<Button
-									icon={<WarningOutlined />}
+									icon={<AlertTriangle size="1em" />}
 									onClick={() => handleStatusChange(currentRecord.id, 'false_positive')}
 									loading={statusMut.isPending}
 								>
@@ -510,7 +539,7 @@ export default function AuditAnomaliesPage() {
 							<Button onClick={() => handleAssignClick(currentRecord.id)}>
 								{t('auditAnomalies.actions.assign')}
 							</Button>
-							<Button icon={<LinkOutlined />} onClick={() => handleLinkCaseClick(currentRecord.id)}>
+							<Button icon={<Link2 size="1em" />} onClick={() => handleLinkCaseClick(currentRecord.id)}>
 								{t('auditAnomalies.actions.linkCase')}
 							</Button>
 						</Space>
@@ -525,8 +554,8 @@ export default function AuditAnomaliesPage() {
 									children: (
 										<div>
 											<div className="text-xs text-neutral-600 mb-1">
-												{c.authorName || c.authorId || t('auditAnomalies.unknown')} —{' '}
-												{formatTs(c.createdAt)}
+												{/* A-212（W1e）：authorName 恒空 → 成员表按 authorId 解析显示名（未命中回退原值） */}
+												{resolveOwner(c.authorId, c.authorName)} — {formatTs(c.createdAt)}
 											</div>
 											<div>{c.content}</div>
 										</div>
@@ -542,6 +571,9 @@ export default function AuditAnomaliesPage() {
 								placeholder={t('auditAnomalies.commentPlaceholder')}
 								value={newComment}
 								onChange={(e) => setNewComment(e.target.value)}
+								// A-212（W1e）：后端上限 2000（dto.go:331-343）——前端同源限长 + 计数
+								maxLength={2000}
+								showCount
 							/>
 							<Button
 								type="primary"
@@ -572,12 +604,14 @@ export default function AuditAnomaliesPage() {
 											<Tag
 												color={SEVERITY_COLORS[timelineData.anomaly.severity || ''] || 'default'}
 											>
-												{timelineData.anomaly.severity}
+												{t(`auditAnomalies.severity.${timelineData.anomaly.severity}`, {
+													defaultValue: timelineData.anomaly.severity,
+												})}
 											</Tag>
 										</Descriptions.Item>
 										<Descriptions.Item label={t('auditAnomalies.column.status')}>
 											<Tag color={STATUS_COLORS[timelineData.anomaly.status || ''] || 'default'}>
-												{timelineData.anomaly.status}
+												{statusLabel(timelineData.anomaly.status)}
 											</Tag>
 										</Descriptions.Item>
 										<Descriptions.Item label={t('auditAnomalies.column.description')} span={2}>
@@ -586,7 +620,7 @@ export default function AuditAnomaliesPage() {
 									</Descriptions>
 								)}
 								{timelineData.context && (
-									<div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-900 rounded text-sm">
+									<div className="mb-4 p-3 bg-neutral-50 dark:bg-neutral-900 rounded-xs text-sm">
 										<div className="font-medium mb-1">{t('auditAnomalies.contextSummary')}</div>
 										<Row gutter={16}>
 											<Col span={8}>
@@ -609,6 +643,35 @@ export default function AuditAnomaliesPage() {
 												})}
 											</div>
 										)}
+									</div>
+								)}
+								{/* A-214（W1e）：login_sessions 完整数据（指纹/UA/事件数/首末见）原零渲染 → 补齐 */}
+								{timelineData.loginSessions && timelineData.loginSessions.length > 0 && (
+									<div className="mb-4">
+										<div className="font-medium mb-1 text-sm">
+											{t('auditAnomalies.loginSessions')}
+										</div>
+										<div className="space-y-1">
+											{timelineData.loginSessions.map((s, i) => (
+												<div
+													key={s.fingerprint || i}
+													className="p-2 rounded-xs bg-neutral-50 dark:bg-neutral-900 text-sm"
+												>
+													<div className="text-xs text-neutral-600">
+														{formatTs(s.firstSeen)} – {formatTs(s.lastSeen)} ·{' '}
+														{t('auditAnomalies.eventCount', { count: s.eventCount ?? 0 })}
+													</div>
+													<div className="truncate">
+														{s.ip || '-'} · {(s.userAgent || '').substring(0, 60)}
+													</div>
+													{s.fingerprint && (
+														<div className="text-xs text-neutral-500 truncate">
+															{s.fingerprint}
+														</div>
+													)}
+												</div>
+											))}
+										</div>
 									</div>
 								)}
 								{timelineData.events?.length > 0 ? (
@@ -659,18 +722,20 @@ export default function AuditAnomaliesPage() {
 								{relatedData.items.map((item: any) => (
 									<div
 										key={item.id}
-										className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 border rounded hover:bg-neutral-50 hover:bg-neutral-900 cursor-pointer transition-colors"
+										className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 border rounded-xs hover:bg-neutral-50 hover:bg-neutral-900 cursor-pointer transition-colors"
 										onClick={() => openDetail(item)}
 									>
 										<div className="flex items-center gap-3 min-w-0">
 											<Tag color={SEVERITY_COLORS[item.severity] || 'default'} className="shrink-0">
-												{item.severity}
+												{t(`auditAnomalies.severity.${item.severity}`, {
+													defaultValue: item.severity,
+												})}
 											</Tag>
-											<Tag className="shrink-0">{item.type}</Tag>
+											<Tag className="shrink-0">{typeLabel(item.type)}</Tag>
 											<span className="truncate text-sm">{item.description || '-'}</span>
 										</div>
 										<Tag color={STATUS_COLORS[item.status] || 'default'} className="shrink-0">
-											{item.status}
+											{statusLabel(item.status)}
 										</Tag>
 									</div>
 								))}
@@ -691,6 +756,9 @@ export default function AuditAnomaliesPage() {
 					setAssignTargetId(null);
 					setAssigneeName('');
 				}}
+				// A-213（W1e）：嵌套 Modal 关闭按钮 a11y 名 "Close" 未本地化 → 中文「关闭」
+				closable={{ 'aria-label': t('common.close') }}
+				okButtonProps={{ disabled: !assigneeName.trim() }}
 				confirmLoading={assignMut.isPending}
 				className="w-full max-w-[560px]"
 			>
@@ -712,6 +780,7 @@ export default function AuditAnomaliesPage() {
 					setLinkCaseTargetId(null);
 					setCaseIdInput('');
 				}}
+				closable={{ 'aria-label': t('common.close') }}
 				confirmLoading={linkCaseMut.isPending}
 				className="w-full max-w-[560px]"
 			>

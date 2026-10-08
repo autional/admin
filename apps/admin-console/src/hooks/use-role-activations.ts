@@ -1,6 +1,6 @@
 'use client';
 
-import { extractList } from '@autional/shared';
+import { fromPageResult, toPageParams } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,17 +24,31 @@ export interface RoleActivation {
 	createdAt: string;
 }
 
-export function useRoleActivations(status?: string) {
-	const params: Record<string, string> = {};
-	if (status && status !== 'all') {
-		params.status = status;
-	}
+/** 查询入参（camel 书面；分页键经 toPageParams 单点转 wire snake）。 */
+export interface RoleActivationsQuery {
+	status?: string;
+	page?: number;
+	pageSize?: number;
+}
+
+export function useRoleActivations(params?: RoleActivationsQuery) {
+	const status = params?.status && params.status !== 'all' ? params.status : undefined;
 	return useQuery({
-		queryKey: [...queryKeys.roleActivations.all, { status }],
+		queryKey: queryKeys.roleActivations.list({
+			status,
+			page: params?.page,
+			pageSize: params?.pageSize,
+		}),
 		staleTime: 30000,
 		queryFn: async () => {
-			const res = await getRoleActivations(params);
-			return extractList<RoleActivation>(res);
+			// A-144：服务端分页契约（toPageParams 单点转 wire page/page_size；旧实现无 page 参 →
+			// 后端默认 page_size=20 截断，第 21+ 条永不可达）。响应侧 fromPageResult 归一 items/total。
+			const res = await getRoleActivations({
+				...toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+				...(status ? { status } : {}),
+			});
+			const paged = fromPageResult<RoleActivation>(res);
+			return { items: paged.items, total: paged.total };
 		},
 	});
 }

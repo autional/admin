@@ -37,7 +37,6 @@ function toIdPRecordFromSaml(item: SamlProviderItem): IdPRecord {
 		name: item.name ?? '',
 		type: 'saml' as const,
 		status: item.enabled ? 'active' : 'inactive',
-		lastTestedAt: undefined,
 		config: {
 			entityId: item.entityId,
 			ssoUrl: item.ssoUrl,
@@ -49,6 +48,34 @@ function toIdPRecordFromSaml(item: SamlProviderItem): IdPRecord {
 			forceAuthn: item.forceAuthn,
 		},
 	};
+}
+
+/**
+ * A-36：IdP「最后测试」时间戳本地存储 —— 测试结果无后端字段，
+ * 测试连接成功后记录于 localStorage，列表读取时合并回 lastTestedAt。
+ */
+const IDP_LAST_TESTED_STORAGE_KEY = 'admin-console-idp-last-tested';
+
+/** 读取 IdP 最近测试时间映射（id → ISO 时间）。 */
+export function readIdpLastTestedMap(): Record<string, string> {
+	if (typeof window === 'undefined') return {};
+	try {
+		const raw = window.localStorage.getItem(IDP_LAST_TESTED_STORAGE_KEY);
+		return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+	} catch {
+		return {};
+	}
+}
+
+function writeIdpLastTested(id: string, at: string) {
+	if (typeof window === 'undefined') return;
+	try {
+		const map = readIdpLastTestedMap();
+		map[id] = at;
+		window.localStorage.setItem(IDP_LAST_TESTED_STORAGE_KEY, JSON.stringify(map));
+	} catch {
+		// localStorage 不可用时静默（非关键路径，不阻断测试结果提示）
+	}
 }
 
 export function useIdentityProviders() {
@@ -68,7 +95,11 @@ export function useIdentityProviders() {
 				samlRes.status === 'fulfilled'
 					? extractList<SamlProviderItem>(samlRes.value).map(toIdPRecordFromSaml)
 					: [];
-			return [...identityItems, ...samlItems];
+			// A-36：合并本地「最后测试」时间（有记录的行覆盖 lastTestedAt）。
+			const lastTestedMap = readIdpLastTestedMap();
+			return [...identityItems, ...samlItems].map((item) =>
+				lastTestedMap[item.id] ? { ...item, lastTestedAt: lastTestedMap[item.id] } : item,
+			);
 		},
 	});
 }
@@ -99,8 +130,14 @@ export function useDeleteIdentityProvider() {
 }
 
 export function useTestIdentityProvider() {
+	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (id: string) => testIdentityProvider(id),
+		// A-36：测试成功后记录本地时间戳并刷新列表 → 「最后测试」列即时可见。
+		onSuccess: (_data, id) => {
+			writeIdpLastTested(id, new Date().toISOString());
+			queryClient.invalidateQueries({ queryKey: queryKeys.identityProviders.all });
+		},
 	});
 }
 
@@ -114,6 +151,8 @@ export function useLdapHealth() {
 	return useQuery({
 		queryKey: queryKeys.ldap.health,
 		staleTime: 30000,
+		// A-37：未配置 LDAP 时后端返回 503（ErrCodeLDAPNotConfigured），重试无意义。
+		retry: false,
 		queryFn: async () => {
 			const res = await getLdapHealth();
 			return extractList<LdapHealthResponse>(res);

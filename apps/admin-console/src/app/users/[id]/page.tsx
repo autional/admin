@@ -8,17 +8,17 @@ import { adminSessions } from '@autional/shared/generated/api';
 import { Card, Avatar, Tabs, Tag, Button, Space, Form, Input, Descriptions, Modal, Spin, Empty, Select } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
-	ArrowLeftOutlined,
-	LockOutlined,
-	UnlockOutlined,
-	SafetyOutlined,
-	ReloadOutlined,
-	UserOutlined,
-	MailOutlined,
-	ClockCircleOutlined,
-	PlusOutlined,
-	DeleteOutlined,
-} from '@ant-design/icons';
+	ArrowLeft,
+	Clock,
+	Lock,
+	Mail,
+	Plus,
+	RefreshCw,
+	ShieldCheck,
+	Trash2,
+	Unlock,
+	User,
+} from 'lucide-react';
 import { useUser } from '@/hooks/use-users';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
@@ -244,7 +244,7 @@ export default function UserDetailPage() {
 	return (
 		<div>
 			<div className="mb-4">
-				<Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+				<Button icon={<ArrowLeft size="1em" />} onClick={() => navigate(-1)}>
 					{t('userDetail.back')}
 				</Button>
 			</div>
@@ -252,7 +252,7 @@ export default function UserDetailPage() {
 			<Card className="mb-4">
 				<div className="flex items-start justify-between flex-wrap gap-4">
 					<div className="flex items-center gap-4">
-						<Avatar size={64} icon={<UserOutlined />} className="!bg-info" />
+						<Avatar size={64} icon={<User size="1em" />} className="!bg-info" />
 						<div>
 							<div className="text-xl font-semibold flex items-center gap-2">
 								{user.username}
@@ -260,20 +260,20 @@ export default function UserDetailPage() {
 							</div>
 							<div className="text-neutral-600 mt-1 flex flex-wrap items-center gap-4">
 								<span>
-									<MailOutlined /> {user.email}
+									<Mail size="1em" /> {user.email}
 								</span>
 								<span>
-									<ClockCircleOutlined /> {t('userDetail.createdAt')} {user.createdAt}
+									<Clock size="1em" /> {t('userDetail.createdAt')} {user.createdAt}
 								</span>
 							</div>
 						</div>
 					</div>
 					<Space wrap>
-						<Button icon={<LockOutlined />} onClick={handleResetPassword}>
+						<Button icon={<Lock size="1em" />} onClick={handleResetPassword}>
 							{t('userDetail.resetPassword')}
 						</Button>
 						{user.status === 'locked' && (
-							<Button icon={<UnlockOutlined />} onClick={handleUnlock}>
+							<Button icon={<Unlock size="1em" />} onClick={handleUnlock}>
 								{t('userDetail.unlockAccount')}
 							</Button>
 						)}
@@ -286,10 +286,10 @@ export default function UserDetailPage() {
 								{t('userDetail.enableAccount')}
 							</Button>
 						)}
-						<Button icon={<SafetyOutlined />} onClick={handleResetMFA}>
+						<Button icon={<ShieldCheck size="1em" />} onClick={handleResetMFA}>
 							{t('userDetail.resetMfa')}
 						</Button>
-						<Button icon={<ReloadOutlined />} onClick={() => setEditModalVisible(true)}>
+						<Button icon={<RefreshCw size="1em" />} onClick={() => setEditModalVisible(true)}>
 							{t('userDetail.editProfile')}
 						</Button>
 					</Space>
@@ -390,7 +390,7 @@ export default function UserDetailPage() {
 									extra={
 										<Button
 											type="primary"
-											icon={<PlusOutlined />}
+											icon={<Plus size="1em" />}
 											onClick={() => setPermModalVisible(true)}
 										>
 											{t('userDetail.assignPermission')}
@@ -425,7 +425,7 @@ export default function UserDetailPage() {
 														<Button
 															type="link"
 															danger
-															icon={<DeleteOutlined />}
+															icon={<Trash2 size="1em" />}
 															onClick={() => handleRevokePermission(record.id)}
 														>
 															{t('userDetail.revoke')}

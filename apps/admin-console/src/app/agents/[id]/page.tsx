@@ -4,8 +4,8 @@
 import React, { useState } from 'react';
 import { DataTable } from '@autional/ui/antd';
 import { useParams, useNavigate } from 'react-router';
-import { Button, Tag, Modal, Form, Input, Select, Skeleton, Descriptions } from 'antd';
-import { EditOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Button, Tag, Modal, Form, Input, Skeleton, Descriptions } from 'antd';
+import { ArrowLeft, Pencil } from 'lucide-react';
 import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { AppPageHeader, EmptyState, ErrorState, SectionCard, StatusBadge } from '@autional/ui';
@@ -25,38 +25,24 @@ import {
 import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
+import { useOwnerDisplay } from '@/hooks/use-owner-display';
+import { AGENT_STATUS_VARIANT, statusVariantOf, retryUnlessNotFound } from '@/lib/nhi';
 
 import { useTranslation } from 'react-i18next';
 
 // TASK-AB1-27（RC-5 契约收敛）：契约类型直读（generated types，键名 camel），删除手写 snake 接口。
 // wire 锚：service-identity agent/domain/agent.go:76-135 经响应拦截器 camel 化（identityId/workloadSubtype/…）。
-type AgentDetail = AgentInfo;
+// W1b（A-78）：owner_principal_id 为 additive 增量键（generated 快照未含）→ 局部增强类型。
+type AgentDetail = AgentInfo & { ownerPrincipalId?: string };
 type CredentialRecord = AgentCredentialInfo;
 type ActivityRecord = AgentActivityInfo;
 type PermissionRecord = AgentPermissionInfo;
-
-const SUBTYPE_LABELS: Record<string, string> = {
-	agent: 'Agent',
-	service_account: 'Service Account',
-	automation: 'Automation',
-};
 
 const SUBTYPE_COLORS: Record<string, string> = {
 	agent: 'blue',
 	service_account: 'green',
 	automation: 'orange',
 };
-
-const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
-	active: 'success',
-	disabled: 'danger',
-	suspended: 'warning',
-	provisioning: 'info',
-};
-
-function statusVariant(s: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-	return STATUS_VARIANT[s] || 'neutral';
-}
 
 function formatDate(iso: string): string {
 	if (!iso) return '-';
@@ -70,9 +56,15 @@ async function fetchAgent(id: string): Promise<AgentDetail> {
 }
 
 async function fetchCredentials(id: string): Promise<CredentialRecord[]> {
-	const res = await adminAgentsCredentialsByAgents(id);
-	// 列表归一单点 = extractList（信封 items 分支；键名已由拦截器 camel）
-	return extractList<CredentialRecord>(res);
+	try {
+		const res = await adminAgentsCredentialsByAgents(id);
+		// 列表归一单点 = extractList（信封 items 分支；键名已由拦截器 camel）
+		return extractList<CredentialRecord>(res);
+	} catch (err: any) {
+		// A-79：404 降级为空列表（对齐 activity/permissions 既有降级口径，消 console 404 噪声）
+		if (err?.response?.status === 404 || err?.status === 404) return [];
+		throw err;
+	}
 }
 
 async function fetchActivity(id: string): Promise<ActivityRecord[]> {
@@ -114,6 +106,17 @@ export default function AgentDetailPage() {
 	const [editVisible, setEditVisible] = useState(false);
 	const [form] = Form.useForm();
 
+	// A-78：owner_principal_id → 成员显示名解析（列表/详情共用单点 hook）
+	const { resolve: resolveOwner } = useOwnerDisplay();
+
+	// A-78：JIT TTL 秒值人性化（3600 →「1 小时」；300 →「5 分钟」）
+	const formatTtl = (seconds?: number): string => {
+		if (!seconds || seconds <= 0) return '-';
+		if (seconds % 3600 === 0) return t('common.ttl.hours', { count: seconds / 3600 });
+		if (seconds % 60 === 0) return t('common.ttl.minutes', { count: seconds / 60 });
+		return t('common.ttl.seconds', { count: seconds });
+	};
+
 	const {
 		data: agent,
 		isLoading,
@@ -124,6 +127,8 @@ export default function AgentDetailPage() {
 		queryFn: () => fetchAgent(id!),
 		enabled: !!id,
 		staleTime: 300000,
+		// A-79：404 不重试（消「假 ID 2 条 console 404」噪声）；其余沿用全局 retry:1
+		retry: retryUnlessNotFound,
 	});
 
 	const { data: credentials = [], isLoading: credLoading } = useQuery({
@@ -175,12 +180,13 @@ export default function AgentDetailPage() {
 
 	const openEdit = () => {
 		if (!agent) return;
+		// W2-05（A-75 残余 / ADR-B4-08）：编辑表单收窄为 PUT 契约键集 {name, description, callbackUrl}
+		// （identity agent.go:104-108 UpdateAgentRequest）——workloadSubtype/rotationDays/jitTtl
+		// 提交后端静默忽略（假成功），从编辑弹窗移除（创建通道仍支持、详情 Descriptions 仍展示）。
 		form.setFieldsValue({
 			name: agent.name,
 			description: agent.description,
-			workloadSubtype: agent.workloadSubtype,
-			rotationDays: agent.rotationDays,
-			jitTtl: agent.jitTtl,
+			callbackUrl: agent.callbackUrl,
 		});
 		setEditVisible(true);
 	};
@@ -252,18 +258,18 @@ export default function AgentDetailPage() {
 
 	if (!id) {
 		return (
-			<div className="p-6">
+			<div>
 				<ErrorState title={t('agents.detail.invalidId')} message={t('agents.detail.invalidIdMessage')} />
 			</div>
 		);
 	}
 
 	return (
-		<div className="p-6">
+		<div>
 			<div className="mb-6">
 				<Button
 					type="text"
-					icon={<ArrowLeftOutlined />}
+					icon={<ArrowLeft size="1em" />}
 					onClick={() => navigate(buildNavHref('/agents', tenantSlug))}
 					className="mb-4 pl-0"
 				>
@@ -272,10 +278,11 @@ export default function AgentDetailPage() {
 				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
 					<AppPageHeader
 						title={agent?.name || t('agents.detail.title')}
-						description={agent?.description || t('common.loading')}
+						// A-79：错误态副标题不得残留「加载中」（agent 未达时留白，由下方 ErrorState 表达）
+						description={agent?.description || undefined}
 					/>
 					{agent && (
-						<Button icon={<EditOutlined />} onClick={openEdit}>
+						<Button icon={<Pencil size="1em" />} onClick={openEdit}>
 							{t('agents.detail.editBtn')}
 						</Button>
 					)}
@@ -304,25 +311,27 @@ export default function AgentDetailPage() {
 					<Descriptions column={2} bordered size="small">
 						<Descriptions.Item label={t('agents.detail.label.name')}>{agent.name}</Descriptions.Item>
 						<Descriptions.Item label={t('agents.detail.label.status')}>
-							<StatusBadge variant={statusVariant(agent.status || '')}>
+							<StatusBadge variant={statusVariantOf(AGENT_STATUS_VARIANT, agent.status)}>
 								{t(`agents.status.${agent.status}`, { defaultValue: agent.status })}
 							</StatusBadge>
 						</Descriptions.Item>
 						<Descriptions.Item label={t('agents.detail.label.subtype')}>
 							<Tag color={SUBTYPE_COLORS[agent.workloadSubtype || ''] || 'default'}>
 								{t(`agents.type.${agent.workloadSubtype}`, {
-									defaultValue: SUBTYPE_LABELS[agent.workloadSubtype || ''] || agent.workloadSubtype,
+									defaultValue: agent.workloadSubtype,
 								})}
 							</Tag>
 						</Descriptions.Item>
 						<Descriptions.Item label={t('agents.detail.label.owner')}>
-							{agent.ownerId || '-'}
+							{/* A-78：显示名解析（owner_principal_id 优先；历史行回退 owner_id） */}
+							{resolveOwner(agent.ownerPrincipalId, agent.ownerId)}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('agents.detail.label.rotationDays')}>
 							{agent.rotationDays ?? '-'}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('agents.detail.label.jitTtl')}>
-							{agent.jitTtl || '-'}
+							{/* A-78：TTL 人性化（旧显示原始秒数如 3600） */}
+							{formatTtl(agent.jitTtl)}
 						</Descriptions.Item>
 						<Descriptions.Item label={t('agents.detail.label.created')}>
 							{formatDate(agent.createdAt || '')}
@@ -418,24 +427,9 @@ export default function AgentDetailPage() {
 					<Form.Item name="description" label={t('agents.detail.form.description')}>
 						<Input.TextArea rows={3} placeholder={t('agents.detail.form.descriptionPlaceholder')} />
 					</Form.Item>
-					<Form.Item
-						name="workloadSubtype"
-						label={t('agents.detail.form.subtype')}
-						rules={[{ required: true }]}
-					>
-						<Select
-							options={[
-								{ value: 'agent', label: t('agents.type.agent') },
-								{ value: 'service_account', label: t('agents.type.service_account') },
-								{ value: 'automation', label: t('agents.type.automation') },
-							]}
-						/>
-					</Form.Item>
-					<Form.Item name="rotationDays" label={t('agents.detail.form.rotationDays')}>
-						<Input type="number" placeholder="90" />
-					</Form.Item>
-					<Form.Item name="jitTtl" label={t('agents.detail.form.jitTtl')}>
-						<Input placeholder={t('agents.detail.form.jitTtlPlaceholder')} />
+					{/* W2-05（A-75 残余）：契约键 callbackUrl 补入口（后端支持无 UI；此前提交后静默丢弃） */}
+					<Form.Item name="callbackUrl" label={t('agents.detail.form.callbackUrl')}>
+						<Input placeholder={t('agents.detail.form.callbackUrlPlaceholder')} />
 					</Form.Item>
 				</Form>
 			</Modal>

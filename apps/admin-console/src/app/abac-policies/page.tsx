@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Space, Tag, Modal, Form, Input, InputNumber, Select } from 'antd';
+import { Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Tooltip } from 'antd';
 import { message, modal } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Info, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
 	useAbacPolicies,
@@ -13,24 +13,33 @@ import {
 } from '@/hooks/use-abac-policies';
 import type { ABACPolicy } from '@/hooks/use-abac-policies';
 import { handleApiError } from '@/lib/error-handler';
-import { useCurrentTenantId, PLATFORM_TENANT_ID } from '@autional/shared';
+import { useCurrentTenantId, usePageTitle, PLATFORM_TENANT_ID } from '@autional/shared';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 
 export default function AbacPoliciesPage() {
 	const { t } = useTranslation();
+	usePageTitle(t('abacPolicies.title')); // A-140：tab 标题（旧实现恒「Autional 管理控制台」）
 	const currentTenantId = useCurrentTenantId() ?? '';
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editing, setEditing] = useState<ABACPolicy | null>(null);
 	const [keyword, setKeyword] = useState('');
 	const [form] = Form.useForm();
 
-	const { data = [], isLoading, error, refetch } = useAbacPolicies();
+	// A-136：服务端分页状态（旧实现 hook 无分页参 → 后端默认 page_size=20 截断，21+ 永不可达；
+	// 前端本地 10/页与后端 20 不同源 → 收敛为服务端分页驱动）。
+	const [page, setPage] = useState(1);
+	const [pageSize] = useState(10);
+
+	const { data, isLoading, error, refetch } = useAbacPolicies({ page, pageSize });
+	const policies = data?.items ?? [];
+	const total = data?.total ?? 0;
 	const createMut = useCreateAbacPolicy();
 	const updateMut = useUpdateAbacPolicy();
 	const deleteMut = useDeleteAbacPolicy();
 
-	const filteredData = (data as ABACPolicy[]).filter((p) => {
+	// 本地关键字过滤作用于「当前页已载入集」（SDK 列表接口无 search 参；服务端搜索待接口支持）。
+	const filteredData = policies.filter((p) => {
 		if (!keyword) return true;
 		const k = keyword.toLowerCase();
 		return (
@@ -104,7 +113,15 @@ export default function AbacPoliciesPage() {
 			ellipsis: true,
 		},
 		{
-			title: t('abacPolicies.priority'),
+			// A-140：优先级口径说明（旧仅弹窗 placeholder 有「数字越大优先级越高」，列表列头零说明）
+			title: (
+				<span className="inline-flex items-center gap-1">
+					{t('abacPolicies.priority')}
+					<Tooltip title={t('abacPolicies.priorityHint')}>
+						<Info size="0.9em" className="text-neutral-500" />
+					</Tooltip>
+				</span>
+			),
 			dataIndex: 'priority',
 			key: 'priority',
 			width: 100,
@@ -114,8 +131,12 @@ export default function AbacPoliciesPage() {
 			dataIndex: 'condition',
 			key: 'condition',
 			width: 200,
+			// A-140：截断表达式补 title 提示（长条件 hover 可见全文）
 			render: (v: string) => (
-				<code className="text-xs bg-neutral-200 px-2 py-1 rounded max-w-48 inline-block truncate">
+				<code
+					title={v}
+					className="text-xs bg-neutral-200 px-2 py-1 rounded-xs max-w-48 inline-block truncate"
+				>
 					{v}
 				</code>
 			),
@@ -154,7 +175,7 @@ export default function AbacPoliciesPage() {
 					<Space size="small">
 						<Button
 							type="link"
-							icon={<EditOutlined />}
+							icon={<Pencil size="1em" />}
 							onClick={() => {
 								setEditing(record);
 								form.setFieldsValue(record);
@@ -166,7 +187,7 @@ export default function AbacPoliciesPage() {
 						<Button
 							type="link"
 							danger
-							icon={<DeleteOutlined />}
+							icon={<Trash2 size="1em" />}
 							onClick={() => handleDelete(record.id)}
 						>
 							{t('common.delete')}
@@ -185,7 +206,7 @@ export default function AbacPoliciesPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -216,7 +237,13 @@ export default function AbacPoliciesPage() {
 				columns={columns}
 				dataSource={filteredData}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
+				pagination={{
+					current: page,
+					pageSize,
+					total,
+					showSizeChanger: false,
+					onChange: (p) => setPage(p),
+				}}
 				scroll={{ x: 800 }}
 			/>
 

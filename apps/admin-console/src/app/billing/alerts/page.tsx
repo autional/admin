@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Button, Modal, Form, Input, Select, InputNumber, Space, Popconfirm, Tag } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import {
 	useBillingAlerts,
 	useCreateBillingAlert,
@@ -16,6 +16,7 @@ import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
+import { usePageTitle } from '@autional/shared';
 
 function formatDateTime(v?: string) {
 	if (!v) return '-';
@@ -24,7 +25,18 @@ function formatDateTime(v?: string) {
 
 export default function BillingAlertsPage() {
 	const { t } = useTranslation();
-	const { data: alerts = [], isLoading, error, refetch } = useBillingAlerts();
+	usePageTitle(t('billingAlerts.title'));
+	// A-426③：服务端分页接线（服务端默认 page_size=20 + 旧本地 10/页 ⇒ >20 条不可达）
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
+	const {
+		data: alertResult,
+		isLoading,
+		error,
+		refetch,
+	} = useBillingAlerts({ page, page_size: pageSize });
+	const alerts = alertResult?.items ?? [];
+	const total = alertResult?.pagination?.total ?? 0;
 	const createMut = useCreateBillingAlert();
 	const updateMut = useUpdateBillingAlert();
 	const deleteMut = useDeleteBillingAlert();
@@ -147,7 +159,7 @@ export default function BillingAlertsPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
@@ -169,7 +181,7 @@ export default function BillingAlertsPage() {
 						okText={t('billingAlerts.okText')}
 						cancelText={t('billingAlerts.cancelText')}
 					>
-						<Button type="link" danger icon={<DeleteOutlined />}>
+						<Button type="link" danger icon={<Trash2 size="1em" />}>
 							{t('billingAlerts.delete')}
 						</Button>
 					</Popconfirm>
@@ -186,7 +198,7 @@ export default function BillingAlertsPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -208,7 +220,17 @@ export default function BillingAlertsPage() {
 				columns={columns}
 				dataSource={alerts}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
+				// A-426③：受控分页（page/page_size 上行 + total 来自服务端信封）
+				pagination={{
+					current: page,
+					pageSize,
+					total,
+					showSizeChanger: true,
+					onChange: (p, ps) => {
+						setPage(p);
+						setPageSize(ps);
+					},
+				}}
 				scroll={{ x: 1100 }}
 			/>
 

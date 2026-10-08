@@ -5,16 +5,17 @@ import { useCurrentTenantIdOr } from '@autional/shared';
 import { Button, Space, Tag, Modal, Form, Input, Select, Empty, Tabs, Tooltip, Popconfirm, Descriptions, Divider } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	CopyOutlined,
-	EditOutlined,
-	PauseCircleOutlined,
-	PlayCircleOutlined,
-	DeleteOutlined,
-	EyeOutlined,
-} from '@ant-design/icons';
+	Copy,
+	Eye,
+	PauseCircle,
+	Pencil,
+	Play,
+	Plus,
+	Trash2,
+} from 'lucide-react';
 import {
 	useApplications,
+	useAppTypes,
 	useCreateApplication,
 	useUpdateApplication,
 	useDeleteApplication,
@@ -31,6 +32,9 @@ import { createApplicationSchema } from '@/lib/validators';
 
 const { Option } = Select;
 
+/** A-43：内置应用类型（表单固定项；API 自定义类型去重后追加）。 */
+const BUILTIN_APP_TYPES = ['oidc', 'saml', 'custom'];
+
 export default function ApplicationsPage() {
 	const { t } = useTranslation();
 	const [modalVisible, setModalVisible] = useState(false);
@@ -40,6 +44,8 @@ export default function ApplicationsPage() {
 	const tenantId = useCurrentTenantIdOr('default-tenant');
 
 	const { data = [], isLoading, error, refetch } = useApplications(tenantId);
+	// A-43：租户自定义应用类型（type 回显名称 + 表单选项）
+	const { data: appTypes = [] } = useAppTypes(tenantId);
 	const createMut = useCreateApplication();
 	const updateMut = useUpdateApplication();
 	const deleteMut = useDeleteApplication();
@@ -57,6 +63,10 @@ export default function ApplicationsPage() {
 		saml: 'SAML',
 		custom: t('applications.type.custom'),
 	};
+
+	// A-43：类型展示名 = 内置标签 → API 自定义类型名 → 原值兜底
+	const typeLabel = (type: string) =>
+		TYPE_LABELS[type] || appTypes.find((at) => at.code === type)?.name || type;
 
 	const STATUS_LABELS: Record<string, string> = {
 		active: t('applications.status.active'),
@@ -137,7 +147,7 @@ export default function ApplicationsPage() {
 			dataIndex: 'type',
 			key: 'type',
 			render: (type: string) => (
-				<Tag color={TYPE_COLORS[type] || 'default'}>{TYPE_LABELS[type] || type}</Tag>
+				<Tag color={TYPE_COLORS[type] || 'default'}>{typeLabel(type)}</Tag>
 			),
 		},
 		{
@@ -146,12 +156,12 @@ export default function ApplicationsPage() {
 			key: 'clientId',
 			render: (v: string, record: AppRecord) => (
 				<Space size="small">
-					<code className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded">{v || record.code}</code>
+					<code className="text-xs bg-neutral-200 px-1.5 py-0.5 rounded-xs">{v || record.code}</code>
 					<Tooltip title={t('applications.copy')}>
 						<Button
 							type="text"
 							size="small"
-							icon={<CopyOutlined />}
+							icon={<Copy size="1em" />}
 							aria-label={t('applications.copy')}
 							onClick={() => handleCopy(v)}
 						/>
@@ -172,13 +182,6 @@ export default function ApplicationsPage() {
 			),
 		},
 		{
-			title: t('applications.column.redirectUri'),
-			dataIndex: 'redirectUris',
-			key: 'redirectUris',
-			ellipsis: true,
-			render: (uris: string[]) => (uris && uris.length > 0 ? uris[0] : '-'),
-		},
-		{
 			title: t('common.actions'),
 			key: 'action',
 			render: (_: any, record: AppRecord) => (
@@ -187,7 +190,7 @@ export default function ApplicationsPage() {
 						<Button
 							type="text"
 							size="small"
-							icon={<EyeOutlined />}
+							icon={<Eye size="1em" />}
 							aria-label={t('applications.detail')}
 							onClick={() => setDetailRecord(record)}
 						/>
@@ -195,7 +198,7 @@ export default function ApplicationsPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
@@ -212,7 +215,7 @@ export default function ApplicationsPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={record.status === 'active' ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+						icon={record.status === 'active' ? <PauseCircle size="1em" /> : <Play size="1em" />}
 						onClick={() => handleToggleStatus(record)}
 					>
 						{record.status === 'active' ? t('applications.pause') : t('applications.resume')}
@@ -224,7 +227,7 @@ export default function ApplicationsPage() {
 						okButtonProps={{ danger: true }}
 						onConfirm={() => handleDelete(record.id)}
 					>
-						<Button type="text" danger size="small" icon={<DeleteOutlined />}>
+						<Button type="text" danger size="small" icon={<Trash2 size="1em" />}>
 							{t('common.delete')}
 						</Button>
 					</Popconfirm>
@@ -245,7 +248,7 @@ export default function ApplicationsPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -316,6 +319,14 @@ export default function ApplicationsPage() {
 							<Option value="oidc">OIDC</Option>
 							<Option value="saml">SAML</Option>
 							<Option value="custom">{t('applications.type.custom')}</Option>
+							{/* A-43：租户自定义应用类型（去重内置三项后追加） */}
+							{appTypes
+								.filter((at) => at.code && !BUILTIN_APP_TYPES.includes(at.code))
+								.map((at) => (
+									<Option key={at.code} value={at.code}>
+										{at.name || at.code}
+									</Option>
+								))}
 						</Select>
 					</Form.Item>
 					<Form.Item name="description" label={t('applications.form.description')}>
@@ -339,7 +350,7 @@ export default function ApplicationsPage() {
 						</Descriptions.Item>
 						<Descriptions.Item label={t('applications.detail.type')}>
 							<Tag color={TYPE_COLORS[detailRecord.type] || 'default'}>
-								{TYPE_LABELS[detailRecord.type] || detailRecord.type}
+								{typeLabel(detailRecord.type)}
 							</Tag>
 						</Descriptions.Item>
 						<Descriptions.Item label={t('applications.detail.clientId')} span={2}>
@@ -348,7 +359,7 @@ export default function ApplicationsPage() {
 								<Button
 									type="text"
 									size="small"
-									icon={<CopyOutlined />}
+									icon={<Copy size="1em" />}
 									onClick={() => {
 										navigator.clipboard.writeText(detailRecord.clientId);
 										message.success(t('applications.copiedClientId'));
@@ -364,15 +375,6 @@ export default function ApplicationsPage() {
 						<Descriptions.Item label={t('applications.detail.createdAt')}>
 							{detailRecord.createdAt ? new Date(detailRecord.createdAt).toLocaleString() : '-'}
 						</Descriptions.Item>
-						{detailRecord.redirectUris && detailRecord.redirectUris.length > 0 && (
-							<Descriptions.Item label={t('applications.detail.redirectUri')} span={2}>
-								{detailRecord.redirectUris.map((uri, i) => (
-									<div key={i} className="font-mono text-xs">
-										{uri}
-									</div>
-								))}
-							</Descriptions.Item>
-						)}
 						{detailRecord.description && (
 							<Descriptions.Item label={t('applications.detail.description')} span={2}>
 								{detailRecord.description}

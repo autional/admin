@@ -25,13 +25,23 @@ export interface WebhookRecord {
 	retryPolicy?: { maxRetries: number; backoff: string };
 }
 
+/**
+ * Webhook 投递日志（A-40：对齐后端 WebhookDeliveryLogResponse camel 化后的真实 wire 键
+ * —— id/event_type/url/status_code/payload/response/error/duration_ms/attempt/status/request_id/created_at）。
+ */
 export interface DeliveryLog {
 	id: string;
-	timestamp: string;
-	status: 'success' | 'failed';
-	requestBody: string;
-	responseBody: string;
-	durationMs: number;
+	eventType?: string;
+	url?: string;
+	statusCode?: number;
+	payload?: string;
+	response?: string;
+	error?: string;
+	durationMs?: number;
+	attempt?: number;
+	status?: string;
+	requestId?: string;
+	createdAt?: string;
 }
 
 export function useWebhooks(tenantId: string) {

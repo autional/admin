@@ -1,7 +1,7 @@
 import { Routes, Route, Outlet, useParams } from 'react-router';
 import type { ReactNode } from 'react';
 import { Button } from 'antd';
-import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppShell, ErrorBoundary } from '@autional/ui';
 import { DEFAULT_ERROR_BOUNDARY } from './lib/error-boundary-config';
@@ -101,7 +101,7 @@ function LayoutWrapper() {
 								<Button
 									type="text"
 									className="hidden lg:inline-flex"
-									icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+									icon={collapsed ? <PanelLeftOpen size="1em" /> : <PanelLeftClose size="1em" />}
 									onClick={toggleSidebar}
 									aria-label={collapsed ? t('header.expandSidebar') : t('header.collapseSidebar')}
 									aria-expanded={!collapsed}

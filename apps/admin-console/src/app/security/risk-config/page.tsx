@@ -7,14 +7,15 @@ import {
 	Switch,
 	Button,
 	Space,
-	message,
 	Spin,
 	Typography,
 	Popconfirm,
 } from 'antd';
-import { SaveOutlined, UndoOutlined } from '@ant-design/icons';
+import { message } from '@/lib/antd-app';
+import { Save, Undo2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRiskConfig, updateRiskConfig, resetRiskConfig } from '@/lib/api.generated';
+import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
 // TASK-AB1-27（RC-5 契约收敛，清单外补收敛）：删本地 snake 接口 + 手写回转换（写回 snake 供表单匹配的旧法）；
 // 行契约 = generated RiskConfigResponse/SignalWeights（camel 直读，拦截器深 camel 化）。
@@ -22,28 +23,32 @@ import { queryKeys } from '@/lib/query-keys';
 // signal_weights/...）；权重 service-identity/internal/domain/risk_config.go:31-46（json ip_unknown 等）。
 import type { RiskConfigResponse, SignalWeights } from '@autional/shared/generated/types';
 import { AppPageHeader } from '@autional/ui';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
-const signalLabels: Record<keyof SignalWeights, string> = {
-	ipUnknown: '未知 IP',
-	ipBadReputation: 'IP 信誉差',
-	ipVpn: 'VPN/代理 IP',
-	loginFailureHigh: '高频登录失败',
-	loginFailureModerate: '中频登录失败',
-	newDeviceOrIp: '新设备/IP',
-	unknownDevice: '未知设备',
-	unusualLocation: '异地登录',
-	unusualTime: '异常时间',
-	newCountry: '新国家',
-	velocityAnomaly: '速度异常',
-	credentialLeaked: '凭证泄露',
-	mfaMethodChanged: 'MFA 方式变更',
-	sessionHijack: '会话劫持',
-};
+// A-105：信号名单源键表（渲染标签走 i18n riskConfig.signal.*；旧实现硬编码中文 14 条，EN 模式不翻译）
+const SIGNAL_KEYS: Array<keyof SignalWeights> = [
+	'ipUnknown',
+	'ipBadReputation',
+	'ipVpn',
+	'loginFailureHigh',
+	'loginFailureModerate',
+	'newDeviceOrIp',
+	'unknownDevice',
+	'unusualLocation',
+	'unusualTime',
+	'newCountry',
+	'velocityAnomaly',
+	'credentialLeaked',
+	'mfaMethodChanged',
+	'sessionHijack',
+];
 
 export default function RiskConfigPage() {
+	const { t } = useTranslation();
 	const queryClient = useQueryClient();
+	const [form] = Form.useForm();
 
 	const { data: config, isLoading } = useQuery({
 		queryKey: queryKeys.security.riskConfig,
@@ -58,63 +63,86 @@ export default function RiskConfigPage() {
 		mutationFn: updateRiskConfig,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: queryKeys.security.riskConfig });
-			message.success('风险配置已保存');
+			message.success(t('riskConfig.saveSuccess'));
 		},
-		onError: () => message.error('保存失败'),
 	});
 
 	const { mutateAsync: reset, isPending: isResetting } = useMutation({
 		mutationFn: resetRiskConfig,
 		onSuccess: (data) => {
 			queryClient.setQueryData(queryKeys.security.riskConfig, data as RiskConfigResponse);
-			message.success('已恢复默认配置');
+			// A-104：重置后表单回显 —— AntD initialValues 挂载后不响应数据变更，旧实现仅 setQueryData
+			// → 表单停留旧值，随即点「保存配置」把旧值打回、重置被静默撤销。reset 响应即完整配置，直接回填。
+			form.setFieldsValue(data as RiskConfigResponse);
+			message.success(t('riskConfig.resetSuccess'));
 		},
-		onError: () => message.error('重置失败'),
+		onError: (err) => handleApiError(err, t('riskConfig.resetFailed')),
 	});
-
-	const [form] = Form.useForm();
 
 	if (isLoading || !config) return <Spin style={{ display: 'block', margin: '80px auto' }} />;
 
 	const handleSave = async () => {
 		const values = await form.validateFields();
-		await save(values);
+		// A-105：具体错误透出（旧实现仅「保存失败」吞后端 400 单调性校验原因）——经 handleApiError
+		// 取响应的 message/title/detail（shared utils/error.ts 键链）。try/catch 与 mfa 页既有模式一致，
+		// 避免 mutateAsync 的 rejection 逃逸为 unhandled rejection。
+		try {
+			await save(values);
+		} catch (err) {
+			handleApiError(err, t('riskConfig.saveFailed'));
+		}
 	};
 
 	return (
 		<div style={{ maxWidth: 800 }}>
-			<AppPageHeader title="风险评分配置" description="配置自适应 MFA 的风险评分阈值与信号权重" />
+			<AppPageHeader title={t('riskConfig.title')} description={t('riskConfig.subtitle')} />
 
 			<Form form={form} layout="vertical" initialValues={config}>
-				<Card title="风险等级阈值" style={{ marginBottom: 16 }}>
+				<Card title={t('riskConfig.levelThresholdCard')} style={{ marginBottom: 16 }}>
 					<Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-						五级风险模型：L0 正常 → L1 建议 MFA → L2 需要 SMS → L3 需要 TOTP → L4 阻断登录
+						{t('riskConfig.fiveLevelDesc')}
 					</Text>
 					<Space wrap>
-						<Form.Item name="elevatedThreshold" label="L1 提醒阈值" rules={[{ required: true }]}>
+						<Form.Item
+							name="elevatedThreshold"
+							label={t('riskConfig.threshold.l1')}
+							rules={[{ required: true }]}
+						>
 							<InputNumber min={0} max={100} />
 						</Form.Item>
-						<Form.Item name="moderateThreshold" label="L2 SMS 阈值" rules={[{ required: true }]}>
+						<Form.Item
+							name="moderateThreshold"
+							label={t('riskConfig.threshold.l2')}
+							rules={[{ required: true }]}
+						>
 							<InputNumber min={0} max={100} />
 						</Form.Item>
-						<Form.Item name="highThreshold" label="L3 TOTP 阈值" rules={[{ required: true }]}>
+						<Form.Item
+							name="highThreshold"
+							label={t('riskConfig.threshold.l3')}
+							rules={[{ required: true }]}
+						>
 							<InputNumber min={0} max={100} />
 						</Form.Item>
-						<Form.Item name="criticalThreshold" label="L4 阻断阈值" rules={[{ required: true }]}>
+						<Form.Item
+							name="criticalThreshold"
+							label={t('riskConfig.threshold.l4')}
+							rules={[{ required: true }]}
+						>
 							<InputNumber min={0} max={100} />
 						</Form.Item>
 					</Space>
 				</Card>
 
-				<Card title="信号权重" style={{ marginBottom: 16 }}>
+				<Card title={t('riskConfig.signalWeightsCard')} style={{ marginBottom: 16 }}>
 					<Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-						每个风险信号对总分 (0-100) 的贡献值
+						{t('riskConfig.signalWeightsDesc')}
 					</Text>
-					{Object.entries(signalLabels).map(([key, label]) => (
+					{SIGNAL_KEYS.map((key) => (
 						<Form.Item
 							key={key}
 							name={['signalWeights', key]}
-							label={`${label} (${key})`}
+							label={`${t(`riskConfig.signal.${key}`)} (${key})`}
 							style={{ display: 'inline-block', width: 280, marginRight: 16 }}
 						>
 							<InputNumber min={0} max={100} size="small" />
@@ -122,23 +150,28 @@ export default function RiskConfigPage() {
 					))}
 				</Card>
 
-				<Card title="通用设置" style={{ marginBottom: 16 }}>
-					<Form.Item name="learningPeriodDays" label="新用户学习期 (天)">
-						<InputNumber min={0} max={90} />
+				<Card title={t('riskConfig.generalCard')} style={{ marginBottom: 16 }}>
+					<Form.Item name="learningPeriodDays" label={t('riskConfig.learningPeriod')}>
+						{/* A-105：边界对齐后端 binding（risk_config_handler.go:22 min=0,max=3650；旧 UI 上限 90） */}
+						<InputNumber min={0} max={3650} />
 					</Form.Item>
-					<Form.Item name="sessionRiskEnabled" label="会话持续风险监控" valuePropName="checked">
+					<Form.Item
+						name="sessionRiskEnabled"
+						label={t('riskConfig.sessionRisk')}
+						valuePropName="checked"
+					>
 						<Switch />
 					</Form.Item>
 				</Card>
 			</Form>
 
 			<Space>
-				<Button type="primary" icon={<SaveOutlined />} loading={isSaving} onClick={handleSave}>
-					保存配置
+				<Button type="primary" icon={<Save size="1em" />} loading={isSaving} onClick={handleSave}>
+					{t('riskConfig.save')}
 				</Button>
-				<Popconfirm title="恢复系统默认风险配置？" onConfirm={() => reset()}>
-					<Button icon={<UndoOutlined />} loading={isResetting}>
-						恢复默认
+				<Popconfirm title={t('riskConfig.resetConfirm')} onConfirm={() => reset()}>
+					<Button icon={<Undo2 size="1em" />} loading={isResetting}>
+						{t('riskConfig.reset')}
 					</Button>
 				</Popconfirm>
 			</Space>

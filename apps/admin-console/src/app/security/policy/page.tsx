@@ -3,17 +3,20 @@
 import React from 'react';
 import { Card, Form, Input, Select, Switch, InputNumber, Button } from 'antd';
 import { message } from '@/lib/antd-app';
-import { SaveOutlined } from '@ant-design/icons';
+import { Save } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getSecurityPolicy, updateSecurityPolicy } from '@/lib/api.generated';
 import { queryKeys } from '@/lib/query-keys';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
-import { extractItem, useCurrentTenantId } from '@autional/shared';
+import { extractItem, useCurrentTenantId, usePageTitle } from '@autional/shared';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 
-/** 后端 GET 返回的嵌套结构（apiClient 响应已转 camelCase） */
+/** 后端 GET 返回的嵌套结构（apiClient 响应已转 camelCase；flat 键与 nested 键并存）。
+ *  wire 锚：service-tenant/internal/handler/dto/dto.go:337-346 SecurityPolicyResponse
+ *  （password_policy/session_policy 嵌套 + max_attempts_per_user/lock_duration/allowed_ip_ranges/
+ *  blocked_countries/mfa_required 扁平）。 */
 interface SecurityPolicyNested {
 	passwordPolicy?: {
 		minLength?: number;
@@ -28,8 +31,14 @@ interface SecurityPolicyNested {
 		maxConcurrentSessions?: number;
 	};
 	ipWhitelist?: string[];
+	/** A-128：响应扁平键 blocked_countries → camel；旧实现硬编码 [] → 已配置列表不可见。 */
+	blockedCountries?: string[];
 	mfaRequired?: boolean;
 }
+
+/** Go time.ParseDuration 可解析的必要格式（数字+单位 h/m/s 的一段或多段），如 30m / 1h / 1h30m。
+ *  A-129：自由文本如 "30" 直送后端 ParseDuration 必 400 且报错为英文，前端同格式预校验。 */
+const DURATION_PATTERN = /^(\d+(\.\d+)?(h|m|s))+$/;
 
 /** 表单模型（对应后端 UpdateSecurityPolicyRequest 扁平字段，camelCase） */
 interface SecurityPolicyForm {
@@ -50,10 +59,16 @@ interface SecurityPolicyForm {
 
 export default function SecurityPolicyPage() {
 	const { t } = useTranslation();
+	usePageTitle(t('securityPolicy.title')); // A-130：tab 标题（旧实现恒「Autional 管理控制台」）
 	const [form] = Form.useForm();
 	const tenantId = useCurrentTenantId() ?? '';
 
-	const { data: policy, isLoading } = useQuery({
+	const {
+		data: policy,
+		isLoading,
+		error, // A-131：error 接线（旧实现未解构 → GET 失败静默空白表单）
+		refetch,
+	} = useQuery({
 		queryKey: queryKeys.security.tenantPolicy(tenantId),
 		queryFn: async () => {
 			const res = await getSecurityPolicy(tenantId);
@@ -71,7 +86,8 @@ export default function SecurityPolicyPage() {
 				maxConcurrentSessions: nested.sessionPolicy?.maxConcurrentSessions,
 				mfaRequired: nested.mfaRequired,
 				allowedIpRanges: nested.ipWhitelist ?? [],
-				blockedCountries: [],
+				// A-128：读回显（响应键 blocked_countries → camel）；保存即「所见集合」的替换语义可见化。
+				blockedCountries: nested.blockedCountries ?? [],
 			};
 			return formData;
 		},
@@ -126,6 +142,10 @@ export default function SecurityPolicyPage() {
 	return (
 		<div>
 			<AppPageHeader title={t('securityPolicy.title')} />
+			{/* A-131：GET 失败显示错误态（旧实现 error 未解构 → 空白表单被当现状，据空白保存） */}
+			{error && (
+				<PageError message={t('securityPolicy.loadError')} retry={refetch} className="mb-4" />
+			)}
 			<Card loading={isLoading}>
 				<Form form={form} layout="vertical" onFinish={onFinish}>
 					<Form.Item name="allowedIpRanges" label={t('securityPolicy.ipWhitelist')}>
@@ -154,47 +174,86 @@ export default function SecurityPolicyPage() {
 						/>
 					</Form.Item>
 
-					<Form.Item name="mfaRequired" label="MFA 必填" valuePropName="checked">
+					{/* A-130：以下标签/分组标题全部走 t()（旧实现硬编码中文，EN 模式半中文） */}
+					<Form.Item name="mfaRequired" label={t('securityPolicy.mfaRequired')} valuePropName="checked">
 						<Switch />
 					</Form.Item>
 
-					<h3 className="text-sm font-semibold mt-4 mb-2">密码复杂度</h3>
-					<Form.Item name="passwordMinLength" label="最小长度">
-						<InputNumber min={4} max={128} className="w-50" />
+					<h3 className="text-sm font-semibold mt-4 mb-2">{t('securityPolicy.passwordComplexity')}</h3>
+					<Form.Item name="passwordMinLength" label={t('securityPolicy.minLength')}>
+						{/* A-129：边界同源 —— DTO min=6（dto.go:364 password_min_length [6,128]；旧 UI min=4 → 4/5 保存必 400） */}
+						<InputNumber min={6} max={128} className="w-50" />
 					</Form.Item>
-					<Form.Item name="passwordMaxLength" label="最大长度">
+					<Form.Item name="passwordMaxLength" label={t('securityPolicy.maxLength')}>
 						<InputNumber min={8} max={256} className="w-50" />
 					</Form.Item>
-					<Form.Item name="requireUppercase" label="必须包含大写字母" valuePropName="checked">
+					<Form.Item
+						name="requireUppercase"
+						label={t('securityPolicy.requireUppercase')}
+						valuePropName="checked"
+					>
 						<Switch />
 					</Form.Item>
-					<Form.Item name="requireLowercase" label="必须包含小写字母" valuePropName="checked">
+					<Form.Item
+						name="requireLowercase"
+						label={t('securityPolicy.requireLowercase')}
+						valuePropName="checked"
+					>
 						<Switch />
 					</Form.Item>
-					<Form.Item name="requireDigit" label="必须包含数字" valuePropName="checked">
+					<Form.Item name="requireDigit" label={t('securityPolicy.requireDigit')} valuePropName="checked">
 						<Switch />
 					</Form.Item>
-					<Form.Item name="requireSpecial" label="必须包含特殊字符" valuePropName="checked">
+					<Form.Item
+						name="requireSpecial"
+						label={t('securityPolicy.requireSpecial')}
+						valuePropName="checked"
+					>
 						<Switch />
 					</Form.Item>
 
-					<h3 className="text-sm font-semibold mt-4 mb-2">账户与会话</h3>
-					<Form.Item name="maxAttemptsPerUser" label="最大登录失败次数">
-						<InputNumber min={0} max={20} className="w-50" />
+					<h3 className="text-sm font-semibold mt-4 mb-2">
+						{t('securityPolicy.accountAndSession')}
+					</h3>
+					<Form.Item name="maxAttemptsPerUser" label={t('securityPolicy.maxAttemptsPerUser')}>
+						{/* A-129：边界同源 —— DTO [1,100]（dto.go:362 max_attempts_per_user；旧 UI [0,20] → 0 必 400） */}
+						<InputNumber min={1} max={100} className="w-50" />
 					</Form.Item>
-					<Form.Item name="lockDuration" label="锁定时长">
-						<Input placeholder="如 30m / 1h" className="w-50" />
+					<Form.Item
+						name="lockDuration"
+						label={t('securityPolicy.lockDuration')}
+						rules={[
+							{
+								validator: (_, value: string) =>
+									!value || DURATION_PATTERN.test(value)
+										? Promise.resolve()
+										: Promise.reject(new Error(t('securityPolicy.durationInvalid'))),
+							},
+						]}
+					>
+						<Input placeholder={t('securityPolicy.durationPlaceholder')} className="w-50" />
 					</Form.Item>
-					<Form.Item name="sessionTimeout" label="会话超时">
-						<Input placeholder="如 30m / 2h" className="w-50" />
+					<Form.Item
+						name="sessionTimeout"
+						label={t('securityPolicy.sessionTimeout')}
+						rules={[
+							{
+								validator: (_, value: string) =>
+									!value || DURATION_PATTERN.test(value)
+										? Promise.resolve()
+										: Promise.reject(new Error(t('securityPolicy.durationInvalid'))),
+							},
+						]}
+					>
+						<Input placeholder={t('securityPolicy.durationPlaceholder')} className="w-50" />
 					</Form.Item>
-					<Form.Item name="maxConcurrentSessions" label="最大并发会话">
+					<Form.Item name="maxConcurrentSessions" label={t('securityPolicy.maxConcurrentSessions')}>
 						<InputNumber min={1} max={1000} className="w-50" />
 					</Form.Item>
 
 					<Button
 						type="primary"
-						icon={<SaveOutlined />}
+						icon={<Save size="1em" />}
 						htmlType="submit"
 						loading={updateMut.isPending}
 					>

@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { Tag, Button, Select, Space, Row, Col, Modal, Input } from 'antd';
 
 import { message } from '@/lib/antd-app';
-import { SearchOutlined } from '@ant-design/icons';
+import { Search } from 'lucide-react';
 import { useAlerts, useUpdateAlertStatus, useAssignAlert } from '@/hooks/use-audit-alerts';
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
 import type { DataTablePagination } from '@autional/ui/antd';
-import { useIsAuditRestricted, AuditStatsOnly } from '@autional/shared';
+import { useIsAuditRestricted, AuditStatsOnly, usePageTitle } from '@autional/shared';
 import type * as Types from '@autional/shared/generated/types';
 import { AppPageHeader } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
@@ -29,8 +29,17 @@ const STATUS_COLORS: Record<string, string> = {
 	dismissed: 'default',
 };
 
+// A-205（W1e）：type 原无配色（SEVERITY/STATUS 有映射，TYPE 裸 Tag）→ 补齐
+const TYPE_COLORS: Record<string, string> = {
+	anomaly: 'volcano',
+	threshold: 'gold',
+	system: 'cyan',
+};
+
 export default function AuditAlertsPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	// A-205（W1e）：tab 恒"Autional 管理控制台" → 挂载页面标题
+	usePageTitle(t('auditAlerts.title'));
 
 	const SEVERITY_OPTIONS = [
 		{ label: t('auditAlerts.severity.low'), value: 'low' },
@@ -106,7 +115,12 @@ export default function AuditAlertsPage() {
 	};
 
 	const handleAssignConfirm = async () => {
-		if (!assignTargetId || !assigneeName.trim()) return;
+		if (!assignTargetId) return;
+		// A-204（W1e）：空/纯空白输入不再静默 return —— 显式拦截提示（确定按钮同步禁用）
+		if (!assigneeName.trim()) {
+			message.warning(t('auditAlerts.assigneeRequired'));
+			return;
+		}
 		try {
 			await assignMut.mutateAsync({ id: assignTargetId, data: { assignee: assigneeName.trim() } });
 			message.success(t('auditAlerts.assigned'));
@@ -129,14 +143,23 @@ export default function AuditAlertsPage() {
 			dataIndex: 'severity',
 			key: 'severity',
 			width: 100,
-			render: (v: string) => <Tag color={SEVERITY_COLORS[v] || 'default'}>{v}</Tag>,
+			// A-203（W1e）：英文原值 → 词表中文（未收录值回退原值）
+			render: (v: string) => (
+				<Tag color={SEVERITY_COLORS[v] || 'default'}>
+					{t(`auditAlerts.severity.${v}`, { defaultValue: v })}
+				</Tag>
+			),
 		},
 		{
 			title: t('auditAlerts.column.type'),
 			dataIndex: 'type',
 			key: 'type',
 			width: 100,
-			render: (v: string) => <Tag>{v}</Tag>,
+			render: (v: string) => (
+				<Tag color={TYPE_COLORS[v] || 'default'}>
+					{t(`auditAlerts.type.${v}`, { defaultValue: v })}
+				</Tag>
+			),
 		},
 		{ title: t('auditAlerts.column.title'), dataIndex: 'title', key: 'title', ellipsis: true },
 		{
@@ -144,7 +167,11 @@ export default function AuditAlertsPage() {
 			dataIndex: 'status',
 			key: 'status',
 			width: 130,
-			render: (v: string) => <Tag color={STATUS_COLORS[v] || 'default'}>{v}</Tag>,
+			render: (v: string) => (
+				<Tag color={STATUS_COLORS[v] || 'default'}>
+					{t(`auditAlerts.status.${v}`, { defaultValue: v })}
+				</Tag>
+			),
 		},
 		{ title: t('auditAlerts.column.assignee'), dataIndex: 'assignee', key: 'assignee', width: 130 },
 		{
@@ -152,6 +179,8 @@ export default function AuditAlertsPage() {
 			dataIndex: 'createdAt',
 			key: 'createdAt',
 			width: 170,
+			// A-203（W1e）：RFC3339 原样 → 本地化时间
+			render: (v: string) => (v ? new Date(v).toLocaleString(i18n.language) : '-'),
 		},
 		{
 			title: t('auditAlerts.column.action'),
@@ -249,7 +278,7 @@ export default function AuditAlertsPage() {
 						/>
 					</Col>
 					<Col xs={24} sm={8} md={6}>
-						<Button type="primary" icon={<SearchOutlined />} onClick={() => refetch()}>
+						<Button type="primary" icon={<Search size="1em" />} onClick={() => refetch()}>
 							{t('auditAlerts.search')}
 						</Button>
 					</Col>
@@ -295,7 +324,9 @@ export default function AuditAlertsPage() {
 							</Col>
 							<Col span={16}>
 								<Tag color={SEVERITY_COLORS[currentRecord.severity] || 'default'}>
-									{currentRecord.severity}
+									{t(`auditAlerts.severity.${currentRecord.severity}`, {
+										defaultValue: currentRecord.severity,
+									})}
 								</Tag>
 							</Col>
 						</Row>
@@ -304,7 +335,9 @@ export default function AuditAlertsPage() {
 								{t('auditAlerts.column.type')}
 							</Col>
 							<Col span={16}>
-								<Tag>{currentRecord.type}</Tag>
+								<Tag color={TYPE_COLORS[currentRecord.type] || 'default'}>
+									{t(`auditAlerts.type.${currentRecord.type}`, { defaultValue: currentRecord.type })}
+								</Tag>
 							</Col>
 						</Row>
 						<Row>
@@ -319,7 +352,9 @@ export default function AuditAlertsPage() {
 							</Col>
 							<Col span={16}>
 								<Tag color={STATUS_COLORS[currentRecord.status] || 'default'}>
-									{currentRecord.status}
+									{t(`auditAlerts.status.${currentRecord.status}`, {
+										defaultValue: currentRecord.status,
+									})}
 								</Tag>
 							</Col>
 						</Row>
@@ -345,14 +380,20 @@ export default function AuditAlertsPage() {
 							<Col span={8} className="text-neutral-600">
 								{t('auditAlerts.column.created')}
 							</Col>
-							<Col span={16}>{currentRecord.createdAt}</Col>
+							<Col span={16}>
+								{currentRecord.createdAt
+									? new Date(currentRecord.createdAt).toLocaleString(i18n.language)
+									: '-'}
+							</Col>
 						</Row>
 						{currentRecord.acknowledgedAt && (
 							<Row>
 								<Col span={8} className="text-neutral-600">
 									{t('auditAlerts.acknowledgedAt')}
 								</Col>
-								<Col span={16}>{currentRecord.acknowledgedAt}</Col>
+								<Col span={16}>
+									{new Date(currentRecord.acknowledgedAt).toLocaleString(i18n.language)}
+								</Col>
 							</Row>
 						)}
 						{currentRecord.resolvedAt && (
@@ -361,7 +402,7 @@ export default function AuditAlertsPage() {
 									{t('auditAlerts.resolvedAt')}
 								</Col>
 								<Col span={16}>
-									{currentRecord.resolvedAt}{' '}
+									{new Date(currentRecord.resolvedAt).toLocaleString(i18n.language)}{' '}
 									{t('auditAlerts.resolvedBy', { user: currentRecord.resolvedBy })}
 								</Col>
 							</Row>
@@ -371,7 +412,9 @@ export default function AuditAlertsPage() {
 								<Col span={8} className="text-neutral-600">
 									{t('auditAlerts.escalatedAt')}
 								</Col>
-								<Col span={16}>{currentRecord.escalatedAt}</Col>
+								<Col span={16}>
+									{new Date(currentRecord.escalatedAt).toLocaleString(i18n.language)}
+								</Col>
 							</Row>
 						)}
 						<Row className="pt-4">
@@ -429,6 +472,7 @@ export default function AuditAlertsPage() {
 					setAssignTargetId(null);
 					setAssigneeName('');
 				}}
+				okButtonProps={{ disabled: !assigneeName.trim() }}
 				confirmLoading={assignMut.isPending}
 				className="w-full max-w-[560px]"
 			>

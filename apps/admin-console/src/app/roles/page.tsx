@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select, Switch, Checkbox, Divider, Typography, Empty, Spin } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	SafetyOutlined,
-	CopyOutlined,
-} from '@ant-design/icons';
+	Copy,
+	Pencil,
+	Plus,
+	ShieldCheck,
+	Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
 	useRoles,
@@ -257,7 +257,7 @@ export default function RolesPage() {
 
 	const groupedPermissions = React.useMemo(() => {
 		const groups: Record<string, PermissionItem[]> = {};
-		allPermissions.forEach((p: PermissionItem) => {
+		(permissionsResult?.items ?? []).forEach((p: PermissionItem) => {
 			const cat = CATEGORY_LABELS[p.category] || p.category || 'roles.category.other';
 			if (!groups[cat]) groups[cat] = [];
 			groups[cat].push(p);
@@ -311,7 +311,7 @@ export default function RolesPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue(record);
@@ -322,18 +322,18 @@ export default function RolesPage() {
 					</Button>
 					<Button
 						type="link"
-						icon={<SafetyOutlined />}
+						icon={<ShieldCheck size="1em" />}
 						onClick={() => openPermissionDrawer(record)}
 					>
 						{t('roles.assignPermissions')}
 					</Button>
-					<Button type="link" icon={<CopyOutlined />} onClick={() => handleClone(record)}>
+					<Button type="link" icon={<Copy size="1em" />} onClick={() => handleClone(record)}>
 						{t('roles.clone')}
 					</Button>
 					<Button
 						type="link"
 						danger
-						icon={<DeleteOutlined />}
+						icon={<Trash2 size="1em" />}
 						onClick={() => handleDelete(record.id)}
 					>
 						{t('common.delete')}
@@ -351,7 +351,7 @@ export default function RolesPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -472,7 +472,7 @@ export default function RolesPage() {
 									{permissions.map((perm) => (
 										<div
 											key={perm.id}
-											className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded border border-neutral-200 px-3 py-2 hover:bg-neutral-50"
+											className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xs border border-neutral-200 px-3 py-2 hover:bg-neutral-50"
 										>
 											<div className="flex-1 min-w-0 mr-4">
 												<div className="font-medium text-sm">{perm.name}</div>

@@ -6,8 +6,20 @@ import { queryKeys } from '@/lib/query-keys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDataClassification, updateDataClassification } from '@/lib/api.generated';
 
-interface ClassificationData {
-	[key: string]: string;
+/** 单个分级条目（A-124：description/color 为契约字段，读写双向接通）。
+ *  wire 锚：service-tenant/internal/handler/dto/dto.go:924-961
+ *  （classifications:[{level,label,description,color}] + updated_at）。 */
+export interface ClassificationEntry {
+	level: string;
+	label: string;
+	description?: string;
+	color?: string;
+}
+
+export interface ClassificationData {
+	tenantId?: string;
+	classifications: ClassificationEntry[];
+	updatedAt?: string;
 }
 
 export function useDataClassification(tenantId: string) {
@@ -15,7 +27,8 @@ export function useDataClassification(tenantId: string) {
 		queryKey: queryKeys.security.dataClassification(tenantId),
 		queryFn: async () => {
 			const res = await getDataClassification(tenantId);
-			return extractItem<ClassificationData>(res) ?? ({} as ClassificationData);
+			const data = extractItem<ClassificationData>(res);
+			return data ?? ({ classifications: [] } as ClassificationData);
 		},
 		enabled: !!tenantId,
 	});

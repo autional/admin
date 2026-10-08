@@ -10,7 +10,7 @@ import {
 	getBillingStatistics,
 	getBillingRecords,
 } from '@/lib/api.generated';
-import { extractItem, extractList } from '@autional/shared';
+import { extractItem, extractList, extractListResult } from '@autional/shared';
 import * as Generated from '@autional/shared/generated/api';
 import type {
 	CreatePlanRequest,
@@ -61,21 +61,23 @@ export interface BillingStatistics {
 	churnRate?: number;
 }
 
+// A-288：wire 主键 = record_id（camel recordId）；此前 id 列恒空
 export interface BillingRecord {
-	id: string;
+	recordId: string;
 	type: string;
-	amount: number;
+	amount: number | string;
 	status: string;
 	description: string;
 	createdAt: string;
 }
 
+// A-291：wire 主键 = plan_id（camel planId）；此前行操作读 id=undefined、code/status 列恒空
 export interface Plan {
-	id: string;
+	planId: string;
 	name: string;
 	code?: string;
-	monthlyPrice?: number;
-	yearlyPrice?: number;
+	monthlyPrice?: number | string;
+	yearlyPrice?: number | string;
 	features?: string[];
 	status?: string;
 	description?: string;
@@ -91,14 +93,16 @@ export interface PaymentGateway {
 	[key: string]: unknown;
 }
 
+// A-289：按 RefundApprovalResponse 契约重写（refund_id/approved_by/approved_at）；reason/created_at 无 wire 来源已退场
 export interface RefundApproval {
-	id: string;
-	amount: number;
-	reason: string;
+	refundId: string;
+	amount: number | string;
 	status: string;
 	tenantId?: string;
 	transactionId?: string;
-	createdAt?: string;
+	invoiceNumber?: string;
+	approvedBy?: string;
+	approvedAt?: string;
 	[key: string]: unknown;
 }
 
@@ -109,7 +113,7 @@ export interface DunningSettings {
 	[key: string]: unknown;
 }
 
-export function useBillingSubscription(tenantId: string) {
+export function useBillingSubscription(tenantId: string, enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.subscription(tenantId),
 		staleTime: 60000,
@@ -117,11 +121,12 @@ export function useBillingSubscription(tenantId: string) {
 			const res = await getBillingSubscription(tenantId, signal);
 			return extractItem<BillingSubscription>(res);
 		},
-		enabled: !!tenantId,
+		// A-292④：按激活页签惰性取数（首屏 8 GET → 1）
+		enabled: !!tenantId && enabled,
 	});
 }
 
-export function useBillingUsage(tenantId: string) {
+export function useBillingUsage(tenantId: string, enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.usage(tenantId),
 		staleTime: 60000,
@@ -129,11 +134,11 @@ export function useBillingUsage(tenantId: string) {
 			const res = await getBillingUsage(tenantId, signal);
 			return extractItem<BillingUsage>(res);
 		},
-		enabled: !!tenantId,
+		enabled: !!tenantId && enabled,
 	});
 }
 
-export function useBillingStatistics(tenantId: string) {
+export function useBillingStatistics(tenantId: string, enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.statistics(tenantId),
 		staleTime: 60000,
@@ -141,11 +146,11 @@ export function useBillingStatistics(tenantId: string) {
 			const res = await getBillingStatistics(tenantId, signal);
 			return extractItem<BillingStatistics>(res);
 		},
-		enabled: !!tenantId,
+		enabled: !!tenantId && enabled,
 	});
 }
 
-export function useBillingRecords(tenantId: string) {
+export function useBillingRecords(tenantId: string, enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.records(tenantId),
 		staleTime: 30000,
@@ -153,7 +158,7 @@ export function useBillingRecords(tenantId: string) {
 			const res = await getBillingRecords(tenantId, signal);
 			return extractList<BillingRecord>(res);
 		},
-		enabled: !!tenantId,
+		enabled: !!tenantId && enabled,
 	});
 }
 
@@ -169,7 +174,7 @@ export function useChangeBillingPlan() {
 	});
 }
 
-export function usePlans() {
+export function usePlans(enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.plans,
 		staleTime: 60000,
@@ -177,6 +182,7 @@ export function usePlans() {
 			const res = await Generated.adminBillingPlans();
 			return extractList<Plan>(res);
 		},
+		enabled,
 	});
 }
 
@@ -206,14 +212,18 @@ export function useDeletePlan() {
 	});
 }
 
-export function usePaymentGateways() {
+export function usePaymentGateways(
+	params?: { page?: number; page_size?: number },
+	enabled = true,
+) {
 	return useQuery({
-		queryKey: queryKeys.billing.paymentGateways,
+		queryKey: queryKeys.billing.paymentGateways.list(params),
 		staleTime: 60000,
 		queryFn: async ({ signal }) => {
-			const res = await Generated.adminBillingPaymentGateways();
-			return extractList<PaymentGateway>(res);
+			const res = await Generated.adminBillingPaymentGateways(params);
+			return extractListResult<PaymentGateway>(res);
 		},
+		enabled,
 	});
 }
 
@@ -222,7 +232,8 @@ export function useCreatePaymentGateway() {
 	return useMutation({
 		mutationFn: (data: Record<string, unknown>) =>
 			Generated.adminBillingPaymentGatewaysPost(data as unknown as CreatePaymentGatewayRequest),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.paymentGateways }),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: queryKeys.billing.paymentGateways.all }),
 	});
 }
 
@@ -234,11 +245,12 @@ export function useUpdatePaymentGateway() {
 				id,
 				data as unknown as UpdatePaymentGatewayRequest,
 			),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.billing.paymentGateways }),
+		onSuccess: () =>
+			queryClient.invalidateQueries({ queryKey: queryKeys.billing.paymentGateways.all }),
 	});
 }
 
-export function useRefundApprovals() {
+export function useRefundApprovals(enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.refundApprovals,
 		staleTime: 30000,
@@ -246,6 +258,7 @@ export function useRefundApprovals() {
 			const res = await Generated.adminBillingRefundApprovals();
 			return extractList<RefundApproval>(res);
 		},
+		enabled,
 	});
 }
 
@@ -277,7 +290,7 @@ export function useExecuteRefund() {
 	});
 }
 
-export function useDunningSettings(tenantId: string) {
+export function useDunningSettings(tenantId: string, enabled = true) {
 	return useQuery({
 		queryKey: queryKeys.billing.dunningSettings(tenantId),
 		staleTime: 60000,
@@ -285,7 +298,7 @@ export function useDunningSettings(tenantId: string) {
 			const res = await Generated.adminBillingDunningSettingsByDunningSettings(tenantId);
 			return extractItem<DunningSettings>(res);
 		},
-		enabled: !!tenantId,
+		enabled: !!tenantId && enabled,
 	});
 }
 

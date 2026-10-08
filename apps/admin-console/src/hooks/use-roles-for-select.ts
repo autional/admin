@@ -27,7 +27,10 @@ export function useRolesForSelect() {
 	return useMemo(
 		() =>
 			roles.map((r) => ({
-				value: r.id,
+				// A-160：值域取角色码（如 admin）——公告 target_roles 存「角色名/码」
+				// （wire 锚 service-notification domain.go:208；集成测试 admin/manager），
+				// 非角色 ULID；无码时降级回落 id 保可提交。
+				value: r.code || r.id,
 				label: r.name || r.code || r.id,
 			})),
 		[roles],

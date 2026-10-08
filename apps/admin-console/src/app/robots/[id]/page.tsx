@@ -16,12 +16,12 @@ import {
 	Space,
 } from 'antd';
 import {
-	EditOutlined,
-	ArrowLeftOutlined,
-	PlayCircleOutlined,
-	PauseCircleOutlined,
-	KeyOutlined,
-} from '@ant-design/icons';
+	ArrowLeft,
+	KeyRound,
+	PauseCircle,
+	Pencil,
+	Play,
+} from 'lucide-react';
 import { usePageTitle, useTenantSlug, useCurrentTenantId } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { AppPageHeader, EmptyState, ErrorState, SectionCard, StatusBadge } from '@autional/ui';
@@ -32,33 +32,27 @@ import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
+import { useOwnerDisplay } from '@/hooks/use-owner-display';
+import { ROBOT_STATUS_VARIANT, statusVariantOf, retryUnlessNotFound } from '@/lib/nhi';
 
 import type { RobotInfo } from '@autional/shared/generated/types';
 
+// W1b（A-84）：owner_principal_id 为 additive 增量键（generated 快照未含）→ 局部增强类型。
+type RobotDetail = RobotInfo & { ownerPrincipalId?: string };
+
 const { Paragraph, Text } = Typography;
 
-const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
-	active: 'success',
-	commissioning: 'info',
-	degraded: 'warning',
-	decommissioned: 'neutral',
-	maintenance: 'warning',
-	provisioning: 'info',
-};
-
-function statusVariant(s: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-	return STATUS_VARIANT[s] || 'neutral';
-}
+// A-85：状态词表单源 = src/lib/nhi.ts（旧本地表含维护中/配置中等幽灵态——两页各抄一份即漂移根源）。
 
 function formatDate(iso: string): string {
 	if (!iso) return '-';
 	return new Date(iso).toLocaleDateString('zh-CN');
 }
 
-async function fetchRobot(id: string): Promise<RobotInfo> {
+async function fetchRobot(id: string): Promise<RobotDetail> {
 	const res = await adminRobotsByRobots(id);
 	// 根因修复 (2026-08-13): generated 已解包，res.data → undefined → 详情页空
-	return extractItem(res) ?? ({} as RobotInfo);
+	return extractItem(res) ?? ({} as RobotDetail);
 }
 
 async function updateRobot(id: string, values: Record<string, unknown>): Promise<RobotInfo> {
@@ -115,6 +109,9 @@ export default function RobotDetailPage() {
 	const [form] = Form.useForm();
 	const [intentForm] = Form.useForm();
 
+	// A-84：owner_principal_id → 成员显示名解析（列表/详情共用单点 hook）
+	const { resolve: resolveOwner } = useOwnerDisplay();
+
 	const {
 		data: robot,
 		isLoading,
@@ -125,6 +122,8 @@ export default function RobotDetailPage() {
 		queryFn: () => fetchRobot(id!),
 		enabled: !!id,
 		staleTime: 30000,
+		// A-86：404 不重试（消「假 ID 2 条 console 404」噪声）；其余沿用全局 retry:1
+		retry: retryUnlessNotFound,
 	});
 
 	const updateMut = useMutation({
@@ -219,18 +218,18 @@ export default function RobotDetailPage() {
 
 	if (!id) {
 		return (
-			<div className="p-6">
+			<div>
 				<ErrorState title={t('robotDetail.invalidTitle')} message={t('robotDetail.invalidMessage')} />
 			</div>
 		);
 	}
 
 	return (
-		<div className="p-6">
+		<div>
 			<div className="mb-6">
 				<Button
 					type="text"
-					icon={<ArrowLeftOutlined />}
+					icon={<ArrowLeft size="1em" />}
 					onClick={() => navigate(buildNavHref('/robots', tenantSlug))}
 					className="mb-4 pl-0"
 				>
@@ -239,17 +238,16 @@ export default function RobotDetailPage() {
 				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
 					<AppPageHeader
 						title={robot?.name || t('robotDetail.title')}
+						// A-86：错误态副标题不得残留「加载中」（robot 未达时留白，由下方 ErrorState 表达）
 						description={
-							robot?.model
-								? `${t('robotDetail.modelLabel')}: ${robot.model}`
-								: t('common.loading')
+							robot?.model ? `${t('robotDetail.modelLabel')}: ${robot.model}` : undefined
 						}
 					/>
 					{robot && (
 						<Space>
 							{canCommission && (
 								<Button
-									icon={<PlayCircleOutlined />}
+									icon={<Play size="1em" />}
 									className="!text-success-text !border-success"
 									onClick={handleCommission}
 									loading={commissionMut.isPending}
@@ -259,7 +257,7 @@ export default function RobotDetailPage() {
 							)}
 							{canDecommission && (
 								<Button
-									icon={<PauseCircleOutlined />}
+									icon={<PauseCircle size="1em" />}
 									danger
 									onClick={handleDecommission}
 									loading={decommissionMut.isPending}
@@ -269,7 +267,7 @@ export default function RobotDetailPage() {
 							)}
 							{canIssueIntent && (
 								<Button
-									icon={<KeyOutlined />}
+									icon={<KeyRound size="1em" />}
 									onClick={() => {
 										intentForm.resetFields();
 										setIntentResult(null);
@@ -279,7 +277,7 @@ export default function RobotDetailPage() {
 									{t('robotDetail.issueIntent')}
 								</Button>
 							)}
-							<Button icon={<EditOutlined />} onClick={openEdit}>
+							<Button icon={<Pencil size="1em" />} onClick={openEdit}>
 								{t('robotDetail.editTitle')}
 							</Button>
 						</Space>
@@ -308,7 +306,7 @@ export default function RobotDetailPage() {
 						<Descriptions column={2} bordered size="small">
 							<Descriptions.Item label={t('common.name')}>{robot.name}</Descriptions.Item>
 						<Descriptions.Item label={t('common.status')}>
-							<StatusBadge variant={statusVariant(robot.status || '')}>
+							<StatusBadge variant={statusVariantOf(ROBOT_STATUS_VARIANT, robot.status)}>
 								{t(`robots.status.${robot.status}`, { defaultValue: robot.status || '-' })}
 							</StatusBadge>
 						</Descriptions.Item>
@@ -321,7 +319,10 @@ export default function RobotDetailPage() {
 							<Descriptions.Item label={t('robots.column.location')}>{robot.location || '-'}</Descriptions.Item>
 							<Descriptions.Item label={t('robots.form.firmware')}>{robot.firmwareVer || '-'}</Descriptions.Item>
 							<Descriptions.Item label={t('robotDetail.identityId')}>{robot.identityId || '-'}</Descriptions.Item>
-							<Descriptions.Item label={t('robotDetail.ownerId')}>{robot.ownerId || '-'}</Descriptions.Item>
+							<Descriptions.Item label={t('robotDetail.ownerId')}>
+								{/* A-84：owner 显示名（owner_principal_id 优先；历史行回退 owner_id） */}
+								{resolveOwner(robot.ownerPrincipalId, robot.ownerId)}
+							</Descriptions.Item>
 							<Descriptions.Item label={t('robotDetail.safetyPolicy')}>
 								{robot.safetyPolicy || '-'}
 							</Descriptions.Item>
@@ -441,7 +442,7 @@ export default function RobotDetailPage() {
 				{intentResult ? (
 					<div className="space-y-3">
 						<Text strong>{t('robotDetail.generatedIntentToken')}</Text>
-						<Paragraph copyable code className="break-all text-xs bg-neutral-50 p-3 rounded border">
+						<Paragraph copyable code className="break-all text-xs bg-neutral-50 p-3 rounded-xs border">
 							{intentResult}
 						</Paragraph>
 						<Text type="secondary" className="text-xs">

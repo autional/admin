@@ -1,10 +1,9 @@
 'use client';
 
-import { extractList, extractItem } from '@autional/shared';
+import { extractList, extractItem, fromPageResult, toPageParams } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 import type {
 	CommunicationDashboardResponse,
-	MessageTemplateResponse,
 	TemplateResponse,
 } from '@autional/shared/generated/types';
 
@@ -12,9 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	getCommunicationLogs,
 	getCommunicationDashboard,
-	getCommunicationHealth,
 	getCommunicationTemplates,
-	getCommunicationTemplateStats,
 	getCommunicationProviders,
 	createCommunicationTemplate,
 	updateCommunicationTemplate,
@@ -32,22 +29,22 @@ interface LogRecord {
 	recipient: string;
 	status: string;
 	sentAt: string;
-}
-
-interface ChannelStats {
-	[key: string]: unknown;
+	// A-179：失败行 SentAt 为空（后端 CommunicationLogResponse.SentAt omitempty），
+	// 发送时间列回退读 CreatedAt（恒有值，wire 锚：service-communication dto CreatedAt）。
+	createdAt?: string;
 }
 
 interface CommunicationProvider {
 	[key: string]: unknown;
 }
 
-export function useCommunicationDashboard() {
+// A-182：仪表盘时间窗接线（days 入 queryKey 与 wire；后端默认窗口保持不传即用）。
+export function useCommunicationDashboard(days?: number) {
 	return useQuery({
-		queryKey: queryKeys.communication.dashboard,
+		queryKey: queryKeys.communication.dashboard(days),
 		staleTime: 30000,
 		queryFn: async () => {
-			const res = await getCommunicationDashboard();
+			const res = await getCommunicationDashboard(days ? { days } : undefined);
 			const data = extractItem<CommunicationDashboardResponse>(res);
 			return (
 				data ?? {
@@ -73,19 +70,8 @@ export function useMessageLogs() {
 	});
 }
 
-export function useChannelStats() {
-	return useQuery({
-		queryKey: queryKeys.communication.stats,
-		queryFn: async () => {
-			try {
-				const res = await getCommunicationHealth('email');
-				return extractItem<ChannelStats>(res) ?? ({} as ChannelStats);
-			} catch {
-				return {};
-			}
-		},
-	});
-}
+// A-181（[删]）：useChannelStats 已删（死取数——页面仅声明未消费 stats，
+// 且仅取 email 单渠道名不副实）。queryKeys.communication.stats 同步删。
 
 export function useCommunicationProviders() {
 	return useQuery({
@@ -127,29 +113,36 @@ export function useSaveCommunicationProvider() {
 	});
 }
 
-export function useCommunicationTemplates(params?: Record<string, unknown>) {
+/** 查询入参（camel 书面；分页键经 toPageParams 单点转 wire snake）。
+ *  wire 锚：adminCommunicationTemplates({channel?, is_active?, keyword?, page?, page_size?})。 */
+export interface CommunicationTemplatesQuery {
+	channel?: string;
+	isActive?: boolean;
+	keyword?: string;
+	page?: number;
+	pageSize?: number;
+}
+
+// A-186：服务端分页/筛选接线（原实现无参调用 → 后端默认页截断，筛选面缺失）。
+export function useCommunicationTemplates(params?: CommunicationTemplatesQuery) {
 	return useQuery({
 		queryKey: queryKeys.communication.templates(params),
 		staleTime: 60000,
 		queryFn: async () => {
-			const res = await getCommunicationTemplates(
-				params as Parameters<typeof getCommunicationTemplates>[0],
-			);
-			return extractList<TemplateResponse>(res);
+			const res = await getCommunicationTemplates({
+				...toPageParams({ page: params?.page, pageSize: params?.pageSize }),
+				...(params?.channel ? { channel: params.channel } : {}),
+				...(params?.isActive !== undefined ? { is_active: params.isActive } : {}),
+				...(params?.keyword ? { keyword: params.keyword } : {}),
+			});
+			// 响应侧 fromPageResult 归一 items/total（服务端分页契约）。
+			return fromPageResult<TemplateResponse>(res);
 		},
 	});
 }
 
-export function useCommunicationTemplateStats() {
-	return useQuery({
-		queryKey: queryKeys.communication.templateStats,
-		staleTime: 60000,
-		queryFn: async () => {
-			const res = await getCommunicationTemplateStats();
-			return extractList<Record<string, unknown>>(res);
-		},
-	});
-}
+// A-185（[删]）：useCommunicationTemplateStats 已删（死取数——页面声明 stats 零消费）。
+// queryKeys.communication.templateStats 同步删。
 
 export function useCreateCommunicationTemplate() {
 	const queryClient = useQueryClient();

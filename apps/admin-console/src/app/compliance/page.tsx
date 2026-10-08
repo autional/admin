@@ -1,17 +1,17 @@
 'use client';
 // @generated-api-exempt: 2 key(s) [COMPLIANCE.ADMIN_TENANT_SELF_POLICY, COMPLIANCE.ADMIN_TENANT_SELF_SCORE] lack generated func
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Tabs, Card, Tag, Button, Statistic, Row, Col, Space, Modal, Form, Input, InputNumber, Select, Switch, Empty, Progress, Badge, Popconfirm } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
-	SafetyCertificateOutlined,
-	EditOutlined,
-	PlusOutlined,
-	EyeOutlined,
-	SettingOutlined,
-	ReloadOutlined,
-} from '@ant-design/icons';
+	BadgeCheck,
+	Eye,
+	Pencil,
+	Plus,
+	RefreshCw,
+	Settings,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
 	useDSARs,
@@ -27,15 +27,25 @@ import {
 	useConsents,
 	useCreateConsent,
 	useRevokeConsent,
+	useComplianceScore,
+	useCompliancePolicy,
 } from '@/hooks/use-compliance';
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, Drawer, PageError } from '@autional/ui/antd';
-import { apiClient, API_PATHS, useIsAuditRestricted, AuditStatsOnly, extractItem, useTenantSlug } from '@autional/shared';
+import { useIsAuditRestricted, AuditStatsOnly, useTenantSlug, usePageTitle } from '@autional/shared';
+import { QueryStateFallback } from '@/components/common/QueryStateFallback';
 import type { CreateRetentionPolicyRequest, UpdateRetentionPolicyRequest } from '@autional/shared/generated/types';
 import { AppPageHeader } from '@autional/ui';
 import { buildNavHref } from '@/lib/nav';
 import { useNavigate } from 'react-router';
 import { useIsAdminRole } from '@/hooks/use-is-admin-role';
+
+// W4-01（A-244 分页家族）：五表服务端分页——wire 契约 page/page_size（service-core base/dto/page.go
+// 默认 20 上限 100），分页器 current/pageSize/total 全接服务端值（旧实现本地伪分页 + 单拉截断）。
+const COMPLIANCE_PAGE_SIZE = 10;
+
+/** A-243（W4-01，批 2 listRender 同款）：数组列渲染（roles_a/roles_b）→ 逗号连接；空数组/非数组 → '-'。 */
+const listRender = (v: unknown) => (Array.isArray(v) && v.length > 0 ? v.join(', ') : '-');
 
 // F-AB2-26-a（TASK-AB2-26 附带修正）：请求人 = wire `user_id`（后端 dsar.go:49 键集无 requester_email，
 // 旧接口 `requesterEmail` 列恒空）。AC-B2-047 预填亦依赖此键。
@@ -69,12 +79,15 @@ interface RetentionPolicy {
 	status: string;
 }
 
+// A-243（W4-01）：键位对齐 wire（SoDRule{name / roles_a[] / roles_b[] / enabled}；旧本地单值
+// roleA/roleB 与响应不符 → 两列恒空——批 2 listRender（数组 join）同款修法 + 补 enabled 列）。
 interface SODRule {
 	id: string;
 	name: string;
-	roleA: string;
-	roleB: string;
-	description: string;
+	rolesA: string[];
+	rolesB: string[];
+	enabled: boolean;
+	description?: string;
 }
 
 interface ISOControl {
@@ -97,16 +110,23 @@ interface ConsentRecord {
 
 export default function CompliancePage() {
 	const { t } = useTranslation();
+	// W4-01（AC-B4-W4-01-7 / A-245）：页面标题落位（旧实现无 usePageTitle）。
+	usePageTitle(t('compliance.title'));
 	const isRestricted = useIsAuditRestricted();
 	// A-232/A-233（TASK-AB1-15）：写控件按精确角色门控（admin/super_admin 可见；security_admin 只读）
 	const isAdminRole = useIsAdminRole();
 	const [activeTab, setActiveTab] = useState('dashboard');
-	const [complianceScore, setComplianceScore] = useState<number | null>(null);
-	const [standardCount, setStandardCount] = useState(0);
 	const navigate = useNavigate();
 	const tenantSlug = useTenantSlug();
 	const [dsarDrawer, setDsarDrawer] = useState(false);
 	const [currentDsar, setCurrentDsar] = useState<DSARRecord | null>(null);
+
+	// W4-01（A-244）：五表服务端分页页码（翻页即重发 page/page_size）。
+	const [dsarPage, setDsarPage] = useState(1);
+	const [consentPage, setConsentPage] = useState(1);
+	const [retentionPage, setRetentionPage] = useState(1);
+	const [sodPage, setSodPage] = useState(1);
+	const [isoPage, setIsoPage] = useState(1);
 
 	const [policyModal, setPolicyModal] = useState(false);
 	const [policyForm] = Form.useForm();
@@ -118,10 +138,48 @@ export default function CompliancePage() {
 	const [erasureModal, setErasureModal] = useState(false);
 	const [erasureForm] = Form.useForm();
 
-	const { data: dsars = [], isLoading: dsarLoading } = useDSARs();
-	const { data: policies = [], isLoading: policyLoading, error, refetch } = useRetentionPolicies();
-	const { data: sodRules = [], isLoading: sodLoading } = useSODRules();
-	const { data: isoControls = [], isLoading: isoLoading } = useISOControls();
+	// W4-01（A-244）：五表服务端分页——请求经 toPageParams 发 page/page_size，响应经 fromPageResult
+	// 归一取 items/total（旧实现无参单拉 + 本地伪分页）。
+	const {
+		data: dsarResult,
+		isLoading: dsarLoading,
+		error: dsarError,
+		refetch: dsarRefetch,
+	} = useDSARs({ page: dsarPage, pageSize: COMPLIANCE_PAGE_SIZE });
+	const dsars = dsarResult?.items ?? [];
+	const dsarTotal = dsarResult?.total ?? 0;
+	const {
+		data: policyResult,
+		isLoading: policyLoading,
+		error: policyError,
+		refetch: policyRefetch,
+	} = useRetentionPolicies({ page: retentionPage, pageSize: COMPLIANCE_PAGE_SIZE });
+	const policies = policyResult?.items ?? [];
+	const policyTotal = policyResult?.total ?? 0;
+	const {
+		data: sodResult,
+		isLoading: sodLoading,
+		error: sodError,
+		refetch: sodRefetch,
+	} = useSODRules({ page: sodPage, pageSize: COMPLIANCE_PAGE_SIZE });
+	const sodRules = sodResult?.items ?? [];
+	const sodTotal = sodResult?.total ?? 0;
+	const {
+		data: isoResult,
+		isLoading: isoLoading,
+		error: isoError,
+		refetch: isoRefetch,
+	} = useISOControls({ page: isoPage, pageSize: COMPLIANCE_PAGE_SIZE });
+	const isoControls = isoResult?.items ?? [];
+	const isoTotal = isoResult?.total ?? 0;
+	const {
+		data: consentResult,
+		isLoading: consentLoading,
+		error: consentError,
+		refetch: consentRefetch,
+	} = useConsents({ page: consentPage, pageSize: COMPLIANCE_PAGE_SIZE });
+	const consents = consentResult?.items ?? [];
+	const consentTotal = consentResult?.total ?? 0;
 	const {
 		data: erasures = [],
 		isLoading: erasureLoading,
@@ -133,28 +191,32 @@ export default function CompliancePage() {
 	const erasureMut = useExecuteErasure();
 	const createPolicyMut = useCreateRetentionPolicy();
 	const updatePolicyMut = useUpdateRetentionPolicy();
-	const { data: consents = [], isLoading: consentLoading } = useConsents();
 	const createConsentMut = useCreateConsent();
 	const revokeConsentMut = useRevokeConsent();
 
-	const loading = dsarLoading || policyLoading || sodLoading || isoLoading;
-
-	useEffect(() => {
-		(async () => {
-			try {
-				const scoreRes = await apiClient.get(API_PATHS.COMPLIANCE.ADMIN_TENANT_SELF_SCORE);
-				if (extractItem(scoreRes.data)) {
-					setComplianceScore(extractItem(scoreRes.data)?.overallScore ?? null);
-				}
-				const polRes = await apiClient.get(API_PATHS.COMPLIANCE.ADMIN_TENANT_SELF_POLICY);
-				setStandardCount(extractItem(polRes.data)?.standards?.length || 0);
-			} catch (err) {
-				if (import.meta.env.DEV) {
-					console.error('Failed to load compliance data', err);
-				}
-			}
-		})();
-	}, []);
+	// A-245（W4-01）：自评分/策略框架两卡查询（旧 useEffect 静默 catch → 失败静默伪 0，本批成态）。
+	const {
+		data: complianceScore,
+		isLoading: scoreLoading,
+		error: scoreError,
+		refetch: scoreRefetch,
+	} = useComplianceScore();
+	const {
+		data: compliancePolicy,
+		isLoading: frameworkLoading,
+		error: frameworkError,
+		refetch: frameworkRefetch,
+	} = useCompliancePolicy();
+	const standardCount = compliancePolicy?.standards?.length ?? 0;
+	// A-245：待处理 DSAR 计数——服务端分页后不能再从当前页数组 filter（且列表被 403 时同样失真），
+	// 专发 status=pending&page_size=1 直读 ListResponse.total（后端 ListDSAR 支持 status 过滤）。
+	const {
+		data: pendingDsarResult,
+		isLoading: pendingDsarLoading,
+		error: pendingDsarError,
+		refetch: pendingDsarRefetch,
+	} = useDSARs({ page: 1, pageSize: 1, status: 'pending' });
+	const pendingDsarCount = pendingDsarResult?.total ?? 0;
 
 	const handleProcessDsar = async (id: string, statusVal: string) => {
 		try {
@@ -318,7 +380,7 @@ export default function CompliancePage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EyeOutlined />}
+						icon={<Eye size="1em" />}
 						onClick={() => {
 							setCurrentDsar(record);
 							setDsarDrawer(true);
@@ -420,7 +482,7 @@ export default function CompliancePage() {
 					<Space size="small">
 						<Button
 							type="link"
-							icon={<EditOutlined />}
+							icon={<Pencil size="1em" />}
 							onClick={() => {
 								// A-241：只预填 wire 回传四键（name/autoDelete 无回显源不预填，
 								// 提交侧独立门控——见 handleSavePolicy）。
@@ -442,10 +504,18 @@ export default function CompliancePage() {
 		},
 	];
 
+	// A-243（W4-01）：列键对齐 wire SoDRule{name / rolesA[] / rolesB[] / enabled}——旧 dataIndex
+	// roleA/roleB 单值与响应 roles_a/roles_b 数组不符 → 两列恒空；数组经 listRender join；补 enabled 列。
 	const sodColumns = [
 		{ title: t('compliance.sod.ruleName'), dataIndex: 'name', key: 'name' },
-		{ title: t('compliance.sod.roleA'), dataIndex: 'roleA', key: 'roleA' },
-		{ title: t('compliance.sod.roleB'), dataIndex: 'roleB', key: 'roleB' },
+		{ title: t('compliance.sod.roleA'), dataIndex: 'rolesA', key: 'rolesA', render: listRender },
+		{ title: t('compliance.sod.roleB'), dataIndex: 'rolesB', key: 'rolesB', render: listRender },
+		{
+			title: t('compliance.sod.enabled'),
+			dataIndex: 'enabled',
+			key: 'enabled',
+			render: (v: boolean) => (v ? t('common.yes') : t('common.no')),
+		},
 		{
 			title: t('common.description'),
 			dataIndex: 'description',
@@ -507,10 +577,103 @@ export default function CompliancePage() {
 		},
 	];
 
-	const pendingDsarCount = (dsars as DSARRecord[]).filter((d) => d.status === 'pending').length;
+	// A-245（W4-01，AC-B4-W4-01-4/6）：三卡统计块——dashboard Tab 与 isRestricted 锁卡 children 共用；
+	// 三卡各自成态：403/失败经 QueryStateFallback（无权限文案、403 不接重试）；score 卡不再 `?? 0` 伪 0
+	// （失败显式成态、缺值显 '-'），grade 响应字段补渲染。
+	const dashboardStats = (
+		<Row gutter={16}>
+			<Col xs={24} md={6}>
+				<Card loading={scoreLoading}>
+					{scoreError ? (
+						<QueryStateFallback
+							isLoading={scoreLoading}
+							error={scoreError}
+							data={complianceScore}
+							errorMessage={t('compliance.scoreLoadError')}
+							onRetry={scoreRefetch}
+						/>
+					) : (
+						<>
+							<Statistic
+								title={t('compliance.score')}
+								value={complianceScore?.overallScore ?? '-'}
+								suffix="/ 100"
+								valueStyle={{
+									color:
+										(complianceScore?.overallScore ?? 0) >= 80
+											? 'var(--color-success-light)'
+											: 'var(--color-error-light)',
+								}}
+								prefix={<BadgeCheck size="1em" />}
+							/>
+							{complianceScore?.grade && (
+								<div className="mt-2 text-sm text-neutral-600">
+									{t('compliance.scoreGrade')}: <Tag color="blue">{complianceScore.grade}</Tag>
+								</div>
+							)}
+						</>
+					)}
+				</Card>
+			</Col>
+			<Col xs={24} md={6}>
+				<Card loading={frameworkLoading}>
+					{frameworkError ? (
+						<QueryStateFallback
+							isLoading={frameworkLoading}
+							error={frameworkError}
+							data={compliancePolicy}
+							errorMessage={t('compliance.loadError')}
+							onRetry={frameworkRefetch}
+						/>
+					) : (
+						<Statistic
+							title={t('compliance.standardsCount')}
+							value={standardCount}
+							suffix={t('compliance.standardsUnit')}
+						/>
+					)}
+					{isAdminRole && (
+						<Button
+							type="link"
+							size="small"
+							icon={<Settings size="1em" />}
+							onClick={() => navigate(buildNavHref('/compliance/policy', tenantSlug))}
+						>
+							{t('compliance.managePolicy')}
+						</Button>
+					)}
+				</Card>
+			</Col>
+			<Col xs={24} md={6}>
+				<Card loading={pendingDsarLoading}>
+					{pendingDsarError ? (
+						<QueryStateFallback
+							isLoading={pendingDsarLoading}
+							error={pendingDsarError}
+							data={pendingDsarResult}
+							errorMessage={t('compliance.loadError')}
+							onRetry={pendingDsarRefetch}
+						/>
+					) : (
+						<Statistic
+							title={t('compliance.pendingDsar')}
+							value={pendingDsarCount}
+							valueStyle={{
+								color:
+									pendingDsarCount > 0
+										? 'var(--color-error-light)'
+										: 'var(--color-success-light)',
+							}}
+						/>
+					)}
+				</Card>
+			</Col>
+		</Row>
+	);
 
 	if (isRestricted) {
-		return <AuditStatsOnly title={t('compliance.title')} />;
+		// A-245（W4-01，AC-B4-W4-01-6）：锁卡携统计 children（旧实现零统计——children 通道现成）。
+		return <AuditStatsOnly title={t('compliance.title')}>{dashboardStats}</AuditStatsOnly>;
 	}
 
 	return (
@@ -524,70 +687,34 @@ export default function CompliancePage() {
 					{
 						key: 'dashboard',
 						label: t('compliance.tabDashboard'),
-						children: (
-							<Row gutter={16}>
-								<Col xs={24} md={6}>
-									<Card loading={loading}>
-										<Statistic
-											title={t('compliance.score')}
-											value={complianceScore ?? 0}
-											suffix="/ 100"
-											valueStyle={{
-												color:
-													(complianceScore ?? 0) >= 80
-														? 'var(--color-success-light)'
-														: 'var(--color-error-light)',
-											}}
-											prefix={<SafetyCertificateOutlined />}
-										/>
-									</Card>
-								</Col>
-								<Col xs={24} md={6}>
-									<Card loading={loading}>
-										<Statistic
-											title={t('compliance.standardsCount')}
-											value={standardCount}
-											suffix={t('compliance.standardsUnit')}
-										/>
-										{isAdminRole && (
-											<Button
-												type="link"
-												size="small"
-												icon={<SettingOutlined />}
-												onClick={() => navigate(buildNavHref('/compliance/policy', tenantSlug))}
-											>
-												{t('compliance.managePolicy')}
-											</Button>
-										)}
-									</Card>
-								</Col>
-								<Col xs={24} md={6}>
-									<Card loading={loading}>
-										<Statistic
-											title={t('compliance.pendingDsar')}
-											value={pendingDsarCount}
-											valueStyle={{
-												color:
-													pendingDsarCount > 0
-														? 'var(--color-error-light)'
-														: 'var(--color-success-light)',
-											}}
-										/>
-									</Card>
-								</Col>
-							</Row>
-						),
+						children: dashboardStats,
 					},
 					{
 						key: 'dsar',
 						label: t('compliance.tabDsar'),
-						children: (
+						// W4-01（AC-B4-W4-01-2/5）：服务端分页 + 失败≠空态（403 经 QueryStateFallback 分流无权限态）。
+						children: dsarError ? (
+							<QueryStateFallback
+								isLoading={dsarLoading}
+								error={dsarError}
+								data={dsars}
+								errorMessage={t('compliance.loadError')}
+								onRetry={dsarRefetch}
+							/>
+						) : (
 							<DataTable
 								rowKey="id"
 								columns={dsarColumns}
 								dataSource={dsars}
 								loading={dsarLoading}
-								pagination={{ pageSize: 10 }}
+								pagination={{
+									current: dsarPage,
+									pageSize: COMPLIANCE_PAGE_SIZE,
+									total: dsarTotal,
+									onChange: (page) => setDsarPage(page),
+									showSizeChanger: false,
+									showTotal: (total) => t('paginationTotal', { total }),
+								}}
 								scroll={{ x: 800 }}
 							/>
 						),
@@ -600,7 +727,7 @@ export default function CompliancePage() {
 							<>
 								<div className="flex justify-end gap-2 mb-4">
 									<Button
-										icon={<ReloadOutlined />}
+										icon={<RefreshCw size="1em" />}
 										onClick={() => erasureRefetch()}
 									>
 										{t('common.refresh')}
@@ -608,7 +735,7 @@ export default function CompliancePage() {
 									{isAdminRole && (
 										<Button
 											type="primary"
-											icon={<PlusOutlined />}
+											icon={<Plus size="1em" />}
 											onClick={() => openErasureModal()}
 										>
 											{t('compliance.erasure.create')}
@@ -643,7 +770,7 @@ export default function CompliancePage() {
 									<div className="flex justify-end mb-4">
 										<Button
 											type="primary"
-											icon={<PlusOutlined />}
+											icon={<Plus size="1em" />}
 											onClick={() => {
 												consentForm.resetFields();
 												setConsentModal(true);
@@ -653,14 +780,32 @@ export default function CompliancePage() {
 										</Button>
 									</div>
 								)}
-								<DataTable
-									rowKey="id"
-									columns={consentColumns}
-									dataSource={consents}
-									loading={consentLoading}
-									pagination={{ pageSize: 10 }}
-									scroll={{ x: 800 }}
-								/>
+								{/* W4-01（AC-B4-W4-01-2/5）：服务端分页 + 失败≠空态（403 分流无权限态）。 */}
+								{consentError ? (
+									<QueryStateFallback
+										isLoading={consentLoading}
+										error={consentError}
+										data={consents}
+										errorMessage={t('compliance.loadError')}
+										onRetry={consentRefetch}
+									/>
+								) : (
+									<DataTable
+										rowKey="id"
+										columns={consentColumns}
+										dataSource={consents}
+										loading={consentLoading}
+										pagination={{
+											current: consentPage,
+											pageSize: COMPLIANCE_PAGE_SIZE,
+											total: consentTotal,
+											onChange: (page) => setConsentPage(page),
+											showSizeChanger: false,
+											showTotal: (total) => t('paginationTotal', { total }),
+										}}
+										scroll={{ x: 800 }}
+									/>
+								)}
 							</>
 						),
 					},
@@ -673,7 +818,7 @@ export default function CompliancePage() {
 									<div className="flex justify-end mb-4">
 										<Button
 											type="primary"
-											icon={<PlusOutlined />}
+											icon={<Plus size="1em" />}
 											onClick={() => {
 												setEditingPolicy(null);
 												policyForm.resetFields();
@@ -685,30 +830,62 @@ export default function CompliancePage() {
 									</div>
 								)}
 
-								{error && (
-									<PageError message={t('compliance.loadError')} retry={refetch} className="mb-4" />
+								{/* W4-01（AC-B4-W4-01-2/5）：服务端分页 + 失败≠空态（旧 PageError 兄弟位 → 错误态整位替换，
+								    403 经 QueryStateFallback 分流无权限态且不接重试）。 */}
+								{policyError ? (
+									<QueryStateFallback
+										isLoading={policyLoading}
+										error={policyError}
+										data={policies}
+										errorMessage={t('compliance.loadError')}
+										onRetry={policyRefetch}
+									/>
+								) : (
+									<DataTable
+										rowKey="policyId"
+										columns={policyColumns}
+										dataSource={policies}
+										loading={policyLoading}
+										pagination={{
+											current: retentionPage,
+											pageSize: COMPLIANCE_PAGE_SIZE,
+											total: policyTotal,
+											onChange: (page) => setRetentionPage(page),
+											showSizeChanger: false,
+											showTotal: (total) => t('paginationTotal', { total }),
+										}}
+										scroll={{ x: 800 }}
+									/>
 								)}
-								<DataTable
-									rowKey="policyId"
-									columns={policyColumns}
-									dataSource={policies}
-									loading={policyLoading}
-									pagination={{ pageSize: 10 }}
-									scroll={{ x: 800 }}
-								/>
 							</>
 						),
 					},
 					{
 						key: 'sod',
 						label: t('compliance.tabSod'),
-						children: (
+						// W4-01（AC-B4-W4-01-3/5）：sod-rules 服务端分页（Q-02 Go 扩展配套）+ 失败≠空态。
+						children: sodError ? (
+							<QueryStateFallback
+								isLoading={sodLoading}
+								error={sodError}
+								data={sodRules}
+								errorMessage={t('compliance.loadError')}
+								onRetry={sodRefetch}
+							/>
+						) : (
 							<DataTable
 								rowKey="id"
 								columns={sodColumns}
 								dataSource={sodRules}
 								loading={sodLoading}
-								pagination={{ pageSize: 10 }}
+								pagination={{
+									current: sodPage,
+									pageSize: COMPLIANCE_PAGE_SIZE,
+									total: sodTotal,
+									onChange: (page) => setSodPage(page),
+									showSizeChanger: false,
+									showTotal: (total) => t('paginationTotal', { total }),
+								}}
 								scroll={{ x: 800 }}
 							/>
 						),
@@ -716,13 +893,29 @@ export default function CompliancePage() {
 					{
 						key: 'iso',
 						label: t('compliance.tabIso'),
-						children: (
+						// W4-01（AC-B4-W4-01-2/5）：服务端分页 + 失败≠空态。
+						children: isoError ? (
+							<QueryStateFallback
+								isLoading={isoLoading}
+								error={isoError}
+								data={isoControls}
+								errorMessage={t('compliance.loadError')}
+								onRetry={isoRefetch}
+							/>
+						) : (
 							<DataTable
 								rowKey="id"
 								columns={isoColumns}
 								dataSource={isoControls}
 								loading={isoLoading}
-								pagination={{ pageSize: 10 }}
+								pagination={{
+									current: isoPage,
+									pageSize: COMPLIANCE_PAGE_SIZE,
+									total: isoTotal,
+									onChange: (page) => setIsoPage(page),
+									showSizeChanger: false,
+									showTotal: (total) => t('paginationTotal', { total }),
+								}}
 								scroll={{ x: 800 }}
 							/>
 						),
@@ -796,6 +989,7 @@ export default function CompliancePage() {
 					policyForm.resetFields();
 				}}
 				onOk={() => policyForm.submit()}
+				closable={{ 'aria-label': t('common.close') }}
 				className="w-full max-w-[560px]"
 			>
 				<Form form={policyForm} layout="vertical" onFinish={handleSavePolicy}>
@@ -868,6 +1062,7 @@ export default function CompliancePage() {
 					consentForm.resetFields();
 				}}
 				onOk={() => consentForm.submit()}
+				closable={{ 'aria-label': t('common.close') }}
 				className="w-full max-w-[560px]"
 			>
 				<Form form={consentForm} layout="vertical" onFinish={handleCreateConsent}>
@@ -940,6 +1135,7 @@ export default function CompliancePage() {
 					erasureForm.resetFields();
 				}}
 				onOk={() => erasureForm.submit()}
+				closable={{ 'aria-label': t('common.close') }}
 				className="w-full max-w-[560px]"
 			>
 				<Form form={erasureForm} layout="vertical" onFinish={handleCreateErasure}>

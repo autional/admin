@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Tabs, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, Popconfirm, Card } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { extractItem, usePageTitle, useAuthStore } from '@autional/shared';
 import {
 	getAppDefaultRoles,
@@ -198,7 +198,7 @@ export default function AppRolesPage() {
 			width: 160,
 			render: (_: any, record: AppRole) => (
 				<Space size="small">
-					<Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+					<Button type="text" size="small" icon={<Pencil size="1em" />} onClick={() => openEdit(record)}>
 						{t('appRoles.edit')}
 					</Button>
 					<Popconfirm
@@ -209,7 +209,7 @@ export default function AppRolesPage() {
 							type="text"
 							danger
 							size="small"
-							icon={<DeleteOutlined />}
+							icon={<Trash2 size="1em" />}
 							disabled={record.isSystem}
 						>
 							{t('appRoles.delete')}
@@ -262,7 +262,7 @@ export default function AppRolesPage() {
 				actions={
 					<>
 						<Button
-							icon={<ReloadOutlined />}
+							icon={<RefreshCw size="1em" />}
 							onClick={() => (activeTab === 'roles' ? fetchRoles() : fetchMembers())}
 						>
 							{t('appRoles.refresh')}
@@ -289,7 +289,7 @@ export default function AppRolesPage() {
 						children: (
 							<Card>
 								<div className="mb-4">
-									<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+									<Button type="primary" icon={<Plus size="1em" />} onClick={openCreate}>
 										{t('appRoles.createRole')}
 									</Button>
 								</div>
@@ -313,7 +313,7 @@ export default function AppRolesPage() {
 								<div className="mb-4">
 									<Button
 										type="primary"
-										icon={<PlusOutlined />}
+										icon={<Plus size="1em" />}
 										onClick={() => {
 											assignForm.resetFields();
 											setAssignModalVisible(true);

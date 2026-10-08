@@ -1,13 +1,12 @@
 'use client';
 
-import { extractListResult, extractItem, useCurrentTenantId } from '@autional/shared';
+import { extractListResult, useCurrentTenantId } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	getAnomalies,
-	getAnomalyById,
 	updateAnomalyStatus,
 	assignAnomaly,
 	addAnomalyComment,
@@ -37,17 +36,7 @@ export function useAnomalies(params?: Record<string, unknown>) {
 	});
 }
 
-export function useAnomalyDetail(id: string) {
-	const tenantId = useCurrentTenantId() ?? '';
-	return useQuery({
-		queryKey: queryKeys.auditAnomalies.detail(tenantId, id),
-		queryFn: async ({ signal }) => {
-			const res = await getAnomalyById(id, signal);
-			return extractItem<AnomalyRecord>(res);
-		},
-		enabled: !!id,
-	});
-}
+// A-214（W1e）：useAnomalyDetail/getAnomalyById 死链删除（抽屉直用列表行数据；grep 零消费）
 
 export function useUpdateAnomalyStatus() {
 	const queryClient = useQueryClient();

@@ -1,20 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Space, Tag, Modal, Form, Input, Select, Tabs, Tooltip, Popconfirm } from 'antd';
+import { Button, Space, Tag, Modal, Form, Input, Select, Tabs, Tooltip, Popconfirm, Collapse } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	SendOutlined,
-	CodeOutlined,
-	CopyOutlined,
-} from '@ant-design/icons';
+	Code,
+	Copy,
+	Pencil,
+	Plus,
+	Send,
+	Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { extractItem } from '@autional/shared';
+import { extractItem, usePageTitle } from '@autional/shared';
 import {
 	useNotificationTemplates,
+	useAvailableNotificationTemplates,
 	useCreateNotificationTemplate,
 	useUpdateNotificationTemplate,
 	useDeleteNotificationTemplate,
@@ -40,6 +41,16 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const TEMPLATE_TYPES = ['system', 'user', 'alert', 'reminder', 'promotion'] as const;
+
+// A-155：平台默认模板可见性（/templates/available admin twin，含平台+租户聚合）。
+// wire 锚：AvailableTemplateResponse（types.ts:1653-1663：code/name/source/locale/isCustomized）。
+interface AvailableTemplateRecord {
+	code?: string;
+	name?: string;
+	source?: string; // platform | tenant
+	locale?: string;
+	isCustomized?: boolean;
+}
 // 测试发送渠道（TestNotificationRequest.channel binding:required；dto.go:524-527）
 const TEST_CHANNELS = ['email', 'sms', 'push'] as const;
 
@@ -47,6 +58,8 @@ const VARIABLES = ['{{username}}', '{{tenant_name}}', '{{reset_url}}', '{{code}}
 
 export default function NotificationTemplatesPage() {
 	const { t } = useTranslation();
+	// A-156：页面标题（与面包屑同源）
+	usePageTitle(t('notifications.templates.title'));
 	const [modalVisible, setModalVisible] = useState(false);
 	const [testModalVisible, setTestModalVisible] = useState(false);
 	const [cloneModalVisible, setCloneModalVisible] = useState(false);
@@ -58,7 +71,14 @@ export default function NotificationTemplatesPage() {
 	const [activeLang, setActiveLang] = useState('zh-CN');
 	const testChannel = Form.useWatch('channel', testForm);
 
-	const { data = [], isLoading, error, refetch } = useNotificationTemplates();
+	// A-156：服务端分页状态（原实现无参取数 → 默认 page_size=20 截断 + 本地假分页）。
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
+	const { data, isLoading, error, refetch } = useNotificationTemplates({ page, pageSize });
+	const items = data?.items ?? [];
+	const total = data?.total ?? 0;
+	// A-155：平台默认模板可见性面板数据源（零模板租户亦有门可循）。
+	const { data: availableTemplates = [] } = useAvailableNotificationTemplates();
 	const createMut = useCreateNotificationTemplate();
 	const updateMut = useUpdateNotificationTemplate();
 	const deleteMut = useDeleteNotificationTemplate();
@@ -206,7 +226,7 @@ export default function NotificationTemplatesPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							setActiveLang('zh-CN');
@@ -224,7 +244,7 @@ export default function NotificationTemplatesPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<SendOutlined />}
+						icon={<Send size="1em" />}
 						onClick={() => setTestModalVisible(true)}
 					>
 						{t('notifications.templates.test')}
@@ -232,7 +252,7 @@ export default function NotificationTemplatesPage() {
 					<Button
 						type="text"
 						size="small"
-						icon={<CopyOutlined />}
+						icon={<Copy size="1em" />}
 						onClick={() => {
 							setCloning(record);
 							setCloneModalVisible(true);
@@ -244,7 +264,7 @@ export default function NotificationTemplatesPage() {
 						title={t('notifications.templates.confirmDelete')}
 						onConfirm={() => handleDelete(record.templateId)}
 					>
-						<Button type="text" danger size="small" icon={<DeleteOutlined />}>
+						<Button type="text" danger size="small" icon={<Trash2 size="1em" />}>
 							{t('common.delete')}
 						</Button>
 					</Popconfirm>
@@ -294,7 +314,7 @@ export default function NotificationTemplatesPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								setActiveLang('zh-CN');
@@ -308,6 +328,63 @@ export default function NotificationTemplatesPage() {
 				}
 			/>
 
+			{/* A-155：平台默认模板可见性（ListAvailable admin twin）——新租户本租户 0 模板时
+			    平台默认集仍可见可引用（同 code 创建即在本租户定制，平台回退语义）。 */}
+			<Collapse
+				className="mb-4"
+				items={[
+					{
+						key: 'available',
+						label: t('notifications.templates.availableTemplates'),
+						children: (
+							<>
+								<div className="mb-2 text-sm text-neutral-600">
+									{t('notifications.templates.availableTemplatesHint')}
+								</div>
+								<DataTable
+									rowKey={(r: AvailableTemplateRecord) => `${r.code ?? ''}-${r.locale ?? ''}`}
+									columns={[
+										{
+											title: t('notifications.templates.templateName'),
+											dataIndex: 'name',
+											key: 'name',
+											ellipsis: true,
+										},
+										{
+											title: t('notifications.templates.code'),
+											dataIndex: 'code',
+											key: 'code',
+											ellipsis: true,
+										},
+										{
+											title: t('notifications.templates.sourceLabel'),
+											dataIndex: 'source',
+											key: 'source',
+											render: (v: string | undefined, r: AvailableTemplateRecord) => (
+												<Space size="small">
+													<Tag color={v === 'platform' ? 'blue' : 'green'}>
+														{v === 'platform'
+															? t('notifications.templates.sourcePlatform')
+															: t('notifications.templates.sourceTenant')}
+													</Tag>
+													{r.isCustomized && (
+														<Tag color="gold">{t('notifications.templates.customized')}</Tag>
+													)}
+												</Space>
+											),
+										},
+										{ title: t('notifications.templates.locale'), dataIndex: 'locale', key: 'locale' },
+									]}
+									dataSource={availableTemplates}
+									pagination={false}
+									size="small"
+									scroll={{ x: 800 }}
+								/>
+							</>
+						),
+					},
+				]}
+			/>
 			{error && (
 				<PageError
 					message={t('notifications.templates.loadError')}
@@ -318,9 +395,18 @@ export default function NotificationTemplatesPage() {
 			<DataTable
 				rowKey="templateId"
 				columns={columns}
-				dataSource={data}
+				dataSource={items}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
+				pagination={{
+					current: page,
+					pageSize,
+					total,
+					showSizeChanger: true,
+					onChange: (p, ps) => {
+						setPage(p);
+						setPageSize(ps);
+					},
+				}}
 				scroll={{ x: 800 }}
 			/>
 
@@ -386,7 +472,7 @@ export default function NotificationTemplatesPage() {
 									title={t('notifications.templates.insertVariableTip').replace('{}', v)}
 									key={v}
 								>
-									<Button size="small" icon={<CodeOutlined />} onClick={() => insertVariable(v)}>
+									<Button size="small" icon={<Code size="1em" />} onClick={() => insertVariable(v)}>
 										{v}
 									</Button>
 								</Tooltip>

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentTenantIdOr } from '@autional/shared';
+import tokens from '@autional/tokens/tokens.json';
+import { useCurrentTenantIdOr, usePageTitle } from '@autional/shared';
 import { Form, Input, Button, Slider, ColorPicker, Card, Row, Col, Spin } from 'antd';
 import { message } from '@/lib/antd-app';
-import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
+import { RefreshCw, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useBranding, useUpdateBranding } from '@/hooks/use-branding';
 
@@ -25,12 +26,38 @@ interface BrandingData {
 	loginSubtitle?: string;
 }
 
+// A-150：合法色值兜底与拦截——
+// ① 原初值 'var(--color-primary-700)' 非法 ⇒ ColorPicker 解析失败显 #000000（实测 1s 黑蓝闪烁）；
+// ② ColorPicker onChange 首参为 AggregationColor 实例（无 toJSON）⇒ 提交前统一归一为 hex 字符串。
+// A-150 需要一个**合法 hex**（ColorPicker 解析不了 var()），但也不能写死一个可能是错品牌色的字面量 ——
+// 从令牌包的解析值取：改令牌它自动跟着变，且不再是「硬编码设计系统已有的色」（C2）。
+const DEFAULT_PRIMARY_COLOR = tokens.core.color.primary['700'];
+const DEFAULT_BACKGROUND_COLOR = '#ffffff';
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/** ColorPicker 值（string 或 AggregationColor 实例）→ #RRGGBB；无法解析返回空串。 */
+export function colorToHex(value: unknown): string {
+	if (typeof value === 'string') return value;
+	if (value && typeof (value as { toHexString?: unknown }).toHexString === 'function') {
+		return (value as { toHexString: () => string }).toHexString();
+	}
+	return '';
+}
+
+/** 非法/遗留色值（如 CSS var）→ 兜底合法色。 */
+export function toLegalColor(value: unknown, fallback: string): string {
+	const hex = colorToHex(value);
+	return HEX_COLOR_RE.test(hex) ? hex : fallback;
+}
+
 export default function BrandingPage() {
 	const { t } = useTranslation();
+	// A-150：页面标题（与面包屑同源；原 tab 恒默认站名）
+	usePageTitle(t('branding.title'));
 	const [form] = Form.useForm<BrandingData>();
 	const [values, setValues] = useState<BrandingData>({
-		primaryColor: 'var(--color-primary-700)',
-		backgroundColor: '#ffffff',
+		primaryColor: DEFAULT_PRIMARY_COLOR,
+		backgroundColor: DEFAULT_BACKGROUND_COLOR,
 		borderRadius: 8,
 		loginTitle: t('branding.defaultLoginTitle'),
 		loginSubtitle: t('branding.defaultLoginSubtitle'),
@@ -40,12 +67,33 @@ export default function BrandingPage() {
 	const { data, isLoading, error, refetch } = useBranding(tenantId);
 	const updateMut = useUpdateBranding();
 
+	// A-150：服务端数据归一后落表单/预览（三色字段保证合法 —— 防 ColorPicker 黑闪烁）
+	const applyServerData = React.useCallback(
+		(server: BrandingData) => {
+			setValues((prev) => {
+				const merged: BrandingData = {
+					...prev,
+					...server,
+					primaryColor: toLegalColor(server.primaryColor ?? prev.primaryColor, DEFAULT_PRIMARY_COLOR),
+					backgroundColor: toLegalColor(
+						server.backgroundColor ?? prev.backgroundColor,
+						DEFAULT_BACKGROUND_COLOR,
+					),
+				};
+				const secondarySource = server.secondaryColor ?? prev.secondaryColor;
+				if (secondarySource !== undefined) {
+					const hex = colorToHex(secondarySource);
+					merged.secondaryColor = HEX_COLOR_RE.test(hex) ? hex : undefined;
+				}
+				form.setFieldsValue(merged);
+				return merged;
+			});
+		},
+		[form],
+	);
+
 	React.useEffect(() => {
-		if (data) {
-			const merged: BrandingData = { ...values, ...data };
-			form.setFieldsValue(merged);
-			setValues(merged);
-		}
+		if (data) applyServerData(data);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [data]);
 
@@ -53,18 +101,43 @@ export default function BrandingPage() {
 		setValues((prev) => ({ ...prev, ...allValues }));
 	};
 
+	// A-150：局部刷新（原 window.location.reload() 整页重载）；服务端数据立即回填表单/预览
+	const handleRefresh = async () => {
+		const res = await refetch();
+		if (res.data) applyServerData(res.data);
+	};
+
 	const handleSave = async (data: BrandingData) => {
 		try {
-			await updateMut.mutateAsync({ tenantId, data });
+			// A-150：提交体色值归一（AggregationColor 实例 → hex；非法值回落兜底色）
+			const payload: BrandingData = {
+				...data,
+				primaryColor: toLegalColor(data.primaryColor, DEFAULT_PRIMARY_COLOR),
+				secondaryColor: data.secondaryColor
+					? toLegalColor(data.secondaryColor, DEFAULT_PRIMARY_COLOR)
+					: undefined,
+				backgroundColor: toLegalColor(data.backgroundColor, DEFAULT_BACKGROUND_COLOR),
+			};
+			await updateMut.mutateAsync({ tenantId, data: payload });
 			message.success(t('branding.saveSuccess'));
 		} catch (err) {
 			handleApiError(err, t('branding.saveFailed'));
 		}
 	};
 
-	const primary = values.primaryColor || 'var(--color-primary-700)';
-	const bg = values.backgroundColor || '#ffffff';
+	const primary = toLegalColor(values.primaryColor, DEFAULT_PRIMARY_COLOR);
+	const bg = toLegalColor(values.backgroundColor, DEFAULT_BACKGROUND_COLOR);
 	const radius = values.borderRadius ?? 8;
+
+	// A-150：三色字段校验（ColorPicker 的 AggregationColor/任意串均先归一，非法即拦截提交）
+	const colorRule = [
+		{
+			validator: (_: unknown, v: unknown) =>
+				!v || HEX_COLOR_RE.test(colorToHex(v))
+					? Promise.resolve()
+					: Promise.reject(new Error(t('branding.invalidColor'))),
+		},
+	];
 
 	return (
 		<div>
@@ -74,7 +147,8 @@ export default function BrandingPage() {
 				title={t('branding.title')}
 				actions={
 					<>
-						<Button icon={<ReloadOutlined />} onClick={() => window.location.reload()}>
+						{/* A-150：局部刷新（refetch + 回填；原 window.location.reload() 整页重载） */}
+						<Button icon={<RefreshCw size="1em" />} onClick={handleRefresh}>
 							{t('branding.refresh')}
 						</Button>
 					</>
@@ -98,13 +172,21 @@ export default function BrandingPage() {
 								<Form.Item name="faviconUrl" label={t('branding.faviconUrl')}>
 									<Input placeholder="https://example.com/favicon.ico" />
 								</Form.Item>
-								<Form.Item name="primaryColor" label={t('branding.primaryColor')}>
+								<Form.Item name="primaryColor" label={t('branding.primaryColor')} rules={colorRule}>
 									<ColorPicker showText className="w-full" />
 								</Form.Item>
-								<Form.Item name="secondaryColor" label={t('branding.secondaryColor')}>
+								<Form.Item
+									name="secondaryColor"
+									label={t('branding.secondaryColor')}
+									rules={colorRule}
+								>
 									<ColorPicker showText className="w-full" />
 								</Form.Item>
-								<Form.Item name="backgroundColor" label={t('branding.backgroundColor')}>
+								<Form.Item
+									name="backgroundColor"
+									label={t('branding.backgroundColor')}
+									rules={colorRule}
+								>
 									<ColorPicker showText className="w-full" />
 								</Form.Item>
 								<Form.Item name="backgroundImageUrl" label={t('branding.bgImageUrl')}>
@@ -125,7 +207,7 @@ export default function BrandingPage() {
 								<Button
 									type="primary"
 									htmlType="submit"
-									icon={<SaveOutlined />}
+									icon={<Save size="1em" />}
 									loading={updateMut.isPending}
 								>
 									{t('branding.saveConfig')}
@@ -137,7 +219,7 @@ export default function BrandingPage() {
 					<Col xs={24} lg={12}>
 						<Card title={t('branding.livePreview')} bodyStyle={{ background: bg }}>
 							<div
-								className="mx-auto max-w-sm p-8 shadow-lg"
+								className="mx-auto max-w-sm p-8 shadow-card"
 								style={{
 									background: '#fff',
 									borderRadius: radius,

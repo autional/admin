@@ -3,10 +3,10 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Select, Switch, Popconfirm, Tooltip } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined, TagOutlined } from '@ant-design/icons';
+import { Pencil, Plus, Tag as TagIcon, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useTenantSlug } from '@autional/shared';
+import { useTenantSlug, usePageTitle } from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import {
 	useEventMappings,
@@ -22,25 +22,38 @@ import { AppPageHeader } from '@autional/ui';
 
 const { Option } = Select;
 
+// A-168：词表与 registry 单源对证（shared/service-core/cross/registry/event_names.go）——
+// ① 删幻影 user.email_changed / user.phone_changed（registry 无此二键、全工作区无生产者）；
+// ② 补 6 个已有平台默认映射（EventMappingSeeds）的事件：
+//    storage.file.shared(:73) / storage.share.cancelled(:90) / secret.expiring_soon(:503) /
+//    secret.expired(:502) / secret.rotation_due(:506) / secret.access_denied(:505)。
 const EVENT_TYPES = [
 	'user.registered',
 	'user.password_changed',
 	'user.new_device',
-	'user.email_changed',
-	'user.phone_changed',
 	'user.deleted',
 	'rbac.approval.requested',
 	'auth.login_failed',
 	'billing.payment.success',
 	'billing.quota.warning',
+	'storage.file.shared',
+	'storage.share.cancelled',
+	'secret.expiring_soon',
+	'secret.expired',
+	'secret.rotation_due',
+	'secret.access_denied',
 ];
 
 const CHANNELS = ['in_app', 'email', 'sms', 'push'];
+
+const PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
 const SOURCES = ['wallet', 'billing', 'payment', 'point', 'status', 'secret', 'storage', 'saml'];
 
 export default function EventMappingsPage() {
 	const { t } = useTranslation();
+	// A-169：页面标题（与面包屑同源；原 tab 恒默认站名）
+	usePageTitle(t('notifications.eventMappings.title'));
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
 	const [form] = Form.useForm();
@@ -53,6 +66,10 @@ export default function EventMappingsPage() {
 	const createMut = useCreateEventMapping();
 	const updateMut = useUpdateEventMapping();
 	const deleteMut = useDeleteEventMapping();
+
+	// A-169：渠道/优先级枚举本地化（原裸显 in_app/medium；未知值回落原枚举）
+	const channelLabel = (v: string) => t(`notifications.eventMappings.channel.${v}`, v);
+	const priorityLabel = (p: string) => t(`notifications.eventMappings.priority.${p}`, p);
 
 	const filteredData = useMemo(() => {
 		if (sourceFilter === 'all') return data;
@@ -108,7 +125,7 @@ export default function EventMappingsPage() {
 				<Button
 					type="link"
 					size="small"
-					icon={<TagOutlined />}
+					icon={<TagIcon size="1em" />}
 					onClick={() => navigate(buildNavHref('/notifications/templates', tenantSlug))}
 					className="p-0"
 				>
@@ -121,13 +138,14 @@ export default function EventMappingsPage() {
 			dataIndex: 'channel',
 			key: 'channel',
 			width: 100,
-			render: (v: string) => <Tag>{v}</Tag>,
+			render: (v: string) => <Tag>{channelLabel(v)}</Tag>,
 		},
 		{
 			title: t('notifications.eventMappings.priority'),
 			dataIndex: 'priority',
 			key: 'priority',
 			width: 100,
+			render: (v: string) => priorityLabel(v),
 		},
 		{
 			title: t('common.status'),
@@ -165,7 +183,7 @@ export default function EventMappingsPage() {
 					<Tooltip title={t('common.edit')}>
 						<Button
 							size="small"
-							icon={<EditOutlined />}
+							icon={<Pencil size="1em" />}
 							aria-label={t('common.edit')}
 							onClick={() => openEdit(record)}
 						/>
@@ -181,7 +199,7 @@ export default function EventMappingsPage() {
 							}
 						}}
 					>
-						<Button size="small" danger icon={<DeleteOutlined />} aria-label={t('common.delete')} />
+						<Button size="small" danger icon={<Trash2 size="1em" />} aria-label={t('common.delete')} />
 					</Popconfirm>
 				</Space>
 			),
@@ -194,7 +212,7 @@ export default function EventMappingsPage() {
 				title={t('notifications.eventMappings.title')}
 				actions={
 					<>
-						<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+						<Button type="primary" icon={<Plus size="1em" />} onClick={openCreate}>
 							{t('notifications.eventMappings.createMapping')}
 						</Button>
 					</>
@@ -278,16 +296,16 @@ export default function EventMappingsPage() {
 						<Select>
 							{CHANNELS.map((c) => (
 								<Option key={c} value={c}>
-									{c}
+									{channelLabel(c)}
 								</Option>
 							))}
 						</Select>
 					</Form.Item>
 					<Form.Item name="priority" label={t('notifications.eventMappings.priority')}>
 						<Select>
-							{['low', 'medium', 'high', 'critical'].map((p) => (
+							{PRIORITIES.map((p) => (
 								<Option key={p} value={p}>
-									{p}
+									{priorityLabel(p)}
 								</Option>
 							))}
 						</Select>

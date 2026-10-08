@@ -3,8 +3,15 @@
 import React, { useState } from 'react';
 import { DataTable } from '@autional/ui/antd';
 import { Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Popconfirm, Skeleton } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { usePageTitle, useTenantSlug, useCurrentTenantId, extractList, extractItem } from '@autional/shared';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+	usePageTitle,
+	useTenantSlug,
+	useCurrentTenantId,
+	extractItem,
+	toPageParams,
+	fromPageResult,
+} from '@autional/shared';
 import { buildNavHref } from '@/lib/nav';
 import { AppPageHeader, EmptyState, ErrorState, StatusBadge } from '@autional/ui';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,16 +25,15 @@ import { useTranslation } from 'react-i18next';
 import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
+import { useOwnerDisplay } from '@/hooks/use-owner-display';
+import { AGENT_STATUS_VARIANT, statusVariantOf } from '@/lib/nhi';
 import type { AgentInfo, CreateAgentRequest } from '@autional/shared/generated/types';
 
 /** 列表行 = 生成契约 AgentInfo（identity_id / rotation_days / jit_ttl 等经拦截器深 camel；列表 id 即 identityId）。 */
-type AgentRecord = AgentInfo;
+type AgentRecord = AgentInfo & { ownerPrincipalId?: string };
 
-const SUBTYPE_LABELS: Record<string, string> = {
-	agent: 'Agent',
-	service_account: 'Service Account',
-	automation: 'Automation',
-};
+/** agent 状态选项 = 后端 AgentStatus 枚举全量（agent/domain/agent.go:17-24）单点。 */
+const AGENT_STATUS_OPTIONS = ['provisioning', 'active', 'rotating', 'revoked', 'deleted'] as const;
 
 const SUBTYPE_COLORS: Record<string, string> = {
 	agent: 'blue',
@@ -35,25 +41,30 @@ const SUBTYPE_COLORS: Record<string, string> = {
 	automation: 'orange',
 };
 
-const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
-	active: 'success',
-	disabled: 'danger',
-	suspended: 'warning',
-	provisioning: 'info',
-};
-
-function statusVariant(s: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-	return STATUS_VARIANT[s] || 'neutral';
-}
-
 function formatDate(iso: string): string {
 	if (!iso) return '-';
 	return new Date(iso).toLocaleDateString('zh-CN');
 }
 
-async function fetchAgents(): Promise<AgentRecord[]> {
-	// TASK-AB1-20 / A-74：形状适配单点（extractList 解包 + 契约 camel 字段直读），删除双读兼容分支。
-	return extractList<AgentRecord>(await adminAgents());
+interface AgentsQuery {
+	page: number;
+	pageSize: number;
+	status?: string;
+}
+
+async function fetchAgents(
+	tenantId: string,
+	params: AgentsQuery,
+): Promise<{ items: AgentRecord[]; total: number }> {
+	// A-76：服务端分页契约（toPageParams 单点转 wire page/page_size + status 透传；
+	// 旧实现无参调用 → 后端默认 page_size=20 截断，21 条起永不可达）。
+	const res = await adminAgents({
+		tenant_id: tenantId,
+		...toPageParams({ page: params.page, pageSize: params.pageSize }),
+		...(params.status ? { status: params.status } : {}),
+	});
+	const paged = fromPageResult<AgentRecord>(res);
+	return { items: paged.items, total: paged.total };
 }
 
 async function createAgent(values: CreateAgentRequest): Promise<AgentRecord | null> {
@@ -61,7 +72,8 @@ async function createAgent(values: CreateAgentRequest): Promise<AgentRecord | nu
 	return extractItem<AgentRecord>(await adminAgentsPost(values));
 }
 
-async function deleteAgent(id: string): Promise<void> {
+async function revokeAgent(id: string): Promise<void> {
+	// A-77：DELETE = RevokeAgent 软删除（status→revoked，handler:189-197），非物理删除。
 	await adminAgentsByAgentsDelete(id);
 }
 
@@ -75,24 +87,35 @@ export default function AgentsPage() {
 	const [modalVisible, setModalVisible] = useState(false);
 	const [form] = Form.useForm();
 
+	// A-76/A-77：服务端分页 + 状态筛选状态
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
+	const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+	const queryParams: AgentsQuery = { page, pageSize, status: statusFilter };
+
+	// A-78：owner_principal_id → 成员显示名解析（单点 hook，列表/详情共用）
+	const { resolve: resolveOwner } = useOwnerDisplay();
+
 	const {
-		data: agents = [],
+		data,
 		isLoading,
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: queryKeys.agents.all(tenantId),
-		queryFn: fetchAgents,
+		queryKey: queryKeys.agents.list(tenantId, queryParams),
+		queryFn: () => fetchAgents(tenantId, queryParams),
 		staleTime: 300000,
 	});
+	const agents = data?.items ?? [];
+	const total = data?.total ?? 0;
 
 	const createMut = useMutation({
 		mutationFn: createAgent,
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.agents.all(tenantId) }),
 	});
 
-	const deleteMut = useMutation({
-		mutationFn: deleteAgent,
+	const revokeMut = useMutation({
+		mutationFn: revokeAgent,
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.agents.all(tenantId) }),
 	});
 
@@ -107,12 +130,12 @@ export default function AgentsPage() {
 		}
 	};
 
-	const handleDelete = async (id: string) => {
+	const handleRevoke = async (id: string) => {
 		try {
-			await deleteMut.mutateAsync(id);
-			message.success(t('agents.deleteSuccess'));
+			await revokeMut.mutateAsync(id);
+			message.success(t('agents.revokeSuccess'));
 		} catch (err) {
-			handleApiError(err, t('agents.deleteFailed'));
+			handleApiError(err, t('agents.revokeFailed'));
 		}
 	};
 
@@ -136,7 +159,7 @@ export default function AgentsPage() {
 			key: 'workloadSubtype',
 			render: (v: string) => (
 				<Tag color={SUBTYPE_COLORS[v] || 'default'}>
-					{t(`agents.type.${v}`, { defaultValue: SUBTYPE_LABELS[v] || v || '-' })}
+					{t(`agents.type.${v}`, { defaultValue: v || '-' })}
 				</Tag>
 			),
 		},
@@ -145,16 +168,17 @@ export default function AgentsPage() {
 			dataIndex: 'status',
 			key: 'status',
 			render: (v: string) => (
-				<StatusBadge variant={statusVariant(v)}>
+				<StatusBadge variant={statusVariantOf(AGENT_STATUS_VARIANT, v)}>
 					{t(`agents.status.${v}`, { defaultValue: v || '-' })}
 				</StatusBadge>
 			),
 		},
 		{
+			// A-78：owner 显示名（owner_principal_id 优先；历史行回退 owner_id；均无 → '-'）
 			title: t('agents.column.owner'),
-			dataIndex: 'ownerId',
-			key: 'ownerId',
-			render: (v: string) => v || '-',
+			key: 'owner',
+			render: (_: unknown, record: AgentRecord) =>
+				resolveOwner(record.ownerPrincipalId, record.ownerId),
 		},
 		{
 			title: t('agents.column.created'),
@@ -169,7 +193,7 @@ export default function AgentsPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={(e) => {
 							e.stopPropagation();
 							navigate(buildNavHref(`/agents/${record.identityId ?? ''}`, tenantSlug));
@@ -177,21 +201,22 @@ export default function AgentsPage() {
 					>
 						{t('common.edit')}
 					</Button>
+					{/* A-77：DELETE 实为吊销（软删除 status→revoked），文案对齐语义 */}
 					<Popconfirm
-						title={t('agents.confirmDelete')}
-						description={t('agents.deleteWarning')}
-						onConfirm={() => handleDelete(record.identityId ?? '')}
-						okText={t('common.delete')}
+						title={t('agents.confirmRevoke')}
+						description={t('agents.revokeWarning')}
+						onConfirm={() => handleRevoke(record.identityId ?? '')}
+						okText={t('agents.revoke')}
 						okButtonProps={{ danger: true }}
 						cancelText={t('common.cancel')}
 					>
 						<Button
 							type="link"
 							danger
-							icon={<DeleteOutlined />}
+							icon={<Trash2 size="1em" />}
 							onClick={(e) => e.stopPropagation()}
 						>
-							{t('common.delete')}
+							{t('agents.revoke')}
 						</Button>
 					</Popconfirm>
 				</Space>
@@ -200,21 +225,38 @@ export default function AgentsPage() {
 	];
 
 	return (
-		<div className="p-6">
+		<div>
 			<AppPageHeader
 				title={t('agents.title')}
 				description={t('agents.subtitle')}
 				actions={
-					<Button
-						type="primary"
-						icon={<PlusOutlined />}
-						onClick={() => {
-							form.resetFields();
-							setModalVisible(true);
-						}}
-					>
-						{t('agents.createBtn')}
-					</Button>
+					<Space>
+						{/* A-77：状态筛选（后端 ListAgents status 过滤接线；旧实现无筛选 → 无法过滤已吊销） */}
+						<Select
+							allowClear
+							placeholder={t('agents.filter.status')}
+							value={statusFilter}
+							onChange={(v) => {
+								setStatusFilter(v);
+								setPage(1);
+							}}
+							className="w-40"
+							options={AGENT_STATUS_OPTIONS.map((s) => ({
+								label: t(`agents.status.${s}`),
+								value: s,
+							}))}
+						/>
+						<Button
+							type="primary"
+							icon={<Plus size="1em" />}
+							onClick={() => {
+								form.resetFields();
+								setModalVisible(true);
+							}}
+						>
+							{t('agents.createBtn')}
+						</Button>
+					</Space>
 				}
 			/>
 
@@ -234,20 +276,9 @@ export default function AgentsPage() {
 				/>
 			)}
 
+			{/* A-80：删空态重复 CTA（页头 CTA 已同屏可复用） */}
 			{!isLoading && !error && agents.length === 0 && (
-				<div className="flex flex-col items-center gap-4">
-					<EmptyState title={t('agents.emptyTitle')} description={t('agents.emptyDesc')} />
-					<Button
-						type="primary"
-						icon={<PlusOutlined />}
-						onClick={() => {
-							form.resetFields();
-							setModalVisible(true);
-						}}
-					>
-						{t('agents.createBtn')}
-					</Button>
-				</div>
+				<EmptyState title={t('agents.emptyTitle')} description={t('agents.emptyDesc')} />
 			)}
 
 			{!isLoading && !error && agents.length > 0 && (
@@ -255,7 +286,16 @@ export default function AgentsPage() {
 					rowKey="identityId"
 					columns={columns}
 					dataSource={agents}
-					pagination={{ pageSize: 10 }}
+					pagination={{
+						current: page,
+						pageSize,
+						total,
+						showSizeChanger: false,
+						onChange: (p, ps) => {
+							setPage(p);
+							setPageSize(ps);
+						},
+					}}
 					scroll={{ x: 800 }}
 					onRow={(record) => ({
 						onClick: () => navigate(buildNavHref(`/agents/${record.identityId ?? ''}`, tenantSlug)),
@@ -291,9 +331,9 @@ export default function AgentsPage() {
 					>
 						<Select
 							options={[
-								{ value: 'agent', label: t('agents.subtype.agent') },
-								{ value: 'service_account', label: t('agents.subtype.serviceAccount') },
-								{ value: 'automation', label: t('agents.subtype.automation') },
+								{ value: 'agent', label: t('agents.type.agent') },
+								{ value: 'service_account', label: t('agents.type.service_account') },
+								{ value: 'automation', label: t('agents.type.automation') },
 							]}
 						/>
 					</Form.Item>
@@ -301,7 +341,8 @@ export default function AgentsPage() {
 						{/* TASK-AB1-20 / A-74：InputNumber（value 恒 number）；范围对齐后端 binding omitempty,min=1,max=3650 */}
 						<InputNumber min={1} max={3650} placeholder="90" className="w-full" />
 					</Form.Item>
-					<Form.Item name="jitTtl" label="JIT TTL" initialValue={3600}>
+					{/* A-78：JIT TTL label 收编 i18n（旧硬编码 "JIT TTL" 字符串） */}
+					<Form.Item name="jitTtl" label={t('agents.form.jitTtl')} initialValue={3600}>
 						{/* TASK-AB1-20 / A-74：Select 秒值选项（后端 jit_ttl int seconds, min=60）；提交值为 number */}
 						<Select
 							options={[

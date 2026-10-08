@@ -14,6 +14,7 @@ import {
 export interface DepartmentRecord {
 	id: string;
 	name: string;
+	code?: string;
 	parentId: string | null;
 	memberCount?: number;
 	children?: DepartmentRecord[];
@@ -31,6 +32,7 @@ export function useDepartments(tenantId: string) {
 			return list.map((r) => ({
 				id: (r.departmentId ?? r.id) as string,
 				name: (r.name as string) || '',
+				code: (r.code as string) || undefined,
 				parentId: (r.parentId ?? null) as string | null,
 				memberCount: (r.membersCount ?? 0) as number,
 			})) as DepartmentRecord[];

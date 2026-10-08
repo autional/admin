@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useCurrentTenantIdOr } from '@autional/shared';
 import { Button, Space, Tag, Modal, Form, Input, Select, Empty, Spin, Tooltip } from 'antd';
 import { message } from '@/lib/antd-app';
-import { CheckOutlined, CloseOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Check, CheckCircle2, X } from 'lucide-react';
 import {
 	usePendingMembers,
 	useApproveMember,
@@ -137,7 +137,7 @@ export default function ApprovalPage() {
 				<Space size="small">
 					<Button
 						type="link"
-						icon={<CheckOutlined />}
+						icon={<Check size="1em" />}
 						className="!text-success-text"
 						onClick={() => openApproveModal(record)}
 					>
@@ -146,7 +146,7 @@ export default function ApprovalPage() {
 					<Button
 						type="link"
 						danger
-						icon={<CloseOutlined />}
+						icon={<X size="1em" />}
 						onClick={() => openRejectModal(record)}
 					>
 						{t('approval.reject')}
@@ -172,7 +172,7 @@ export default function ApprovalPage() {
 						{selectedRowKeys.length > 0 && (
 							<Button
 								type="primary"
-								icon={<CheckCircleOutlined />}
+								icon={<CheckCircle2 size="1em" />}
 								onClick={handleBatchApprove}
 								loading={batchApproveMut.isPending}
 							>

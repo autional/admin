@@ -4,14 +4,15 @@ import React, { useState } from 'react';
 import { Button, Space, Tag, Modal, Form, Input, Select, DatePicker, Popconfirm } from 'antd';
 import { message } from '@/lib/antd-app';
 import {
-	PlusOutlined,
-	EditOutlined,
-	DeleteOutlined,
-	SendOutlined,
-	RollbackOutlined,
-} from '@ant-design/icons';
+	Pencil,
+	Plus,
+	Send,
+	Trash2,
+	Undo2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
+import { usePageTitle } from '@autional/shared';
 import {
 	useAnnouncements,
 	useCreateAnnouncement,
@@ -21,6 +22,7 @@ import {
 	useUnpublishAnnouncement,
 	type AnnouncementRecord,
 } from '@/hooks/use-announcements';
+import { useRolesForSelect } from '@/hooks/use-roles-for-select';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
@@ -34,12 +36,10 @@ const STATUS_COLORS: Record<string, string> = {
 	expired: 'warning',
 };
 
-function formatTime(value?: string) {
-	return value ? new Date(value).toLocaleString('zh-CN') : '-';
-}
-
 export default function AnnouncementsPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	// A-161：页面标题（与面包屑同源；原 tab 恒默认站名）
+	usePageTitle(t('notifications.announcements.title'));
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editing, setEditing] = useState<AnnouncementRecord | null>(null);
 	const [page, setPage] = useState(1);
@@ -47,6 +47,13 @@ export default function AnnouncementsPage() {
 	const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 	const [search, setSearch] = useState('');
 	const [form] = Form.useForm();
+
+	// A-160：目标角色字典源（同门户用户与权限的角色数据；mode="tags" 保留自由输入）
+	const roleOptions = useRolesForSelect();
+
+	// A-161：日期随 i18n.language 本地化（原硬编码 'zh-CN' → EN 界面仍中文格式）
+	const formatTime = (value?: string) =>
+		value ? new Date(value).toLocaleString(i18n.language) : '-';
 
 	// RC-5（TASK-AB1-27）：查询入参 camel 书面写（分页键经 hook 内 toPageParams 单点转 wire snake）
 	const { data, isLoading, error, refetch } = useAnnouncements({
@@ -203,7 +210,7 @@ export default function AnnouncementsPage() {
 						<Button
 							type="text"
 							size="small"
-							icon={<EditOutlined />}
+							icon={<Pencil size="1em" />}
 							onClick={() => openEdit(record)}
 						>
 							{t('common.edit')}
@@ -214,7 +221,7 @@ export default function AnnouncementsPage() {
 							title={t('notifications.announcements.confirmPublish')}
 							onConfirm={() => handlePublish(record.id)}
 						>
-							<Button type="text" size="small" icon={<SendOutlined />}>
+							<Button type="text" size="small" icon={<Send size="1em" />}>
 								{t('notifications.announcements.publish')}
 							</Button>
 						</Popconfirm>
@@ -224,7 +231,7 @@ export default function AnnouncementsPage() {
 							title={t('notifications.announcements.confirmUnpublish')}
 							onConfirm={() => handleUnpublish(record.id)}
 						>
-							<Button type="text" size="small" icon={<RollbackOutlined />}>
+							<Button type="text" size="small" icon={<Undo2 size="1em" />}>
 								{t('notifications.announcements.unpublish')}
 							</Button>
 						</Popconfirm>
@@ -234,7 +241,7 @@ export default function AnnouncementsPage() {
 							title={t('notifications.announcements.confirmDelete')}
 							onConfirm={() => handleDelete(record.id)}
 						>
-							<Button type="text" danger size="small" icon={<DeleteOutlined />}>
+							<Button type="text" danger size="small" icon={<Trash2 size="1em" />}>
 								{t('common.delete')}
 							</Button>
 						</Popconfirm>
@@ -250,7 +257,7 @@ export default function AnnouncementsPage() {
 				title={t('notifications.announcements.title')}
 				actions={
 					<>
-						<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+						<Button type="primary" icon={<Plus size="1em" />} onClick={openCreate}>
 							{t('notifications.announcements.createAnnouncement')}
 						</Button>
 					</>
@@ -339,10 +346,11 @@ export default function AnnouncementsPage() {
 						<TextArea rows={6} placeholder={t('notifications.announcements.contentPlaceholder')} />
 					</Form.Item>
 					<Form.Item name="targetRoles" label={t('notifications.announcements.targetRoles')}>
+						{/* A-160：字典选项来自角色列表（值=角色码；原 options=[] 纯手输，拼错静默投向零人） */}
 						<Select
 							mode="tags"
 							placeholder={t('notifications.announcements.targetRolesPlaceholder')}
-							options={[]}
+							options={roleOptions}
 						/>
 					</Form.Item>
 					<Form.Item name="publishAt" label={t('notifications.announcements.publishAt')}>

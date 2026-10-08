@@ -1,6 +1,7 @@
 'use client';
 
-import { extractList } from '@autional/shared';
+import { extractList, extractListResult } from '@autional/shared';
+import type { ListResult } from '@autional/shared';
 import { queryKeys } from '@/lib/query-keys';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +21,6 @@ import type {
 	FreezePointsRequest,
 	UnfreezePointsRequest,
 	ExpirePointsRequest,
-	UpdateAccountStatusRequest,
 	TransferPointsRequest as GenTransferPointsRequest,
 	ExchangePointsRequest as GenExchangePointsRequest,
 } from '@autional/shared/generated/types';
@@ -47,7 +47,9 @@ export function usePointRules() {
 		queryKey: queryKeys.points.rules,
 		staleTime: 300000,
 		queryFn: async () => {
-			const res = await getPointRules();
+			// A-325：显式囊括已禁用规则（服务端默认 include_disabled=false ⇒ 停用规则从列表消失、
+			// 无入口再启用；接线后停用规则照常上列，状态列 Tag 区分）。
+			const res = await getPointRules({ include_disabled: true });
 			return extractList<PointRule>(res);
 		},
 	});
@@ -78,13 +80,18 @@ export function useDeletePointRule() {
 	});
 }
 
-export function usePointAccounts() {
+export function usePointAccounts(params?: { page?: number; pageSize?: number }) {
 	return useQuery({
-		queryKey: queryKeys.points.accounts,
+		queryKey: queryKeys.points.accounts.list(params),
 		staleTime: 300000,
-		queryFn: async () => {
-			const res = await getPointAccounts();
-			return extractList<PointAccount>(res);
+		queryFn: async (): Promise<ListResult<PointAccount>> => {
+			// A-327②：消费服务端分页元数据（旧零参上行 ⇒ 服务端默认 20/页 vs 本地 10/页截断）。
+			// camel 书面写（拦截器 snake 化）；generated 该端点入参类型仍为 snake 字面量故收窄直传。
+			const res = await getPointAccounts(params as unknown as {
+				page?: number;
+				page_size?: number;
+			});
+			return extractListResult<PointAccount>(res);
 		},
 	});
 }
@@ -94,7 +101,7 @@ export function useBatchEarnPoints() {
 	return useMutation({
 		mutationFn: batchEarnPoints,
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
+			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts.all });
 			queryClient.invalidateQueries({ queryKey: queryKeys.points.rules });
 		},
 	});
@@ -120,17 +127,20 @@ export function useTestPointRule() {
 	});
 }
 
-export function usePointTransactions(userId: string) {
+export function usePointTransactions(userId: string, params?: { page?: number; pageSize?: number }) {
 	return useQuery({
-		queryKey: queryKeys.points.transactions(userId),
+		queryKey: queryKeys.points.transactions(userId, params),
 		staleTime: 60000,
-		queryFn: async () => {
+		queryFn: async (): Promise<ListResult<PointTransaction>> => {
 			// U316：改接 admin 面（user 面 point 族在 admin 平面被入口平面门禁拒 403）。
 			// TASK-AB1-27：camel 书面写（拦截器 snake 化）；generated 该端点入参类型仍为 snake 字面量（签名未收编）故收窄直传
-			const res = await Generated.adminPointsTransactions({ userId } as unknown as {
+			// A-327②：分页参接线（旧零参上行 ⇒ 20/页截断潜伏）。
+			const res = await Generated.adminPointsTransactions({ userId, ...params } as unknown as {
 				user_id?: string;
+				page?: number;
+				page_size?: number;
 			});
-			return extractList<PointTransaction>(res);
+			return extractListResult<PointTransaction>(res);
 		},
 		enabled: !!userId,
 	});
@@ -159,7 +169,6 @@ interface TenantConfig {
 	spendEnabled?: boolean;
 	expireEnabled?: boolean;
 	transferEnabled?: boolean;
-	exchangeTransferEnabled?: boolean;
 }
 
 export function useTenantConfig() {
@@ -190,7 +199,7 @@ export function useFreezePoints() {
 		mutationFn: ({ userId, data }: { userId: string; data: Record<string, unknown> }) =>
 			Generated.adminPointsFreezeByPointsPost(userId, data as unknown as FreezePointsRequest),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
+			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts.all });
 			queryClient.invalidateQueries({ queryKey: ['point-transactions'] });
 		},
 	});
@@ -202,7 +211,7 @@ export function useUnfreezePoints() {
 		mutationFn: ({ userId, data }: { userId: string; data: Record<string, unknown> }) =>
 			Generated.adminPointsUnfreezeByPointsPost(userId, data as unknown as UnfreezePointsRequest),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
+			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts.all });
 			queryClient.invalidateQueries({ queryKey: ['point-transactions'] });
 		},
 	});
@@ -214,19 +223,8 @@ export function useExpirePoints() {
 		mutationFn: ({ userId, data }: { userId: string; data: Record<string, unknown> }) =>
 			Generated.adminPointsExpireByPointsPost(userId, data as unknown as ExpirePointsRequest),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
+			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts.all });
 			queryClient.invalidateQueries({ queryKey: ['point-transactions'] });
-		},
-	});
-}
-
-export function useUpdateAccountStatus() {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: ({ userId, data }: { userId: string; data: Record<string, unknown> }) =>
-			Generated.adminPointsStatusByPointsPut(userId, data as unknown as UpdateAccountStatusRequest),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
 		},
 	});
 }
@@ -242,7 +240,7 @@ export function useTransferPoints() {
 		mutationFn: ({ userId, data }: { userId: string; data: GenTransferPointsRequest }) =>
 			transferPoints(userId, data),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
+			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts.all });
 			queryClient.invalidateQueries({ queryKey: ['point-transactions'] });
 		},
 	});
@@ -254,7 +252,7 @@ export function useExchangePoints() {
 		mutationFn: ({ userId, data }: { userId: string; data: GenExchangePointsRequest }) =>
 			exchangePoints(userId, data),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts });
+			queryClient.invalidateQueries({ queryKey: queryKeys.points.accounts.all });
 			queryClient.invalidateQueries({ queryKey: ['point-transactions'] });
 		},
 	});

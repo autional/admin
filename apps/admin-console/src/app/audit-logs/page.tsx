@@ -7,20 +7,20 @@ import dayjs from 'dayjs';
 
 import { message, modal } from '@/lib/antd-app';
 import {
-	SearchOutlined,
-	ExportOutlined,
-	SafetyOutlined,
-	EyeOutlined,
-	DownloadOutlined,
-	LinkOutlined,
-	CheckCircleOutlined,
-	FileProtectOutlined,
-} from '@ant-design/icons';
+	Download,
+	ExternalLink,
+	Eye,
+	FileLock,
+	Link2,
+	Search,
+	ShieldCheck,
+} from 'lucide-react';
 import { useAuditLogs, useVerifyAuditChain, useExportAuditLogs } from '@/hooks/use-audit-logs';
 import { handleApiError } from '@/lib/error-handler';
 import { DataTable, DateRangeFilter, Drawer, PageError } from '@autional/ui/antd';
 import type { DataTablePagination, DateRangeValue } from '@autional/ui/antd';
-import { extractItem, extractList, useCurrentTenantId } from '@autional/shared';
+import { extractItem, extractList, useCurrentTenantId, usePageTitle } from '@autional/shared';
+import { useOwnerDisplay } from '@/hooks/use-owner-display';
 import {
 	adminAuditExportDownloadByExport,
 	adminAuditExportJobs,
@@ -37,6 +37,9 @@ export default function AuditLogsPage() {
 	const { t } = useTranslation();
 	const tenantId = useCurrentTenantId() ?? '';
 	const isRestricted = useIsAuditRestricted();
+	// A-200（W1e）：页面标题 + 操作人 ULID → 显示名解析（未命中回退原值）
+	usePageTitle(t('audit.title'));
+	const { resolve: resolveOwner } = useOwnerDisplay();
 
 	const ACTION_OPTIONS = [
 		{ label: t('audit.action.create'), value: 'create' },
@@ -286,7 +289,14 @@ export default function AuditLogsPage() {
 			width: 170,
 			render: (v: number) => (v ? new Date(v).toLocaleString() : '-'),
 		},
-		{ title: t('audit.column.operator'), dataIndex: 'operatorId', key: 'operatorId', width: 120 },
+		{
+			title: t('audit.column.operator'),
+			dataIndex: 'operatorId',
+			key: 'operatorId',
+			width: 120,
+			// A-200（W1e）：裸 ULID → 成员显示名（未命中回退原值）
+			render: (v: string) => resolveOwner(v),
+		},
 		{
 			title: t('audit.column.action'),
 			dataIndex: 'action',
@@ -332,14 +342,15 @@ export default function AuditLogsPage() {
 			dataIndex: 'duration',
 			key: 'duration',
 			width: 80,
-			render: (v: number) => (v !== undefined ? `${v}ms` : '-'),
+			// A-200（W1e）：0ms 为「未记录耗时」哨兵（后端零值）→ 回落 '-'
+			render: (v: number) => (v ? `${v}ms` : '-'),
 		},
 		{
 			title: t('common.actions'),
 			key: 'actionCol',
 			width: 90,
 			render: (_: any, record: any) => (
-				<Button type="link" icon={<EyeOutlined />} onClick={() => openDetail(record)}>
+				<Button type="link" icon={<Eye size="1em" />} onClick={() => openDetail(record)}>
 					{t('common.viewDetail')}
 				</Button>
 			),
@@ -358,14 +369,14 @@ export default function AuditLogsPage() {
 					<>
 						<Space>
 							<Button
-								icon={<SafetyOutlined />}
+								icon={<ShieldCheck size="1em" />}
 								onClick={handleVerifyChain}
 								loading={verifyMutation.isPending}
 							>
 								{t('audit.action.verifyChain')}
 							</Button>
 							<Button
-								icon={<ExportOutlined />}
+								icon={<ExternalLink size="1em" />}
 								onClick={() => handleExport('csv')}
 								loading={exportMutation.isPending}
 							>
@@ -456,7 +467,7 @@ export default function AuditLogsPage() {
 					</Col>
 				</Row>
 				<div className="mt-3 text-right">
-					<Button type="primary" icon={<SearchOutlined />} onClick={() => refetch()}>
+					<Button type="primary" icon={<Search size="1em" />} onClick={() => refetch()}>
 						{t('audit.action.search')}
 					</Button>
 				</div>
@@ -508,7 +519,7 @@ export default function AuditLogsPage() {
 							<Col span={8} className="text-neutral-600">
 								{t('audit.detail.operator')}
 							</Col>
-							<Col span={16}>{currentRecord.operatorId}</Col>
+							<Col span={16}>{resolveOwner(currentRecord.operatorId)}</Col>
 						</Row>
 						<Row>
 							<Col span={8} className="text-neutral-600">
@@ -573,7 +584,7 @@ export default function AuditLogsPage() {
 								{t('audit.detail.duration')}
 							</Col>
 							<Col span={16}>
-								{currentRecord.duration !== undefined ? `${currentRecord.duration}ms` : '-'}
+								{currentRecord.duration ? `${currentRecord.duration}ms` : '-'}
 							</Col>
 						</Row>
 						<Row>
@@ -612,7 +623,7 @@ export default function AuditLogsPage() {
 									{t('audit.detail.metadata')}
 								</Col>
 								<Col span={16}>
-									<pre className="bg-neutral-50 p-3 rounded text-xs overflow-auto">
+									<pre className="bg-neutral-50 p-3 rounded-xs text-xs overflow-auto">
 										{JSON.stringify(currentRecord.metadata, null, 2)}
 									</pre>
 								</Col>
@@ -629,7 +640,7 @@ export default function AuditLogsPage() {
 						key: 'export',
 						label: (
 							<span>
-								<ExportOutlined className="mr-2" />
+								<ExternalLink size="1em" className="mr-2" />
 								{t('audit.exportJobs.title')}
 							</span>
 						),
@@ -680,7 +691,7 @@ export default function AuditLogsPage() {
 													<Button
 														type="link"
 														size="small"
-														icon={<DownloadOutlined />}
+														icon={<Download size="1em" />}
 														onClick={() => handleDownload(record.jobId)}
 													>
 														{t('audit.exportJobs.download')}
@@ -697,7 +708,7 @@ export default function AuditLogsPage() {
 						key: 'verification',
 						label: (
 							<span>
-								<FileProtectOutlined className="mr-2" />
+								<FileLock size="1em" className="mr-2" />
 								{t('audit.verification.title')}
 							</span>
 						),
@@ -711,7 +722,7 @@ export default function AuditLogsPage() {
 											<Button
 												type="primary"
 												size="small"
-												icon={<LinkOutlined />}
+												icon={<Link2 size="1em" />}
 												onClick={handleViewHashChain}
 											>
 												{t('audit.hashChain.view')}
@@ -731,7 +742,7 @@ export default function AuditLogsPage() {
 											<Button
 												type="primary"
 												size="small"
-												icon={<SafetyOutlined />}
+												icon={<ShieldCheck size="1em" />}
 												onClick={handleVerifyProof}
 											>
 												{t('audit.merkle.verify')}
@@ -945,7 +956,7 @@ export default function AuditLogsPage() {
 						{merkleData.proofPath ? (
 							<div>
 								<div className="text-neutral-600 mb-2">{t('audit.merkle.proofPath')}</div>
-								<pre className="bg-neutral-50 p-3 rounded text-xs overflow-auto">
+								<pre className="bg-neutral-50 p-3 rounded-xs text-xs overflow-auto">
 									{JSON.stringify(merkleData.proofPath, null, 2)}
 								</pre>
 							</div>
@@ -993,7 +1004,7 @@ export default function AuditLogsPage() {
 								</Col>
 								<Col span={16}>
 									<Paragraph
-										className="break-all font-mono text-xs bg-neutral-50 p-3 rounded"
+										className="break-all font-mono text-xs bg-neutral-50 p-3 rounded-xs"
 										copyable
 									>
 										{verifyReport.message}

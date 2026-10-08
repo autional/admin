@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Popconfirm } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Popconfirm, Switch } from 'antd';
 import { message } from '@/lib/antd-app';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { fromPageResult, toPageParams, usePageTitle } from '@autional/shared';
+import { queryKeys } from '@/lib/query-keys';
+import { getCommunicationProviders } from '@/lib/api.generated';
 import {
-	useCommunicationProvidersList,
 	useCreateCommunicationProvider,
 	useUpdateCommunicationProvider,
 	useDeleteCommunicationProvider,
@@ -15,20 +18,27 @@ import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
 import { AppPageHeader } from '@autional/ui';
 
-const { Option } = Select;
 const { TextArea } = Input;
 
 interface ProviderRecord {
 	id?: string;
 	channel?: string;
 	provider?: string;
-	apiKey?: string;
-	// A-177（TASK-AB1-09）：服务端 ProviderConfigResponse.config 为字符串（脱敏 JSON 串），
-	// 编辑回填按字符串展示；提交时原样透传为 string，不再 JSON.parse 成对象。
+	// A-177（TASK-AB1-09）：服务端 ProviderConfigResponse.config 为脱敏 JSON 字符串；
+	// W3-02（A-189）：编辑态不回填掩码串（回写必被后端哨兵 400 拒收），留空 = 不修改。
 	config?: string;
 	isActive?: boolean;
 	priority?: number;
 	updatedAt?: string;
+}
+
+// A-190：表单值形状（创建/编辑共用）；编辑态 config 可空 = 不修改（不回写掩码串）。
+interface ProviderFormValues {
+	channel: string;
+	provider: string;
+	config?: string;
+	isActive?: boolean;
+	priority?: number;
 }
 
 const CHANNEL_COLORS: Record<string, string> = { sms: 'orange', email: 'green', push: 'purple' };
@@ -40,13 +50,45 @@ const PROVIDER_COLORS: Record<string, string> = {
 	apns: 'purple',
 };
 
+// A-191：渠道 × 服务商联动白名单（后端 oneof 仅约束 channel，provider 无服务端白名单，
+// 此处按渠道收敛可选项；切换渠道时清空失配值，由 required 兜底）。
+const CHANNEL_PROVIDERS: Record<string, string[]> = {
+	sms: ['aliyun', 'tencent'],
+	email: ['sendgrid'],
+	push: ['fcm', 'apns'],
+};
+const ALL_PROVIDERS = ['aliyun', 'tencent', 'sendgrid', 'fcm', 'apns'];
+
+/** A-193：服务端分页每页条数（与旧本地分页 pageSize=10 对齐） */
+const PAGE_SIZE = 10;
+
 export default function CommunicationProvidersPage() {
 	const { t } = useTranslation();
+	usePageTitle(t('communication.providers.title'));
+
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editing, setEditing] = useState<ProviderRecord | null>(null);
 	const [form] = Form.useForm();
+	const [page, setPage] = useState(1);
 
-	const { data = [], isLoading, error, refetch } = useCommunicationProvidersList();
+	// A-193（服务端分页）：page/page_size 走 wire（toPageParams 单点），列表归一 fromPageResult；
+	// 键前缀 = queryKeys.communication.providers，增/改/删 mutation 的前缀失效自动覆盖本查询。
+	const {
+		data: pageData,
+		isLoading,
+		error,
+		refetch,
+	} = useQuery({
+		queryKey: [...queryKeys.communication.providers, { page, pageSize: PAGE_SIZE }],
+		queryFn: async () =>
+			fromPageResult<ProviderRecord>(
+				await getCommunicationProviders(toPageParams({ page, pageSize: PAGE_SIZE })),
+			),
+		staleTime: 60000,
+	});
+	const data = pageData?.items ?? [];
+	const total = pageData?.total ?? 0;
+
 	const createMut = useCreateCommunicationProvider();
 	const updateMut = useUpdateCommunicationProvider();
 	const deleteMut = useDeleteCommunicationProvider();
@@ -57,28 +99,66 @@ export default function CommunicationProvidersPage() {
 		{ value: 'push', label: t('communication.channel.push') },
 	];
 
-	const providerOptions = [
-		{ value: 'aliyun', label: t('communication.providers.provider.aliyun') },
-		{ value: 'tencent', label: t('communication.providers.provider.tencent') },
-		{ value: 'sendgrid', label: t('communication.providers.provider.sendgrid') },
-		{ value: 'fcm', label: t('communication.providers.provider.fcm') },
-		{ value: 'apns', label: t('communication.providers.provider.apns') },
-	];
+	// A-191：渠道 × 服务商联动——provider 选项随所选渠道收敛。
+	const selectedChannel = Form.useWatch('channel', form);
+	const providerOptions = useMemo(() => {
+		const allowed = selectedChannel
+			? (CHANNEL_PROVIDERS[selectedChannel as string] ?? [])
+			: undefined;
+		return ALL_PROVIDERS.filter((p) => !allowed || allowed.includes(p)).map((value) => ({
+			value,
+			label: t(`communication.providers.provider.${value}`),
+		}));
+	}, [selectedChannel, t]);
 
-	const handleSave = async (values: any) => {
+	// A-193：config 本地 JSON 校验（非法即拦，不发请求）；W3-02：编辑态留空 = 不修改。
+	const validateConfig = (_: unknown, value?: string) => {
+		const v = (value ?? '').trim();
+		if (!v) {
+			if (editing?.id) return Promise.resolve();
+			return Promise.reject(new Error(t('communication.providers.configJsonInvalid')));
+		}
+		if (v.includes('***REDACTED***')) {
+			return Promise.reject(new Error(t('communication.providers.configMaskedRejected')));
+		}
 		try {
-			// A-177（TASK-AB1-09）：请求体对齐后端 DTO ——
+			JSON.parse(v);
+			return Promise.resolve();
+		} catch {
+			return Promise.reject(new Error(t('communication.providers.configJsonInvalid')));
+		}
+	};
+
+	// A-191 联动守门：值必须属于当前渠道的白名单。编辑态跳过——channel/provider 均被禁用，
+	// 历史失配数据不可经本表单引入，也不应把编辑提交卡死（禁用字段无法修正）。
+	const validateProviderChannel = (_: unknown, value?: string) => {
+		if (editing?.id || !value) return Promise.resolve();
+		const channel = form.getFieldValue('channel') as string | undefined;
+		const allowed = channel ? (CHANNEL_PROVIDERS[channel] ?? []) : [];
+		if (allowed.length > 0 && !allowed.includes(value)) {
+			return Promise.reject(new Error(t('communication.providers.providerChannelMismatch')));
+		}
+		return Promise.resolve();
+	};
+
+	const handleSave = async (values: ProviderFormValues) => {
+		try {
+			// A-177：请求体对齐后端 DTO ——
 			// create = CreateProviderConfigRequest{channel, provider, config(JSON 字符串), priority}；
-			// update = UpdateProviderConfigRequest{config, is_active, priority}（再发 channel/provider
+			// update = UpdateProviderConfigRequest{config?, is_active, priority}（再发 channel/provider
 			// 会命中后端 "no fields to update"）。键名一律 camel 书面写，camel→snake 由 shared
 			// apiClient 请求拦截器承担（isActive→is_active）。
-			const configText: string = values.config || '{}';
+			// W3-02（A-189）：编辑态 config 留空 = 不修改（仅非空才发键，掩码串绝不回写）。
+			// A-190：isActive 由真控件驱动（编辑态取控件实际值；创建态服务端固定 true，不随请求）。
+			const configText: string = (values.config ?? '').trim();
 			const priority: number = values.priority ?? 0;
 			if (editing?.id) {
-				await updateMut.mutateAsync({
-					id: editing.id,
-					data: { config: configText, isActive: values.isActive !== false, priority },
-				});
+				const payload: Record<string, unknown> = {
+					isActive: values.isActive === true,
+					priority,
+				};
+				if (configText) payload.config = configText;
+				await updateMut.mutateAsync({ id: editing.id, data: payload });
 				message.success(t('communication.providers.updateSuccess'));
 			} else {
 				await createMut.mutateAsync({
@@ -111,7 +191,11 @@ export default function CommunicationProvidersPage() {
 			title: t('communication.providers.channel'),
 			dataIndex: 'channel',
 			key: 'channel',
-			render: (v: string) => <Tag color={CHANNEL_COLORS[v] || 'default'}>{v?.toUpperCase()}</Tag>,
+			render: (v: string) => (
+				<Tag color={CHANNEL_COLORS[v] || 'default'}>
+					{v ? t(`communication.channel.${v}`, { defaultValue: v }) : '-'}
+				</Tag>
+			),
 		},
 		{
 			title: t('communication.providers.provider'),
@@ -130,6 +214,14 @@ export default function CommunicationProvidersPage() {
 			),
 		},
 		{
+			// A-191：priority 列（对齐后端 ProviderConfigResponse.priority）
+			title: t('communication.providers.priority'),
+			dataIndex: 'priority',
+			key: 'priority',
+			width: 90,
+			render: (v?: number) => (typeof v === 'number' ? v : '-'),
+		},
+		{
 			title: t('common.updatedAt'),
 			dataIndex: 'updatedAt',
 			key: 'updatedAt',
@@ -138,20 +230,20 @@ export default function CommunicationProvidersPage() {
 		{
 			title: t('common.actions'),
 			key: 'action',
-			render: (_: any, record: ProviderRecord) => (
+			render: (_: unknown, record: ProviderRecord) => (
 				<Space size="small">
 					<Button
 						type="text"
 						size="small"
-						icon={<EditOutlined />}
+						icon={<Pencil size="1em" />}
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
 								channel: record.channel,
 								provider: record.provider,
-								// A-177：config 为字符串（服务端脱敏 JSON 串）→ 原样展示
-								config: record.config || '{}',
-								isActive: record.isActive,
+								// W3-02：config 不回填掩码串（回写 = 400），留空 = 不修改
+								config: '',
+								isActive: record.isActive === true,
 								priority: record.priority ?? 0,
 							});
 							setModalVisible(true);
@@ -163,7 +255,7 @@ export default function CommunicationProvidersPage() {
 						title={t('communication.providers.confirmDelete')}
 						onConfirm={() => record.id && handleDelete(record.id)}
 					>
-						<Button type="text" danger size="small" icon={<DeleteOutlined />}>
+						<Button type="text" danger size="small" icon={<Trash2 size="1em" />}>
 							{t('common.delete')}
 						</Button>
 					</Popconfirm>
@@ -180,7 +272,7 @@ export default function CommunicationProvidersPage() {
 					<>
 						<Button
 							type="primary"
-							icon={<PlusOutlined />}
+							icon={<Plus size="1em" />}
 							onClick={() => {
 								setEditing(null);
 								form.resetFields();
@@ -205,8 +297,15 @@ export default function CommunicationProvidersPage() {
 				columns={columns}
 				dataSource={data}
 				loading={isLoading}
-				pagination={{ pageSize: 10 }}
-				scroll={{ x: 800 }}
+				pagination={{
+					current: page,
+					pageSize: PAGE_SIZE,
+					total,
+					showSizeChanger: false,
+					showTotal: (n: number) => t('paginationTotal', { total: n }),
+					onChange: (p: number) => setPage(p),
+				}}
+				scroll={{ x: 900 }}
 			/>
 
 			<Modal
@@ -230,40 +329,59 @@ export default function CommunicationProvidersPage() {
 					form={form}
 					layout="vertical"
 					onFinish={handleSave}
-					initialValues={{ channel: 'email', priority: 0 }}
+					initialValues={{ channel: 'email', priority: 0, isActive: true }}
 				>
 					<Form.Item
 						name="channel"
 						label={t('communication.providers.channel')}
 						rules={[{ required: true }]}
 					>
-						<Select>
-							{CHANNEL_OPTIONS.map((c) => (
-								<Option key={c.value} value={c.value}>
-									{c.label}
-								</Option>
-							))}
-						</Select>
+						{/* A-190/W3-01：编辑态禁用（update 契约不含 channel，改发即 400） */}
+						<Select
+							options={CHANNEL_OPTIONS}
+							disabled={!!editing?.id}
+							onChange={(v: string) => {
+								const current = form.getFieldValue('provider') as string | undefined;
+								const allowed = CHANNEL_PROVIDERS[v] ?? [];
+								if (current && !allowed.includes(current)) {
+									form.setFieldValue('provider', undefined);
+								}
+							}}
+						/>
 					</Form.Item>
 					<Form.Item
 						name="provider"
 						label={t('communication.providers.provider')}
-						rules={[{ required: true }]}
+						rules={[{ required: true }, { validator: validateProviderChannel }]}
 					>
-						<Select placeholder={t('communication.providers.selectProvider')}>
-							{providerOptions.map((p) => (
-								<Option key={p.value} value={p.value}>
-									{p.label}
-								</Option>
-							))}
-						</Select>
+						{/* A-191：选项随渠道收敛；编辑态禁用（update 契约不含 provider） */}
+						<Select
+							options={providerOptions}
+							placeholder={t('communication.providers.selectProvider')}
+							disabled={!!editing?.id}
+						/>
 					</Form.Item>
 					<Form.Item
 						name="config"
 						label={t('communication.providers.config')}
-						rules={[{ required: true }]}
+						rules={
+							editing?.id
+								? [{ validator: validateConfig }]
+								: [{ required: true }, { validator: validateConfig }]
+						}
+						extra={editing?.id ? t('communication.providers.configEditHint') : undefined}
 					>
 						<TextArea rows={6} placeholder={t('communication.providers.configPlaceholder')} />
+					</Form.Item>
+					{/* A-190：is_active 真控件——编辑态取实际值随请求提交；创建态服务端固定 true，
+					    控件禁用并如实呈现（DTO 无 is_active 字段，登记见执行摘要） */}
+					<Form.Item
+						name="isActive"
+						label={t('communication.providers.activeStatus')}
+						valuePropName="checked"
+						extra={!editing?.id ? t('communication.providers.activeStatusCreateHint') : undefined}
+					>
+						<Switch disabled={!editing?.id} />
 					</Form.Item>
 					{/* A-177：priority 对齐后端 DTO（min0 max100，dto.go:582） */}
 					<Form.Item
