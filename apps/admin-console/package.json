@@ -5,8 +5,8 @@
   "description": "Admin Console - Tenant Management Dashboard (Vite + React Router + Ant Design 6)",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 13102",
-    "build": "tsc && vite build --base /",
+    "dev": "node ../../scripts/gen-env.mjs && vite --port 13102",
+    "build": "node ../../scripts/gen-env.mjs && tsc && vite build --base /",
     "build:harness": "vite build --config vite.harness.config.ts",
     "preview": "vite preview --port 13102",
     "lint": "eslint src/",
