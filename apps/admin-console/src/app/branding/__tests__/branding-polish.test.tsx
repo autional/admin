@@ -1,5 +1,5 @@
 // W1d（A-150）：品牌定制页回归锁（三断言）——
-//   ① 非法色值拦截/归一：历史非法值 'var(--color-primary-700)' → 兜底 #1890ff；AggregationColor 实例 → hex
+//   ① 非法色值拦截/归一：历史非法值 'var(--color-primary-700)' → 兜底令牌主色 #003153；AggregationColor 实例 → hex
 //   ② 刷新改局部 refetch（旧 window.location.reload() 整页重载；jsdom 下旧实现不产生新 GET → 计数判红）
 //   ③ usePageTitle（document.title = 「品牌定制 — Autional」）
 // 断言口径 = 最终 wire 请求（adapter 最末环捕获）+ 归一函数单测。
@@ -20,7 +20,7 @@ const TENANT = 'tenant-w1d-brand';
 const BRANDING_URL = `/tenant/api/v1/admin/tenants/${TENANT}/branding`;
 const TS = '2026-10-06T00:00:00Z';
 
-/** wire 形状（snake）：primary 为历史非法值（CSS var）→ 页面须兜底 #1890ff（旧实现原样落 ColorPicker = 黑闪）。 */
+/** wire 形状（snake）：primary 为历史非法值（CSS var）→ 页面须兜底令牌主色 #003153（旧实现原样落 ColorPicker = 黑闪）。 */
 const RAW_BRANDING = {
 	tenant_id: TENANT,
 	primary_color: 'var(--color-primary-700)',
@@ -146,7 +146,7 @@ describe('品牌定制页（A-150）', () => {
 		await waitFor(() => {
 			const text = document.querySelector('.ant-color-picker-trigger-text');
 			expect(text).toBeTruthy();
-			expect(text!.textContent?.toUpperCase()).toContain('#1890FF');
+			expect(text!.textContent?.toUpperCase()).toContain('#003153');
 		});
 
 		// ③ usePageTitle（与面包屑同源；原 tab 恒默认站名）
@@ -155,7 +155,7 @@ describe('品牌定制页（A-150）', () => {
 		// ① 提交体归一：保存 → PUT body.primary_color 必须为合法 hex（非 var(...)）
 		fireEvent.click(screen.getByRole('button', { name: /保存配置/ }));
 		await waitFor(() => expect(putCalls().length).toBe(1));
-		expect(putCalls()[0].body!.primary_color).toBe('#1890ff');
+		expect(putCalls()[0].body!.primary_color).toBe('#003153');
 		expect(putCalls()[0].body!.background_color).toBe('#ffffff');
 	});
 
