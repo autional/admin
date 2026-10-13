@@ -27,7 +27,7 @@ export interface IdPRecord {
 
 /**
  * 将 SAML IdP 记录映射为统一 IdPRecord（admin /identity-providers 页聚合展示）。
- * 来源: saml-service (authms_saml.saml_providers)，由 seed 015 写入。
+ * 来源: saml-service (autional_saml.saml_providers)，由 seed 015 写入。
  * 见 AGENTS.md「IdP 后端读表统一」: identity.providers (OAuth) 与 saml_providers (SAML) 分库存储，
  * 前端聚合两个来源展示。
  */

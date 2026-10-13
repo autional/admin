@@ -117,7 +117,7 @@ export const createIdentityProvider = Generated.adminIdentityProvidersPost;
 export const updateIdentityProvider = Generated.adminIdentityProvidersByIdentityProvidersPut;
 export const deleteIdentityProvider = Generated.adminIdentityProvidersByIdentityProvidersDelete;
 export const testIdentityProvider = Generated.adminIdentityProvidersTestByIdentityProvidersPost;
-// SAML IdP (saml-service) — 供 /identity-providers 页聚合展示 (authms_saml.saml_providers)
+// SAML IdP (saml-service) — 供 /identity-providers 页聚合展示 (autional_saml.saml_providers)
 export const getSamlProviders = Generated.adminSamlProviders;
 export const createSamlProvider = Generated.adminSamlProvidersPost;
 export const updateSamlProvider = Generated.adminSamlProvidersByProvidersPut;
