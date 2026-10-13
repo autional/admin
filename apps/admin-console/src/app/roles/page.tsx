@@ -135,7 +135,7 @@ export default function RolesPage() {
 	}, [rolePerms]);
 
 	const handleSave = async (values: any) => {
-		const result = createRoleSchema.passthrough().safeParse(values);
+		const result = createRoleSchema(t).passthrough().safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

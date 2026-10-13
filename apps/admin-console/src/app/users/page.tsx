@@ -65,7 +65,7 @@ export default function UsersPage() {
 		password: string;
 		forcePasswordChange?: boolean;
 	}) => {
-		const result = createUserSchema.passthrough().safeParse(values);
+		const result = createUserSchema(t).passthrough().safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

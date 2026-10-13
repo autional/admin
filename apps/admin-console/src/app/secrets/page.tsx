@@ -110,7 +110,7 @@ export default function SecretsPage() {
 				});
 				message.success(t('secrets.updateSuccess'));
 			} else {
-				const result = createSecretSchema.safeParse(values);
+				const result = createSecretSchema(t).safeParse(values);
 				if (!result.success) {
 					result.error.issues.forEach((i) => message.error(i.message));
 					return;

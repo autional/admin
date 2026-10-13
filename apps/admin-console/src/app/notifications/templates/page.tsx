@@ -117,7 +117,7 @@ export default function NotificationTemplatesPage() {
 			return;
 		}
 		// zod 先行（CreateTemplateRequest 必填集；编辑无 code 字段，不适用该 schema）
-		const result = createNotificationTemplateSchema.safeParse(values);
+		const result = createNotificationTemplateSchema(t).safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

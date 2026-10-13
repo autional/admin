@@ -190,12 +190,7 @@ export default function PlatformPortalsPage() {
 		return (
 			<div>
 				<AppPageHeader title={t('applications.platformPortals', 'Platform Portals')} />
-				<Empty
-					description={t(
-						'applications.platformOnlyTenant',
-						'平台内置 Portal 属平台租户数据，仅平台租户会话可查看。',
-					)}
-				/>
+				<Empty description={t('applications.platformOnlyTenant', '平台内置 Portal 属平台租户数据，仅平台租户会话可查看。')} />
 			</div>
 		);
 	}
