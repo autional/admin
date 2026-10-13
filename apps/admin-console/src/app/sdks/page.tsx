@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Card, Row, Col, Button, Typography } from 'antd';
-import { Book, Code, Download } from 'lucide-react';
+import { Card, Row, Col, Typography } from 'antd';
+import { Book, Code } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTenantSlug } from '@autional/shared';
 import { AppPageHeader } from '@autional/ui';
@@ -47,12 +47,9 @@ export default function SdkPage() {
 						<Card
 							hoverable
 							actions={[
-								<Button type="link" icon={<Download size="1em" />} key="download">
-									{t('sdks.download')}
-								</Button>,
-								<Button type="link" icon={<Book size="1em" />} key="docs">
-									{t('sdks.docs')}
-								</Button>,
+								<a key="docs" href={`${DOCS_BASE}/sdk`} target="_blank" rel="noreferrer">
+									<Book size="1em" /> {t('sdks.docs')}
+								</a>,
 							]}
 						>
 							<Card.Meta

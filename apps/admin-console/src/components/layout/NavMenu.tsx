@@ -222,7 +222,6 @@ export function NavMenu() {
 				children: [
 					{ key: '/status', label: t('nav.serviceStatus'), permission: 'tenant:monitor:read' },
 					{ key: '/logs', label: t('nav.systemLogs'), permission: 'tenant:log:read' },
-					{ key: '/traces', label: t('nav.traces'), permission: 'tenant:log:read' },
 					{ key: '/request-logs', label: t('nav.requestLogs'), permission: 'tenant:log:read' },
 				],
 			},
