@@ -45,6 +45,13 @@ const OAUTH_STATUS_COLORS: Record<string, string> = {
 	inactive: 'default',
 };
 
+/** TextArea 换行分割 → wire 数组（trim + 去空行；wire `redirect_uris`/`post_logout_redirect_uris` 均为 []string）。 */
+const splitUris = (value?: string): string[] =>
+	(value || '')
+		.split('\n')
+		.map((line) => line.trim())
+		.filter(Boolean);
+
 export default function OAuthClientsPage() {
 	const { t } = useTranslation();
 	const [modalVisible, setModalVisible] = useState(false);
@@ -68,12 +75,20 @@ export default function OAuthClientsPage() {
 	const { data: stats } = useOAuthClientStats(detailClient?.clientId || '');
 
 	const handleSave = async (values: any) => {
+		// A-45/A-46：payload 按 wire 键书写（camel 书面 → 请求拦截器 snake 化）。
+		// `name`（wire 非 clientName）；`redirect_uris`/`post_logout_redirect_uris` 须为数组（TextArea 换行分割）。
+		const payload = {
+			name: values.name,
+			redirectUris: splitUris(values.redirectUris),
+			postLogoutRedirectUris: splitUris(values.postLogoutRedirectUris),
+			grantTypes: values.grantTypes,
+		};
 		try {
 			if (editing) {
-				await updateMut.mutateAsync({ id: editing.clientId, data: values });
+				await updateMut.mutateAsync({ id: editing.clientId, data: payload });
 				message.success(t('oauthClients.updateSuccess'));
 			} else {
-				await createMut.mutateAsync(values);
+				await createMut.mutateAsync(payload);
 				message.success(t('oauthClients.createSuccess'));
 			}
 			setModalVisible(false);
@@ -130,7 +145,7 @@ export default function OAuthClientsPage() {
 	};
 
 	const columns = [
-		{ title: t('oauthClients.column.clientName'), dataIndex: 'clientName', key: 'clientName' },
+		{ title: t('oauthClients.column.clientName'), dataIndex: 'name', key: 'name' },
 		{
 			title: t('oauthClients.column.clientId'),
 			dataIndex: 'clientId',
@@ -196,8 +211,9 @@ export default function OAuthClientsPage() {
 						onClick={() => {
 							setEditing(record);
 							form.setFieldsValue({
-								clientName: record.clientName,
+								name: record.name,
 								redirectUris: record.redirectUris?.join('\n') || '',
+								postLogoutRedirectUris: record.postLogoutRedirectUris?.join('\n') || '',
 								grantTypes: record.grantTypes || [],
 							});
 							setModalVisible(true);
@@ -274,7 +290,7 @@ export default function OAuthClientsPage() {
 			>
 				<Form form={form} layout="vertical" onFinish={handleSave}>
 					<Form.Item
-						name="clientName"
+						name="name"
 						label={t('oauthClients.form.clientName')}
 						rules={[{ required: true }]}
 					>
@@ -286,6 +302,16 @@ export default function OAuthClientsPage() {
 						extra={t('oauthClients.form.redirectUrisExtra')}
 					>
 						<Input.TextArea rows={3} placeholder={t('oauthClients.form.redirectUrisPlaceholder')} />
+					</Form.Item>
+					<Form.Item
+						name="postLogoutRedirectUris"
+						label={t('oauthClients.form.postLogoutRedirectUris')}
+						extra={t('oauthClients.form.postLogoutRedirectUrisExtra')}
+					>
+						<Input.TextArea
+							rows={2}
+							placeholder={t('oauthClients.form.postLogoutRedirectUrisPlaceholder')}
+						/>
 					</Form.Item>
 					<Form.Item
 						name="grantTypes"
@@ -313,7 +339,7 @@ export default function OAuthClientsPage() {
 					<Space direction="vertical" style={{ width: '100%' }} size="large">
 						<Descriptions column={1} bordered size="small">
 							<Descriptions.Item label={t('oauthClients.column.clientName')}>
-								{detailClient.clientName}
+								{detailClient.name}
 							</Descriptions.Item>
 							<Descriptions.Item label={t('oauthClients.column.clientId')}>
 								<Space>
@@ -388,7 +414,7 @@ export default function OAuthClientsPage() {
 					<>
 						<Descriptions column={1} bordered size="small" className="mb-4">
 							<Descriptions.Item label={t('oauthClients.column.clientName')}>
-								{secretDrawerClient.clientName}
+								{secretDrawerClient.name}
 							</Descriptions.Item>
 							<Descriptions.Item label={t('oauthClients.column.clientId')}>
 								<code className="text-xs">{secretDrawerClient.clientId}</code>

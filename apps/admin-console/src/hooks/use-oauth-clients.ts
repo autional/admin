@@ -20,8 +20,11 @@ import {
 export interface OAuthClientRecord {
 	id: string;
 	clientId: string;
-	clientName: string;
+	/** wire `name`（dto.go OAuthClientItem json:"name"）经响应拦截器 camel 化——列表/详情/编辑回显直读（A-45） */
+	name: string;
 	redirectUris: string[];
+	/** 登出回跳白名单（wire `post_logout_redirect_uris` omitempty——未注册时缺省） */
+	postLogoutRedirectUris?: string[];
 	grantTypes: string[];
 	status: string;
 	createdAt?: string;
