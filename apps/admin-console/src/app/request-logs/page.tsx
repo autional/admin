@@ -31,9 +31,9 @@ export default function RequestLogsPage() {
 			render: (v: string) => (v ? new Date(v).toLocaleString() : '-'),
 		},
 		{ title: t('requestLogs.column.method'), dataIndex: 'action', key: 'action' },
-		{ title: t('requestLogs.column.path'), dataIndex: 'targetType', key: 'targetType' },
+		{ title: t('requestLogs.column.path'), dataIndex: 'resource', key: 'resource' },
 		{ title: t('requestLogs.column.status'), dataIndex: 'status', key: 'status' },
-		{ title: t('requestLogs.column.detail'), dataIndex: 'message', key: 'message', ellipsis: true },
+		{ title: t('requestLogs.column.detail'), dataIndex: 'details', key: 'details', ellipsis: true },
 	];
 
 	return (

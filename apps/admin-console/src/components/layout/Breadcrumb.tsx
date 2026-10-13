@@ -69,7 +69,6 @@ export function Breadcrumb() {
 			'/audit-logs': t('breadcrumb.auditLogs'),
 			'/audit/alerts': t('breadcrumb.alerts'),
 			'/audit/anomalies': t('breadcrumb.anomalies'),
-			'/audit/siem': t('breadcrumb.siemConnectors'),
 			'/audit/retention': t('breadcrumb.retentionPolicy'),
 			'/audit/compliance': t('breadcrumb.auditCompliance'),
 			'/audit/reports': t('breadcrumb.auditReports'),
