@@ -13,7 +13,6 @@ import LogsPage from '../app/logs/page';
 import TracesPage from '../app/traces/page';
 import RequestLogsPage from '../app/request-logs/page';
 import SdkPage from '../app/sdks/page';
-import NhiSdkPage from '../app/sdks/nhi/page';
 import TeamPage from '../app/team/page';
 import StatusPage from '../app/status/page';
 import ApiDocsPage from '../app/api-docs/page';
@@ -91,16 +90,6 @@ export const DeveloperRoutes = (
 				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
 					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
 						<SdkPage />
-					</ErrorBoundary>
-				</RequireAuth>
-			}
-		/>
-		<Route
-			path="sdks/nhi"
-			element={
-				<RequireAuth allowedRoles={Admin} fallback={<ForbiddenRedirect />}>
-					<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
-						<NhiSdkPage />
 					</ErrorBoundary>
 				</RequireAuth>
 			}
