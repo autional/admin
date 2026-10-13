@@ -77,7 +77,7 @@ export default function DepartmentsPage() {
 			message.error(t('departments.noTenantId'));
 			return;
 		}
-		const result = createDepartmentSchema.safeParse(values);
+		const result = createDepartmentSchema(t).safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

@@ -9,9 +9,7 @@
 
 export interface ProfilePreset {
 	key: string;
-	name: string;
 	i18nKey: string;
-	description: string;
 	descriptionI18nKey: string;
 	/** 对应 TenantAuthPolicyRequest 的字段值 */
 	values: Record<string, unknown>;
@@ -20,9 +18,7 @@ export interface ProfilePreset {
 export const COMPLIANCE_PROFILES: ProfilePreset[] = [
 	{
 		key: 'balanced',
-		name: 'Balanced (Default)',
 		i18nKey: 'authConfig.profileBalanced',
-		description: '保守超集 — 新租户默认。折中 NIST/PCI/PSD2 要求，兼顾安全与可用性。',
 		descriptionI18nKey: 'authConfig.profileBalancedDesc',
 		values: {
 			minLength: 12,
@@ -42,10 +38,7 @@ export const COMPLIANCE_PROFILES: ProfilePreset[] = [
 	},
 	{
 		key: 'nist_v4_high',
-		name: 'NIST SP 800-63-4 (High Security)',
 		i18nKey: 'authConfig.profileNISTv4',
-		description:
-			'NIST v4 AAL2 高安全保障。SFA 密码最小 15 字符，SHALL NOT 强制组合规则/定期过期/密码提示/KBA，SHALL 提供防钓鱼 MFA。',
 		descriptionI18nKey: 'authConfig.profileNISTv4Desc',
 		values: {
 			minLength: 15,
@@ -67,10 +60,7 @@ export const COMPLIANCE_PROFILES: ProfilePreset[] = [
 	},
 	{
 		key: 'pci_dss_v4',
-		name: 'PCI DSS v4.0.1',
 		i18nKey: 'authConfig.profilePCI',
-		description:
-			'PCI DSS v4.0.1 合规。SFA 密码最小 12 字符，数字必选，90 天过期，历史 ≥4，首次登录强制改密，15min 空闲超时。',
 		descriptionI18nKey: 'authConfig.profilePCIDesc',
 		values: {
 			minLength: 12,
@@ -91,10 +81,7 @@ export const COMPLIANCE_PROFILES: ProfilePreset[] = [
 	},
 	{
 		key: 'psd2_sca',
-		name: 'PSD2 SCA (Payment)',
 		i18nKey: 'authConfig.profilePSD2',
-		description:
-			'PSD2 强客户认证。MFA 必选，5 次失败锁定，MFA 验证码 5min TTL，支付会话 5min 空闲超时。',
 		descriptionI18nKey: 'authConfig.profilePSD2Desc',
 		values: {
 			minLength: 8,
@@ -108,10 +95,7 @@ export const COMPLIANCE_PROFILES: ProfilePreset[] = [
 	},
 	{
 		key: 'hipaa',
-		name: 'HIPAA NPRM 2024 (Healthcare)',
 		i18nKey: 'authConfig.profileHIPAA',
-		description:
-			'HIPAA 安全规则 NPRM 2024。MFA 必选（所有 ePHI 访问），15min 空闲超时，审计日志 6 年留存。',
 		descriptionI18nKey: 'authConfig.profileHIPPADesc',
 		values: {
 			minLength: 8,

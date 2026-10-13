@@ -54,7 +54,7 @@ export default function MembersPage() {
 	};
 
 	const handleInvite = async (values: { email: string; role: string }) => {
-		const result = inviteMemberSchema.safeParse(values);
+		const result = inviteMemberSchema(t).safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

@@ -113,7 +113,7 @@ export default function IdentityProvidersPage() {
 	};
 
 	const handleSubmit = async (values: any) => {
-		const result = createIdpSchema.passthrough().safeParse(values);
+		const result = createIdpSchema(t).passthrough().safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

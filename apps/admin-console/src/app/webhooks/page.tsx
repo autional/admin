@@ -72,7 +72,7 @@ export default function WebhooksPage() {
 
 	const handleSave = async (values: any) => {
 		try {
-			const result = createWebhookSchema.safeParse(values);
+			const result = createWebhookSchema(t).safeParse(values);
 			if (!result.success) {
 				result.error.issues.forEach((i) => message.error(i.message));
 				return;

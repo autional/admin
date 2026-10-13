@@ -71,7 +71,7 @@ export default function BillingPlansPage() {
 			}
 			return;
 		}
-		const result = createPlanSchema.safeParse(values);
+		const result = createPlanSchema(t).safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;

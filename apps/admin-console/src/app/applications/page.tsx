@@ -76,7 +76,7 @@ export default function ApplicationsPage() {
 	};
 
 	const handleSave = async (values: any) => {
-		const result = createApplicationSchema.safeParse(values);
+		const result = createApplicationSchema(t).safeParse(values);
 		if (!result.success) {
 			result.error.issues.forEach((i) => message.error(i.message));
 			return;
