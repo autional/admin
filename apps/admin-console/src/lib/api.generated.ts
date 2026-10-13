@@ -601,9 +601,10 @@ export const statusMetricsLatency = Generated.statusMetricsLatency;
 export const statusMetricsUptime = Generated.statusMetricsUptime;
 
 // Ops — Grafana URLs and topology
-// 面板 UID（authms-overview / authms-services）为 **Grafana 供给侧契约**（旧命名，面板见
-// monorepo docker/grafana/dashboards/authms-*.json）；改名须与供给侧 uid + 文件名同步，
-// 否则嵌入 404 —— 故此处保留旧 UID，改名单独立协调。
+// 面板 UID（authms-overview / authms-services）**沿用基础设施命名空间**：`authms` 是 live
+// 设施的命名真源（库名 / Redis 前缀 / collection / docker network `authms-network` / 镜像
+// `authms-monolith`，见 shared/infra-ops），面板 UID 与其同族。改名须与供给侧
+// （docker/grafana/dashboards/authms-*.json）同步，否则嵌入 404；故保留，随 infra 整体改名。
 const GRAFANA_BASE =
 	(typeof window !== 'undefined' && (window as any).__GRAFANA_URL__) ||
 	(typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GRAFANA_URL) ||
