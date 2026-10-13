@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import i18n from 'i18next';
@@ -29,6 +29,12 @@ vi.mock('@/hooks/use-oauth-clients', () => ({
 	useOAuthClientStats: vi.fn().mockReturnValue({ data: {} }),
 }));
 
+// antd v6 静态 message 移入 App.useApp()，`@/lib/antd-app` 的 export let 在 Provider 挂载前为
+// undefined —— 测试无 Provider，保存路径 message.success/error 会抛 TypeError（unhandled rejection）。
+vi.mock('@/lib/antd-app', () => ({
+	message: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
+
 import {
 	useOAuthClients,
 	useCreateOAuthClient,
@@ -43,17 +49,20 @@ import {
 
 const mockedUseOAuthClients = vi.mocked(useOAuthClients);
 const mockedUseCreateOAuthClient = vi.mocked(useCreateOAuthClient);
+const mockedUseUpdateOAuthClient = vi.mocked(useUpdateOAuthClient);
 const mockedUseDeleteOAuthClient = vi.mocked(useDeleteOAuthClient);
 const mockedUseOAuthClientSecrets = vi.mocked(useOAuthClientSecrets);
 const mockedUseCreateOAuthClientSecret = vi.mocked(useCreateOAuthClientSecret);
 const mockedUseOAuthClientStats = vi.mocked(useOAuthClientStats);
 
+// wire 真形（拦截器 camel 化后的键：name/redirectUris/postLogoutRedirectUris——A-45/A-46）
 const mockClients = [
 	{
 		id: '1',
 		clientId: 'client-001',
-		clientName: '测试应用',
+		name: '测试应用',
 		redirectUris: ['https://example.com/callback'],
+		postLogoutRedirectUris: ['https://example.com/', 'https://alt.example.com/'],
 		grantTypes: ['authorization_code'],
 		status: 'active',
 		createdAt: '2026-01-01T00:00:00Z',
@@ -61,7 +70,7 @@ const mockClients = [
 	{
 		id: '2',
 		clientId: 'client-002',
-		clientName: 'ERP 系统',
+		name: 'ERP 系统',
 		redirectUris: ['https://erp.example.com/callback'],
 		grantTypes: ['client_credentials'],
 		status: 'active',
@@ -94,6 +103,7 @@ describe('OAuthClientsPage', () => {
 			refetch: vi.fn(),
 		} as any);
 		mockedUseCreateOAuthClient.mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as any);
+		mockedUseUpdateOAuthClient.mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as any);
 		mockedUseDeleteOAuthClient.mockReturnValue({ mutateAsync: vi.fn() } as any);
 		mockedUseOAuthClientSecrets.mockReturnValue({ data: mockSecrets, isLoading: false } as any);
 		mockedUseCreateOAuthClientSecret.mockReturnValue({ mutateAsync: vi.fn() } as any);
@@ -149,6 +159,42 @@ describe('OAuthClientsPage', () => {
 		// 详情标签 = 回调地址（独立键 oauthClients.detailRedirectUris，非表单文案「回调地址（每行一个）」）
 		expect(await screen.findByText('回调地址')).toBeInTheDocument();
 		expect(screen.queryByText('回调地址（每行一个）')).toBeNull();
+	});
+
+	// === Editor wire alignment (A-45/A-46 + post_logout 字段) ===
+	it('edit modal prefills name + post-logout URIs from wire keys (A-45/A-46)', async () => {
+		renderPage();
+		fireEvent.click(screen.getAllByRole('button', { name: '编辑' })[0]);
+		// 回显读 wire `name`（非 clientName）；post_logout 换行预填
+		expect(await screen.findByDisplayValue('测试应用')).toBeTruthy();
+		expect(screen.getByDisplayValue('https://example.com/callback')).toBeTruthy();
+		// DTL 默认 normalizer 只作用 DOM 侧（display-value.js → matches.js:36-42：节点值
+		// collapseWhitespace 后与**原始**期望串 === 比较 → `\n` 永不命中）。normalizer 透传
+		// = 双侧保持原文，精确锁定换行预填。
+		expect(
+			screen.getByDisplayValue('https://example.com/\nhttps://alt.example.com/', {
+				normalizer: (text) => text,
+			}),
+		).toBeTruthy();
+	});
+
+	it('save sends wire-aligned payload (name + URI arrays split by newline)', async () => {
+		const updateSpy = vi.fn().mockResolvedValue({});
+		mockedUseUpdateOAuthClient.mockReturnValue({ mutateAsync: updateSpy, isPending: false } as any);
+		renderPage();
+		fireEvent.click(screen.getAllByRole('button', { name: '编辑' })[0]);
+		fireEvent.click(await screen.findByRole('button', { name: 'OK' }));
+		await waitFor(() =>
+			expect(updateSpy).toHaveBeenCalledWith({
+				id: 'client-001',
+				data: {
+					name: '测试应用',
+					redirectUris: ['https://example.com/callback'],
+					postLogoutRedirectUris: ['https://example.com/', 'https://alt.example.com/'],
+					grantTypes: ['authorization_code'],
+				},
+			}),
+		);
 	});
 
 	it('shows empty state when no clients', () => {
