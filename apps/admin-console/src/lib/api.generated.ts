@@ -601,18 +601,82 @@ export const statusMetricsLatency = Generated.statusMetricsLatency;
 export const statusMetricsUptime = Generated.statusMetricsUptime;
 
 // Ops — Grafana URLs and topology
-// 面板 UID（authms-overview / authms-services）**沿用基础设施命名空间**：`authms` 是 live
-// 设施的命名真源（库名 / Redis 前缀 / collection / docker network `authms-network` / 镜像
-// `authms-monolith`，见 shared/infra-ops），面板 UID 与其同族。改名须与供给侧
-// （docker/grafana/dashboards/authms-*.json）同步，否则嵌入 404；故保留，随 infra 整体改名。
-const GRAFANA_BASE =
+// 面板 UID（autional-overview / autional-services）与**供给侧已收口的命名空间**一致：
+// 2026-10-14「命名空间收口」批次已把面板 uid/文件名/项目名/网络/镜像/库名/Redis 前缀统一为
+// autional 系（见 shared/infra-ops）。本处常量与供给侧（docker/grafana/dashboards/
+// autional-*.json）**同窗**改值 —— 不同窗即嵌入 404。
+// 注：本段属手写段；生成器入口（scripts/generate_api_ts.py）在本镜像内不存在 ⇒ 判定为
+// **② 改产物 + 过渡登记**（下次生成须同改），见本轮执行记录 TASK-NSR-14 / AC-009c。
+// >>> NSR-39-URL-NORMALIZE-BEGIN（TASK-NSR-39 §1 / M-022 / AC-009；测试探针按此标记抽取，勿改标记）
+// 内嵌 URL 规范化（K-4 三问全答）：
+//   ① 产出形态 = **规范化**（scheme/host 白名单 + 去尾斜杠 + 无 path/query/hash），拒绝 `javascript:`、
+//      协议相对 `//evil.example.com`（new URL 无 base 即抛）、尾斜杠重复、query 混入；
+//   ② 越界源 = 不可产生（host 仅 https 任意域 或 http 仅 localhost/127.0.0.1/[::1]）；
+//   ③ 失败 = **显式可观测**：空/畸形 base 抛错（不再静默回落 localhost），uid/service 畸形亦抛错。
+const GRAFANA_HTTPS_ONLY = true;
+const GRAFANA_LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+
+export function normalizeGrafanaBase(raw: unknown): string {
+	const s = typeof raw === 'string' ? raw.trim() : '';
+	if (s === '') return '';
+	let u: URL;
+	try {
+		u = new URL(s);
+	} catch {
+		throw new Error(`[ops] GRAFANA base 不可解析（拒绝静默回退）：${s}`);
+	}
+	const okHttps = GRAFANA_HTTPS_ONLY && u.protocol === 'https:';
+	const okLocal = u.protocol === 'http:' && GRAFANA_LOCAL_HOSTS.includes(u.hostname);
+	if (!okHttps && !okLocal) {
+		throw new Error(`[ops] GRAFANA base scheme/host 不在白名单（仅 https 或 http://localhost）：${u.protocol}//${u.hostname}`);
+	}
+	if (u.search || u.hash) throw new Error('[ops] GRAFANA base 不得含 query/hash');
+	const p = u.pathname.replace(/\/+$/, '');
+	if (p !== '' && p !== '/') throw new Error(`[ops] GRAFANA base 不得含路径：${u.pathname}`);
+	return `${u.protocol}//${u.host}`;
+}
+
+export function normalizeDashboardUid(uid: unknown): string {
+	const s = typeof uid === 'string' ? uid.trim() : '';
+	if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) {
+		throw new Error(`[ops] 面板 uid 畸形/越界（拒绝）：${String(uid)}`);
+	}
+	return s;
+}
+
+export function normalizeServiceVar(service: unknown): string {
+	const s = typeof service === 'string' ? service.trim() : '';
+	if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) {
+		throw new Error(`[ops] service 名畸形/越界（拒绝）：${String(service)}`);
+	}
+	return encodeURIComponent(s);
+}
+
+const OVERVIEW_UID = normalizeDashboardUid('autional-overview');
+const SERVICES_UID = normalizeDashboardUid('autional-services');
+
+const GRAFANA_BASE_RAW =
 	(typeof window !== 'undefined' && (window as any).__GRAFANA_URL__) ||
 	(typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GRAFANA_URL) ||
-	'http://localhost:20300';
+	// dev 回落仅限本机端口（且经白名单校验）；生产未注入 ⇒ 空 base ⇒ 取用时显式抛错（不静默）
+	(typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV ? 'http://localhost:20300' : '');
+export const isGrafanaConfigured = String(GRAFANA_BASE_RAW ?? '').trim() !== '';
+export const GRAFANA_BASE = isGrafanaConfigured ? normalizeGrafanaBase(GRAFANA_BASE_RAW) : '';
+
+function requireGrafanaBase(): string {
+	if (!GRAFANA_BASE) {
+		throw new Error('[ops] GRAFANA 基址未配置（VITE_GRAFANA_URL 缺失）⇒ 拒绝生成嵌入 URL（禁止静默回退 localhost）');
+	}
+	return GRAFANA_BASE;
+}
+
+// <<< NSR-39-URL-NORMALIZE-END
 export const ops = {
-	grafanaOverviewUrl: `${GRAFANA_BASE}/d/authms-overview?kiosk=full`,
+	get grafanaOverviewUrl(): string {
+		return `${requireGrafanaBase()}/d/${OVERVIEW_UID}?kiosk=full`;
+	},
 	grafanaServicesUrl: (service: string) =>
-		`${GRAFANA_BASE}/d/authms-services?var-service=${service}&kiosk=full`,
+		`${requireGrafanaBase()}/d/${SERVICES_UID}?var-service=${normalizeServiceVar(service)}&kiosk=full`,
 };
 
 // Profile Service
