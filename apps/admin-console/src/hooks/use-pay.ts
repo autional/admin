@@ -18,12 +18,8 @@ import {
 } from '@/lib/api.generated';
 import * as Generated from '@autional/shared/generated/api';
 
-// A-344②：404 = 确定性结果（支付不存在），全局 retry:1（main.tsx:27）只会把一次 404 放大成双发
-// （详情+收据两查询各 ×2 = 实测 4×404）；仅对 404 关闭重试，其余错误仍保留 1 次重试。
-function retryUnlessNotFound(failureCount: number, error: unknown): boolean {
-	if ((error as { response?: { status?: number } })?.response?.status === 404) return false;
-	return failureCount < 1;
-}
+// 重试策略收敛到 QueryClient 默认（main.tsx：isRetryableError）——404/403 等 4xx 均不重试，
+// 无需页面级谓词（原 A-344② 的本地 retryUnlessNotFound 已删除）。
 
 export interface Channel {
 	id: string;
@@ -122,8 +118,7 @@ export function usePayPaymentDetail(id: string) {
 			return extractItem<PaymentItem>(res);
 		},
 		enabled: !!id,
-		// A-344②：404 不重试（全局 retry:1 ⇒ 伪 ID 实测 4×404 双发）
-		retry: retryUnlessNotFound,
+		// 重试策略由 QueryClient 默认统一（main.tsx：isRetryableError → 4xx 含 404/403 均不重试）。
 	});
 }
 
@@ -135,8 +130,7 @@ export function usePayReceipt(id: string) {
 			return extractItem<Receipt>(res);
 		},
 		enabled: !!id,
-		// A-344②：同详情——404 不重试，杜绝收据腿的第二发 404
-		retry: retryUnlessNotFound,
+		// 重试策略由 QueryClient 默认统一（main.tsx：isRetryableError → 4xx 含 404/403 均不重试）。
 	});
 }
 

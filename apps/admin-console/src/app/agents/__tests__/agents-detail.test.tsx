@@ -1,13 +1,13 @@
 // W1b（A-78 · A-79）：agents 详情波修复回归锁 ——
 //   A-78：JIT TTL 人性化（900 → 「15 分钟」/ 3600 → 「1 小时」/ 45 → 「45 秒」；旧实现直显原始秒数）
 //   A-79：错误副标题不得残留「加载中」（旧实现 description fallback = t('common.loading')）
-//   A-79：404 不重试（retryUnlessNotFound 页面接线：404 → 恰 1 次详情请求）
+//   A-79：404 不重试（重试策略：main.tsx 默认 isRetryableError → 404 不重试）
 // 断言口径 = 最终 wire 请求/响应（axios adapter 最末环捕获 + snake 行回写，与线上链路同构）。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { apiClient } from '@autional/shared';
+import { apiClient, isRetryableError } from '@autional/shared';
 import AgentDetailPage from '../[id]/page';
 
 vi.mock('@/lib/antd-app', () => ({
@@ -71,7 +71,11 @@ const detailCalls = () => captured.filter((c) => c.method === 'get' && c.url.end
 
 function renderPage() {
 	const queryClient = new QueryClient({
-		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+		// 与生产同一重试策略（main.tsx 默认）：404 → 1 次；500 → 2 次（本测试即验证"谓词真接线"）。
+	defaultOptions: {
+		queries: { retry: (n: number, e: unknown) => isRetryableError(e) && n < 1, retryDelay: 0 },
+		mutations: { retry: false },
+	},
 	});
 	return render(
 		<QueryClientProvider client={queryClient}>

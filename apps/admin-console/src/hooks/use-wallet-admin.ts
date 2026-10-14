@@ -2,7 +2,6 @@
 
 import { extractList, extractListResult, extractItem } from '@autional/shared';
 import type { ListResult } from '@autional/shared';
-import { retryUnlessNotFound } from '@/lib/nhi';
 import { queryKeys } from '@/lib/query-keys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Generated from '@autional/shared/generated/api';
@@ -230,8 +229,7 @@ export function useWalletPolicy(tenantId: string, appId: string) {
 			return extractItem<WalletPolicy>(res);
 		},
 		enabled: !!tenantId && !!appId,
-		// A-385④：404（尚未配置策略）零重试 —— 消「404 双请求 + console 噪声」（A-86/A-93 同法）。
-		retry: retryUnlessNotFound,
+		// 重试策略由 QueryClient 默认统一（main.tsx：isRetryableError → 4xx 含 404/403 均不重试）。
 	});
 }
 

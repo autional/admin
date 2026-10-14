@@ -149,9 +149,7 @@ export function useBillingSubscriptions(params?: Record<string, unknown>) {
 			);
 			return extractList<SubscriptionItem>(res);
 		},
-		// A-405⑤：403（入口平面门禁）不重试 —— 避免无意义二次请求放大报错噪音。
-		retry: (count, err) =>
-			count < 1 && (err as { response?: { status?: number } })?.response?.status !== 403,
+		// 403（入口平面门禁）与所有 4xx 均由 QueryClient 默认统一不重试（main.tsx：isRetryableError）。
 	});
 }
 

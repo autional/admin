@@ -26,7 +26,7 @@ import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
 import { useOwnerDisplay } from '@/hooks/use-owner-display';
-import { AGENT_STATUS_VARIANT, statusVariantOf, retryUnlessNotFound } from '@/lib/nhi';
+import { AGENT_STATUS_VARIANT, statusVariantOf } from '@/lib/nhi';
 
 import { useTranslation } from 'react-i18next';
 
@@ -127,8 +127,7 @@ export default function AgentDetailPage() {
 		queryFn: () => fetchAgent(id!),
 		enabled: !!id,
 		staleTime: 300000,
-		// A-79：404 不重试（消「假 ID 2 条 console 404」噪声）；其余沿用全局 retry:1
-		retry: retryUnlessNotFound,
+		// 重试策略由 QueryClient 默认统一（main.tsx：isRetryableError → 4xx 含 404/403 均不重试）。
 	});
 
 	const { data: credentials = [], isLoading: credLoading } = useQuery({

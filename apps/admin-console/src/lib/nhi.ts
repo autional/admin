@@ -44,14 +44,11 @@ export function statusVariantOf(
 	return (status && map[status]) || 'neutral';
 }
 
-/** 404 判定（identity 错误信封 61001641 error.nhi_*.not_found → axios response.status）。 */
+/** 404 判定（identity 错误信封 61001641 error.nhi_*.not_found → axios response.status）。
+ *
+ * 注：`retryUnlessNotFound` 局部谓词已删除 —— 重试策略收敛到 QueryClient 默认
+ * （main.tsx：`isRetryableError` → 4xx 含 404/403 一律不重试），不再需要页面级谓词。 */
 export function isNotFoundError(err: unknown): boolean {
 	const e = err as { response?: { status?: number }; status?: number } | undefined;
 	return (e?.response?.status ?? e?.status) === 404;
-}
-
-/** 详情查询 retry 谓词：404 不重试（消 2 条 console 404 噪声，A-86/A-93），其余沿用全局 retry:1。
- *  参数类型必须为 Error（react-query v5 由 retry 签名反向推断 TError；unknown 会使 error 变量变 unknown）。 */
-export function retryUnlessNotFound(failureCount: number, error: Error): boolean {
-	return !isNotFoundError(error) && failureCount < 1;
 }

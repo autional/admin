@@ -1,6 +1,6 @@
 // W1b（A-91 · A-93）：devices 详情波修复回归锁 ——
 //   A-91：错误副标题不得残留「加载中」（旧实现 description fallback = t('common.loading')）
-//   A-91：404 不重试（retryUnlessNotFound 页面接线实证：404 → 恰 1 次请求；500 → 恰 2 次，证谓词真接线）
+//   A-91：404 不重试（重试策略：main.tsx 默认 isRetryableError → 404 不重试）
 //   A-93：notFound 死分支修复 —— 200 + data:null → EmptyState「未找到设备」可达
 //         （旧 `?? ({} as DeviceInfo)` 空对象恒 truthy → notFound 分支永不触达）
 // 断言口径 = 最终 wire 请求/响应（axios adapter 最末环捕获 + snake 行回写，与线上链路同构）。
@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { apiClient } from '@autional/shared';
+import { apiClient, isRetryableError } from '@autional/shared';
 import DeviceDetailPage from '../[id]/page';
 
 vi.mock('@/lib/antd-app', () => ({
@@ -74,7 +74,11 @@ const detailCalls = () => captured.filter((c) => c.method === 'get' && c.url.sta
 function renderPage(id: string = DEV_ID) {
 	const queryClient = new QueryClient({
 		// retryDelay=0：500 重试路径无等待（谓词接线验证用）
-		defaultOptions: { queries: { retry: false, retryDelay: 0 }, mutations: { retry: false } },
+		defaultOptions: {
+		// 与生产同一重试策略（main.tsx 默认）：404 → 1 次；500 → 2 次（本测试即验证"谓词真接线"）。
+		queries: { retry: (n: number, e: unknown) => isRetryableError(e) && n < 1, retryDelay: 0 },
+		mutations: { retry: false },
+	},
 	});
 	return render(
 		<QueryClientProvider client={queryClient}>
@@ -114,7 +118,7 @@ describe('devices 详情（A-91/A-93）', () => {
 		renderPage('dev-err');
 
 		expect(await screen.findByText('加载设备失败')).toBeTruthy();
-		// 非 404 → retryUnlessNotFound 放行 1 次 → 共 2 次（若谓词未接线/被默认 false 吞掉则恒 1 次）
+		// 非 404（5xx）→ 生产同款策略放行 1 次 → 共 2 次（若策略未接线或被 retry:false 吞掉则恒 1 次）
 		await waitFor(() => expect(detailCalls()).toHaveLength(2));
 	});
 

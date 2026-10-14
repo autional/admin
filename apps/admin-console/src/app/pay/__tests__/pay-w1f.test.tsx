@@ -1,7 +1,8 @@
 // W1f-30（A-341/A-344）回归锁 —— 支付管理列表 + 支付详情（/pay/payments、/pay/payments/:id）：
 //   A-341：列表零服务端分页参（服务端默认 20/页 vs 本地 10/页伪全量 ⇒ >20 条静默丢失）
 //          ⇒ page/page_size 上行 + 服务端 total 驱动页数。
-//   A-344②：404 详情/收据双查询在全局 retry:1（main.tsx:27）下各 ×2（实测 4×404）⇒ 仅 404 关重试（各恰 1 发）。
+//   A-344②：404 详情/收据双查询此前在全局 retry:1 下各 ×2（实测 4×404）。现重试策略收敛到
+//   QueryClient 默认（main.tsx：isRetryableError）⇒ 404 属 4xx 一律不重试（各恰 1 发），无需 hook 级谓词。
 //   A-344①：404 不再整页替换（未找到态保留返回键 + 标题骨架；旧 error 早退遮蔽 notFound 分支）。
 //   A-344③：H1/tab 标题与菜单·面包屑统一「支付管理」（旧「支付记录」）。
 //   A-344④：usePageTitle 接线（旧 tab 恒「Autional 管理控制台」）。
@@ -13,7 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup, configure } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { apiClient } from '@autional/shared';
+import { apiClient, isRetryableError } from '@autional/shared';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import PayPaymentsPage from '../payments/page';
@@ -194,8 +195,11 @@ function renderRefundsPage() {
 
 function renderDetailPage() {
 	const queryClient = new QueryClient({
-		// A-344②：模拟 main.tsx:27 全局 retry:1 + 短重试延迟；hook 层 404 谓词须压过它（各恰 1 发）
-		defaultOptions: { queries: { retry: 1, retryDelay: 30 }, mutations: { retry: false } },
+		// 生产同款策略（main.tsx 默认：isRetryableError → 4xx 含 404 不重试），短重试延迟。
+		defaultOptions: {
+			queries: { retry: (n: number, e: unknown) => isRetryableError(e) && n < 1, retryDelay: 30 },
+			mutations: { retry: false },
+		},
 	});
 	return render(
 		<QueryClientProvider client={queryClient}>
@@ -276,7 +280,7 @@ describe('支付管理（A-341/A-344）', () => {
 			expect(screen.getByText('返回列表')).toBeTruthy();
 			expect(screen.getByText('支付详情')).toBeTruthy();
 
-			// A-344②：留足重试延迟窗口（retryDelay=30ms）后仍各恰 1 发（旧全局 retry:1 ⇒ 各 2 发）
+			// A-344②：留足重试延迟窗口（retryDelay=30ms）后 404 仍各恰 1 发（策略：4xx 不重试）
 			await new Promise((r) => setTimeout(r, 250));
 			const detailCalls = captured.filter((c) => c.method === 'get' && c.url === DETAIL_URL);
 			const receiptCalls = captured.filter((c) => c.method === 'get' && c.url === RECEIPT_URL);

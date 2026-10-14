@@ -3,7 +3,7 @@
 //   A-92：device 状态三态映射（后端 device/domain/device.go:22-28；revoked/deleted 零写入不在表内）
 //   A-77：agent 状态五态映射（后端 agent/domain/agent.go:17-24 实读）
 //   statusVariantOf：未知/空 → neutral（旧本地表兜底语义不变）
-//   retryUnlessNotFound：404 不重试（消假 ID 重复请求，A-79/A-86/A-91/A-93）；其余沿用 retry:1
+//   重试谓词已收敛到 QueryClient 默认（main.tsx：isRetryableError）——本锁不再覆盖 retry。
 // 恢复即红：任何一页再抄本地状态表 / 表内混入幽灵状态词，本锁或页面测试即失败。
 import { describe, it, expect } from 'vitest';
 import {
@@ -12,7 +12,6 @@ import {
 	DEVICE_STATUS_VARIANT,
 	statusVariantOf,
 	isNotFoundError,
-	retryUnlessNotFound,
 } from '../nhi';
 
 describe('NHI 状态词表单源（A-77/A-85/A-92）', () => {
@@ -73,15 +72,5 @@ describe('详情查询 retry 谓词（A-79/A-86/A-91/A-93）', () => {
 		expect(isNotFoundError({ response: { status: 500 } })).toBe(false);
 		expect(isNotFoundError(new Error('Network Error'))).toBe(false);
 		expect(isNotFoundError(undefined)).toBe(false);
-	});
-
-	it('retryUnlessNotFound：404 零重试；非 404 沿用 failureCount<1（全局 retry:1 口径）', () => {
-		expect(retryUnlessNotFound(0, new Error('Request failed with status code 404'))).toBe(true);
-		// 404 错误对象（形态与线上信封经 axios 抛出的一致）
-		const nf = Object.assign(new Error('not found'), { response: { status: 404 } });
-		expect(retryUnlessNotFound(0, nf)).toBe(false);
-		const err500 = Object.assign(new Error('boom'), { response: { status: 500 } });
-		expect(retryUnlessNotFound(0, err500)).toBe(true);
-		expect(retryUnlessNotFound(1, err500)).toBe(false);
 	});
 });

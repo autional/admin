@@ -17,7 +17,7 @@ import { message } from '@/lib/antd-app';
 import { handleApiError } from '@/lib/error-handler';
 import { queryKeys } from '@/lib/query-keys';
 import { useOwnerDisplay } from '@/hooks/use-owner-display';
-import { DEVICE_STATUS_VARIANT, statusVariantOf, retryUnlessNotFound } from '@/lib/nhi';
+import { DEVICE_STATUS_VARIANT, statusVariantOf } from '@/lib/nhi';
 
 import { useTranslation } from 'react-i18next';
 import type { DeviceInfo } from '@autional/shared/generated/types';
@@ -83,8 +83,7 @@ export default function DeviceDetailPage() {
 		queryFn: () => fetchDevice(id!),
 		enabled: !!id,
 		staleTime: 30000,
-		// A-91：404 不重试（消「假 ID 2 条 console 404」噪声）；其余沿用全局 retry:1
-		retry: retryUnlessNotFound,
+		// 重试策略由 QueryClient 默认统一（main.tsx：isRetryableError → 4xx 含 404/403 均不重试）。
 	});
 
 	const updateMut = useMutation({
