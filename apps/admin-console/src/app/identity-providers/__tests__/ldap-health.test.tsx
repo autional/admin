@@ -75,6 +75,18 @@ describe('identity-providers LDAP 健康三态（A-37 · AC-B5-W1a-10）', () =>
 		expect(screen.getByText('当前未配置 LDAP 目录')).toBeInTheDocument();
 	});
 
+	it('契约驱动：503 但码非 action_required（20000004）→ 失败块（不再被当成「未配置」）', () => {
+		mockBaseHooks({
+			data: [],
+			isLoading: false,
+			error: { response: { status: 503, data: { code: 20000004 } } },
+		});
+		renderPage();
+
+		expect(screen.getByText('LDAP 健康状态加载失败')).toBeInTheDocument();
+		expect(screen.queryByText('当前未配置 LDAP 目录')).toBeNull();
+	});
+
 	it('其他错误（500）→ 失败块（区分于未配置）', () => {
 		mockBaseHooks({
 			data: [],
