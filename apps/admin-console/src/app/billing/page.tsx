@@ -38,6 +38,7 @@ import {
 	useUpdateDunningSettings,
 } from '@/hooks/use-billing';
 import type { BillingRecord, Plan, PaymentGateway, RefundApproval } from '@/hooks/use-billing';
+import { getHttpStatus, semanticsOfError } from '@/lib/error-semantics';
 
 /**
  * 金额渲染单点（A-279 / RC-B4-03）：wire 的金额是 decimal 序列化 —— 可能是 number 也可能是 string。
@@ -56,17 +57,16 @@ export function formatAmount(v: unknown): string {
 }
 
 /**
- * 判断错误是否为"资源/记录不存在"（业务 404：61110004 resource not found / 61110025 usage stats not found / HTTP 404）。
- * 此类错误应显示空态而非"加载失败"（BUG-016：租户无订阅/用量记录时）。
+ * 「资源/记录不存在」判定 —— **由契约驱动**，不再手写错误码字面量（61110004/61110025）。
+ *
+ * 语义来源：`@/lib/error-semantics`（由 service-core 契约生成，与后端同源）：
+ *   · 业务码在契约中 `class === 'not_found'`（61110004 资源不存在 / 61110025 用量记录不存在）→ 空态；
+ *   · 无业务码的裸 404 → 同样按 not_found 处理。
+ * 对应 BUG-016：租户无订阅/用量记录时应显示空态，而不是「加载失败」。
  */
 function isNotFoundError(err: unknown): boolean {
 	if (!err) return false;
-	const e = err as any;
-	const code = e?.response?.data?.code ?? e?.code ?? e?.status;
-	if (code === 404) return true;
-	if (typeof code === 'number') return code === 61110004 || code === 61110025;
-	if (typeof code === 'string') return code.includes('404') || code.includes('not_found') || code.includes('not found');
-	return false;
+	return semanticsOfError(err)?.class === 'not_found' || getHttpStatus(err) === 404;
 }
 
 export default function BillingPage() {
