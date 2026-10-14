@@ -24,6 +24,7 @@ import { PageError, DataTable } from '@autional/ui/antd';
 import { Alert, AppPageHeader } from '@autional/ui';
 import { createIdpSchema } from '@/lib/validators';
 import { useTranslation } from 'react-i18next';
+import { semanticsOfError } from '@/lib/error-semantics';
 import type {
 	LdapHealthResponse,
 	LdapTestConnectionResponse,
@@ -45,12 +46,14 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 /**
- * A-37：未配置 LDAP 时后端返回 503（ErrCodeLDAPNotConfigured=61001801，
- * service-identity errors.go:143-144/353-354），区别于其他健康检查失败。
+ * 「需人工动作、非故障」判定 —— **由契约驱动**，不再手写 503/61001801。
+ *
+ * 契约中 `ui_observation === 'action_required'` 才具备此语义（当前 = ErrCodeLDAPNotConfigured=61001801：
+ * 「未配置」需人工配置，重试必败）。**其余 5xx（502/500…）是真实故障** → 走 danger 分支
+ * （此前「任何 503 → 中性块」会把真实故障也说成「未配置」）。
  */
-function isLdapNotConfigured(err: unknown): boolean {
-	const e = err as { response?: { status?: number; data?: { code?: number } } } | undefined;
-	return e?.response?.status === 503 || e?.response?.data?.code === 61001801;
+function isActionRequiredError(err: unknown): boolean {
+	return semanticsOfError(err)?.uiObservation === 'action_required';
 }
 
 export default function IdentityProvidersPage() {
@@ -324,9 +327,9 @@ export default function IdentityProvidersPage() {
 			{!ldapHealthLoading && ldapHealth.length === 0 && ldapHealthError && (
 				<div className="mb-4">
 					<Alert
-						variant={isLdapNotConfigured(ldapHealthError) ? 'info' : 'danger'}
+						variant={isActionRequiredError(ldapHealthError) ? 'info' : 'danger'}
 						title={
-							isLdapNotConfigured(ldapHealthError)
+							isActionRequiredError(ldapHealthError)
 								? t('idp.ldapNotConfigured', 'No LDAP directory configured')
 								: t('idp.ldapHealthError', 'Failed to load LDAP health status')
 						}
