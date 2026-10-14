@@ -623,23 +623,23 @@ export function normalizeGrafanaBase(raw: unknown): string {
 	try {
 		u = new URL(s);
 	} catch {
-		throw new Error(`[ops] GRAFANA base 不可解析（拒绝静默回退）：${s}`);
+		throw new Error(`[ops] GRAFANA base 不可解析（拒绝静默回退）：${s}`); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	}
 	const okHttps = GRAFANA_HTTPS_ONLY && u.protocol === 'https:';
 	const okLocal = u.protocol === 'http:' && GRAFANA_LOCAL_HOSTS.includes(u.hostname);
 	if (!okHttps && !okLocal) {
-		throw new Error(`[ops] GRAFANA base scheme/host 不在白名单（仅 https 或 http://localhost）：${u.protocol}//${u.hostname}`);
+		throw new Error(`[ops] GRAFANA base scheme/host 不在白名单（仅 https 或 http://localhost）：${u.protocol}//${u.hostname}`); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	}
-	if (u.search || u.hash) throw new Error('[ops] GRAFANA base 不得含 query/hash');
+	if (u.search || u.hash) throw new Error('[ops] GRAFANA base 不得含 query/hash'); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	const p = u.pathname.replace(/\/+$/, '');
-	if (p !== '' && p !== '/') throw new Error(`[ops] GRAFANA base 不得含路径：${u.pathname}`);
+	if (p !== '' && p !== '/') throw new Error(`[ops] GRAFANA base 不得含路径：${u.pathname}`); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	return `${u.protocol}//${u.host}`;
 }
 
 export function normalizeDashboardUid(uid: unknown): string {
 	const s = typeof uid === 'string' ? uid.trim() : '';
 	if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) {
-		throw new Error(`[ops] 面板 uid 畸形/越界（拒绝）：${String(uid)}`);
+		throw new Error(`[ops] 面板 uid 畸形/越界（拒绝）：${String(uid)}`); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	}
 	return s;
 }
@@ -647,7 +647,7 @@ export function normalizeDashboardUid(uid: unknown): string {
 export function normalizeServiceVar(service: unknown): string {
 	const s = typeof service === 'string' ? service.trim() : '';
 	if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) {
-		throw new Error(`[ops] service 名畸形/越界（拒绝）：${String(service)}`);
+		throw new Error(`[ops] service 名畸形/越界（拒绝）：${String(service)}`); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	}
 	return encodeURIComponent(s);
 }
@@ -665,7 +665,7 @@ export const GRAFANA_BASE = isGrafanaConfigured ? normalizeGrafanaBase(GRAFANA_B
 
 function requireGrafanaBase(): string {
 	if (!GRAFANA_BASE) {
-		throw new Error('[ops] GRAFANA 基址未配置（VITE_GRAFANA_URL 缺失）⇒ 拒绝生成嵌入 URL（禁止静默回退 localhost）');
+		throw new Error('[ops] GRAFANA 基址未配置（VITE_GRAFANA_URL 缺失）⇒ 拒绝生成嵌入 URL（禁止静默回退 localhost）'); // i18n-exempt: ops 诊断文案（开发者可见，非用户界面文案；Grafana 嵌入守卫）
 	}
 	return GRAFANA_BASE;
 }
