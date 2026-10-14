@@ -10,8 +10,6 @@
 // i18n 标签侧同源口径：`agents.status.*` / `robots.status.*` / `devices.status.*` 键集
 // 与下列映射逐一对应（src/lib/__tests__/nhi.test.ts 双向断言，防再生）。
 
-import { getHttpStatus, semanticsOfError } from '@/lib/error-semantics';
-
 export type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 /** agent 生命周期（provisioning/active/rotating/revoked/deleted）。 */
@@ -51,6 +49,6 @@ export function statusVariantOf(
  * 注：`retryUnlessNotFound` 局部谓词已删除 —— 重试策略收敛到 QueryClient 默认
  * （main.tsx：`isRetryableError` → 4xx 含 404/403 一律不重试），不再需要页面级谓词。 */
 export function isNotFoundError(err: unknown): boolean {
-	// 单一真源：@/lib/error-semantics（业务码 → class='not_found'；无业务码 → 裸 404）。
-	return semanticsOfError(err)?.class === 'not_found' || getHttpStatus(err) === 404;
+	const e = err as { response?: { status?: number }; status?: number } | undefined;
+	return (e?.response?.status ?? e?.status) === 404;
 }
