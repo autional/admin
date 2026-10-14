@@ -150,6 +150,10 @@ export default function CompliancePolicyPage() {
 	const [activeTab, setActiveTab] = useState('standards');
 	const [standards, setStandards] = useState<StandardItem[]>([]);
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
+	// R1（2026-10-14）：fetchStandards 在 await 策略 GET 后 setSelectedIds(policy.standards)；
+	// 用户在响应到达前就勾选时，迟到响应会把用户刚做的选择**清掉**（CI 全量下该页用例因此偶发红；
+	// 真实用户点快了也会丢选择）。用户一旦手动改过选择，就不再被初始加载覆盖。
+	const userTouchedSelectionRef = useRef(false);
 	const [resolvedPolicy, setResolvedPolicy] = useState<Record<string, ResolvedParam>>({});
 	const [gapReport, setGapReport] = useState<GapReport | null>(null);
 	const [configRows, setConfigRows] = useState<ConfigRow[]>([]);
@@ -178,7 +182,7 @@ export default function CompliancePolicyPage() {
 			const res2 = await apiClient.get(API_PATHS.COMPLIANCE.ADMIN_TENANT_SELF_POLICY);
 			const policy = extractItem(res2.data);
 			if (policy?.standards) {
-				setSelectedIds(policy.standards);
+				if (!userTouchedSelectionRef.current) setSelectedIds(policy.standards);
 				setResolvedPolicy(policy.parameters || {});
 				setResolvedStandards(policy.standards);
 				seedConfigRows(policy.parameters || {});
@@ -339,7 +343,10 @@ export default function CompliancePolicyPage() {
 					<Card title={t('compliance.policy.standards')} className="mb-4">
 						<Checkbox.Group
 							value={selectedIds}
-							onChange={(v) => setSelectedIds(v as string[])}
+							onChange={(v) => {
+							userTouchedSelectionRef.current = true;
+							setSelectedIds(v as string[]);
+						}}
 							className="w-full"
 						>
 							<Space direction="vertical" size="middle" className="w-full">

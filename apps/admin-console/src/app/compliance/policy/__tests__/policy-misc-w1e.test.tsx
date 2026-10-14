@@ -56,6 +56,8 @@ let captured: Captured[] = [];
 let originalAdapter: unknown;
 let policyGets = 0;
 let failPolicyReadBack = false;
+let deferPolicy = false;
+let resolvePolicy: (() => void) | null = null;
 let successSpy: MockInstance<typeof antdMessage.success>;
 
 function ok(payload: unknown, config: any) {
@@ -66,6 +68,8 @@ function installCaptureAdapter() {
 	captured = [];
 	policyGets = 0;
 	failPolicyReadBack = false;
+	deferPolicy = false;
+	resolvePolicy = null;
 	originalAdapter = apiClient.defaults.adapter;
 	apiClient.defaults.adapter = (async (config: any) => {
 		const url = String(config.url || '');
@@ -76,6 +80,12 @@ function installCaptureAdapter() {
 		}
 		if (url === POLICY_URL && method === 'get') {
 			policyGets += 1;
+			if (deferPolicy) {
+				// R1：把策略 GET 挂起，供「迟到响应不得覆盖用户选择」用例
+				return new Promise((resolve) => {
+					resolvePolicy = () => resolve(ok({ code: 0, message: 'success', data: { standards: ['std-other'], parameters: {} }, timestamp: TS }, config));
+				});
+			}
 			// 首取（mount）恒成功；回读失败用例在确认前置 flag → 第 2 次起抛传输层错误
 			if (failPolicyReadBack && policyGets > 1) {
 				throw new Error('Request failed with status code 500');
@@ -128,6 +138,8 @@ describe('合规策略页 A-253 杂项 4（W1e）', () => {
 	it('A-253③：零勾选应用 → Popconfirm 前置确认；确认前零 PUT，确认后 PUT body {standards: []} + 成功回执/零 error', async () => {
 		renderPage();
 		await screen.findByText('GDPR');
+		// R1：同上 —— 先等初始加载落定再交互（消除迟到 GET 覆盖选择的竞态）
+		await waitFor(() => expect(policyGets).toBe(1));
 
 		expect(puts()).toHaveLength(0);
 		fireEvent.click(screen.getByText('应用标准选择'));
@@ -150,6 +162,9 @@ describe('合规策略页 A-253 杂项 4（W1e）', () => {
 	it('A-253①/分支：勾选标准后直发（无确认弹窗）+ PUT body {standards: [std-gdpr]}（标准列表直读渲染）', async () => {
 		renderPage();
 		await screen.findByText('GDPR');
+		// R1：等初始加载完全落定（策略 GET 是 fetchStandards 的最后一步）—— 否则迟到的
+		// setSelectedIds(policy.standards) 会覆盖刚点的选择（原写法等 DOM .checked，会超时假红）。
+		await waitFor(() => expect(policyGets).toBe(1));
 
 		fireEvent.click(screen.getByRole('checkbox', { name: /GDPR/ }));
 		await waitFor(() =>
@@ -161,6 +176,27 @@ describe('合规策略页 A-253 杂项 4（W1e）', () => {
 		// 非零勾选：无确认弹窗（分支判别；旧形态此处本就直发，锁防误挂确认到正路）
 		expect(screen.queryByText('确认清空标准选择？')).toBeNull();
 		expect(decode(puts()[0].data)).toEqual({ standards: ['std-gdpr'] });
+	});
+
+	it('R1-RACE-LOCK R1：策略 GET 迟到时不得覆盖用户已做的选择（页面竞态回归锁）', async () => {
+		// 旧实现：fetchStandards 在 await 策略 GET 后无条件 setSelectedIds(policy.standards)
+		// ⇒ 用户先勾选、响应后到 ⇒ 选择被清空（真实用户点快了也会丢选择）。
+		deferPolicy = true;
+		renderPage();
+		await screen.findByText('GDPR');
+
+		fireEvent.click(screen.getByRole('checkbox', { name: /GDPR/ }));
+		await waitFor(() =>
+			expect((document.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true),
+		);
+
+		expect(resolvePolicy).toBeTruthy();
+		resolvePolicy!();
+		await waitFor(() => expect(policyGets).toBe(1));
+
+		await waitFor(() =>
+			expect((document.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true),
+		);
 	});
 
 	it('A-253②：PUT 成功 + 回读失败 → 成功回执保留、错误为「刷新策略失败」而非「更新失败」（旧单 try 必红）', async () => {
