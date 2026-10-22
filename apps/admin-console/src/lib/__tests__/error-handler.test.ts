@@ -53,8 +53,14 @@ describe('handleApiError 本地化 fallback 优先级（A-200④）', () => {
 		expect(errorMock).toHaveBeenCalledWith('账号已被锁定');
 	});
 
-	it('服务端 data.title 在册（Problem 契约无 message）→ title 赢过 fallback 与英文原文', () => {
+	// U380：Problem 契约键链改为 message → detail → title（对齐 Problem.GetMessage 的 Detail 优先）。
+	it('服务端 data.title+detail 在册（Problem 契约）→ detail 赢过 title 与 fallback', () => {
 		handleApiError(serverError({ title: '权限不足', detail: '缺少 audit:read 权限' }), '请求失败');
+		expect(errorMock).toHaveBeenCalledWith('缺少 audit:read 权限');
+	});
+
+	it('服务端仅 data.title 在册（无 detail）→ title 赢过 fallback 与英文原文', () => {
+		handleApiError(serverError({ title: '权限不足' }), '请求失败');
 		expect(errorMock).toHaveBeenCalledWith('权限不足');
 	});
 
