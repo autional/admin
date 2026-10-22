@@ -12,7 +12,7 @@
 //   ④ total 驱动分页器：total=42 时第 2 页按钮存在（服务端 total 生效）。
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import { apiClient } from '@autional/shared';
@@ -46,6 +46,15 @@ const RAW_USERS = [
 		created_at: '2026-02-01T00:00:00Z',
 		must_change_password: false,
 		password_changed_at: '2026-03-01T00:00:00Z',
+	},
+	{
+		id: 'u-3',
+		username: 'carol',
+		email: 'carol@test.com',
+		status: 'locked',
+		created_at: '2026-04-01T00:00:00Z',
+		must_change_password: false,
+		// 旧数据：password_changed_at 为 NULL，响应 omitempty 不下发该键。
 	},
 ];
 
@@ -98,10 +107,18 @@ describe('users 列表分页契约（A-05/A-10 · H008）', () => {
 		expect(await screen.findByText('alice')).toBeTruthy();
 		expect(screen.getByText('bob')).toBeTruthy();
 		expect(screen.getByText('alice@test.com')).toBeTruthy();
-		expect(screen.getByText('已锁定')).toBeTruthy();
+		const bobRow = screen.getByText('bob').closest('tr');
+		expect(bobRow).toBeTruthy();
+		expect(within(bobRow!).getByText('已锁定')).toBeTruthy();
 		// 密码状态按行判别：alice（must_change_password: true）→「需修改」★1；
 		// bob（false + password_changed_at）→「正常」——snake 直读残留时两行都会错误地变「需修改」。
 		expect(screen.getAllByText('需修改')).toHaveLength(1);
+
+		// 旧数据（false + 无 password_changed_at）不得回落「需修改」——A-07 回归锁。
+		const carolRow = screen.getByText('carol').closest('tr');
+		expect(carolRow).toBeTruthy();
+		expect(within(carolRow!).getByText('正常')).toBeTruthy();
+		expect(within(carolRow!).queryByText('需修改')).toBeNull();
 
 		// ② 请求参数：page/page_size 单点；旧参数名（limit）零残留
 		await waitFor(() => expect(listCalls().length).toBeGreaterThan(0));

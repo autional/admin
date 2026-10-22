@@ -9,6 +9,23 @@ export const CDN_PIN = 'v0.1.0-rc.f0db1b97';
 
 const pickLang = (v) => (v === 'en' || v === 'zh' ? v : undefined);
 
+const API_NAMESPACES = ['dev', 'prod'];
+
+/**
+ * API namespace 与后端实例服务集合必须对齐（secret-service fail-closed）：
+ * 部署构建（Vercel production/preview）统一走 prod 单栈；本地 dev 保持 dev。
+ * API_NAMESPACE 可显式覆盖（如本地演练生产构建），值域只允许 dev|prod。
+ */
+function pickApiNamespace(env) {
+  if (env.API_NAMESPACE) {
+    if (!API_NAMESPACES.includes(env.API_NAMESPACE)) {
+      throw new Error('[build-env] API_NAMESPACE 只允许 dev|prod，收到：' + env.API_NAMESPACE);
+    }
+    return env.API_NAMESPACE;
+  }
+  return env.VERCEL_ENV === 'production' || env.VERCEL_ENV === 'preview' ? 'prod' : 'dev';
+}
+
 /**
  * 生产构建的硬门（2026-10-08 拍板，第 63 轮补·六）：区域变量**缺失即抛错**，不回落到本机开发值。
  * 与 API_ORIGIN 同一条纪律（fail-closed）——「静默产出一个错区域的站点」比构建失败糟得多：
@@ -55,5 +72,6 @@ export function readBuildEnv(env = process.env) {
   const cdnHost = (env.CDN_HOST || 'https://cdn.autional.cn').replace(/\/+$/, '');
   const siteHost = new URL(siteUrl).host;
   const rootDomain = siteHost.split('.').slice(-2).join('.');
-  return { region, siteUrl, defaultLang, fallbackLang, cdnHost, siteHost, rootDomain };
+  const apiNamespace = pickApiNamespace(env);
+  return { region, siteUrl, defaultLang, fallbackLang, cdnHost, siteHost, rootDomain, apiNamespace };
 }

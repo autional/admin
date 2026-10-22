@@ -59,7 +59,10 @@ export interface UsersQuery {
 
 /** 响应已被 api/client.ts 响应拦截器深 camel 化：契约键直读，无 snake 双读兼容。 */
 function derivePasswordStatus(u: Record<string, unknown>): 'normal' | 'must_change' {
-	if (u.mustChangePassword) return 'must_change';
+	// 显式 false 是权威：旧数据 password_changed_at 为 NULL 且 omitempty 不下发，
+	// 不能据此反推「需修改」。
+	if (u.mustChangePassword === true) return 'must_change';
+	if (u.mustChangePassword === false) return 'normal';
 	if (!u.passwordChangedAt) return 'must_change';
 	return 'normal';
 }
