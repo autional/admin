@@ -28,6 +28,12 @@ export interface OAuthClientRecord {
 	grantTypes: string[];
 	status: string;
 	createdAt?: string;
+	/** 应用官网（用户门户「已授权应用」的「打开应用」目标；wire `website`） */
+	website?: string;
+	/** 显示简称（用户门户磁贴优先展示；wire `alias` ← metadata.alias） */
+	alias?: string;
+	/** 应用 Logo（用户门户列表图标；wire `logo_url` → `logoUrl`） */
+	logoUrl?: string;
 }
 
 export interface OAuthClientSecretRecord {

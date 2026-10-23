@@ -189,12 +189,105 @@ describe('OAuthClientsPage', () => {
 				id: 'client-001',
 				data: {
 					name: '测试应用',
+					alias: '',
 					redirectUris: ['https://example.com/callback'],
 					postLogoutRedirectUris: ['https://example.com/', 'https://alt.example.com/'],
 					grantTypes: ['authorization_code'],
+					website: '',
+					logoUrl: '',
 				},
 			}),
 		);
+	});
+
+	it('edit modal prefills website/logo from wire keys (展示元信息)', async () => {
+		mockedUseOAuthClients.mockReturnValue({
+			data: [
+				{
+					...mockClients[0],
+					website: 'https://novel.example.com',
+					logoUrl: 'https://novel.example.com/logo.png',
+				},
+			],
+			isLoading: false,
+			error: null,
+			refetch: vi.fn(),
+		} as any);
+
+		renderPage();
+		fireEvent.click(screen.getAllByRole('button', { name: '编辑' })[0]);
+
+		expect(await screen.findByDisplayValue('https://novel.example.com')).toBeTruthy();
+		expect(screen.getByDisplayValue('https://novel.example.com/logo.png')).toBeTruthy();
+	});
+
+	it('save sends trimmed website/logoUrl (用户门户消费的展示元信息)', async () => {
+		const updateSpy = vi.fn().mockResolvedValue({});
+		mockedUseUpdateOAuthClient.mockReturnValue({ mutateAsync: updateSpy, isPending: false } as any);
+		mockedUseOAuthClients.mockReturnValue({
+			data: [
+				{
+					...mockClients[0],
+					website: 'https://novel.example.com',
+					logoUrl: 'https://novel.example.com/logo.png',
+				},
+			],
+			isLoading: false,
+			error: null,
+			refetch: vi.fn(),
+		} as any);
+
+		renderPage();
+		fireEvent.click(screen.getAllByRole('button', { name: '编辑' })[0]);
+		// 前后空格应被 trim（服务端按 varchar(255) 存，空白会污染展示）
+		fireEvent.change(await screen.findByDisplayValue('https://novel.example.com'), {
+			target: { value: '  https://novel.example.com  ' },
+		});
+		fireEvent.change(screen.getByDisplayValue('https://novel.example.com/logo.png'), {
+			target: { value: ' https://novel.example.com/logo.png ' },
+		});
+		fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+
+		await waitFor(() =>
+			expect(updateSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					id: 'client-001',
+					data: expect.objectContaining({
+						website: 'https://novel.example.com',
+						logoUrl: 'https://novel.example.com/logo.png',
+					}),
+				}),
+			),
+		);
+	});
+
+	it('detail drawer shows website/logo (and - when empty)', async () => {
+		mockedUseOAuthClients.mockReturnValue({
+			data: [
+				{
+					...mockClients[0],
+					website: 'https://novel.example.com',
+					logoUrl: 'https://novel.example.com/logo.png',
+				},
+				mockClients[1], // 无 website/logo → 回退 '-'
+			],
+			isLoading: false,
+			error: null,
+			refetch: vi.fn(),
+		} as any);
+
+		renderPage();
+
+		fireEvent.click(screen.getAllByText('详情')[0]);
+		expect(await screen.findByText('应用官网')).toBeInTheDocument();
+		expect(screen.getByText('https://novel.example.com')).toBeInTheDocument();
+		expect(screen.getByText('https://novel.example.com/logo.png')).toBeInTheDocument();
+
+		// 空值回退：第二条（无元信息）→ 两处 '-'
+		fireEvent.click(screen.getAllByText('详情')[1]);
+		await waitFor(() => {
+			expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(2);
+		});
 	});
 
 	it('shows empty state when no clients', () => {

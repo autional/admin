@@ -79,9 +79,16 @@ export default function OAuthClientsPage() {
 		// `name`（wire 非 clientName）；`redirect_uris`/`post_logout_redirect_uris` 须为数组（TextArea 换行分割）。
 		const payload = {
 			name: values.name,
+			// 显示简称：用户门户「已授权应用」优先展示它，空则回退全名。
+			alias: (values.alias || '').trim(),
 			redirectUris: splitUris(values.redirectUris),
 			postLogoutRedirectUris: splitUris(values.postLogoutRedirectUris),
 			grantTypes: values.grantTypes,
+			// 展示元信息：用户门户「已授权应用」用 website 渲染「打开应用」、logo_url 渲染图标。
+			// 空串 = 清除（UpdateClientParams 用 *string：nil 不动、空串清空）。
+			// URL 合法性由服务端校验（CreateClient/UpdateClient 内），前端不重复实现第三份白名单。
+			website: (values.website || '').trim(),
+			logoUrl: (values.logoUrl || '').trim(),
 		};
 		try {
 			if (editing) {
@@ -212,9 +219,12 @@ export default function OAuthClientsPage() {
 							setEditing(record);
 							form.setFieldsValue({
 								name: record.name,
+								alias: record.alias || '',
 								redirectUris: record.redirectUris?.join('\n') || '',
 								postLogoutRedirectUris: record.postLogoutRedirectUris?.join('\n') || '',
 								grantTypes: record.grantTypes || [],
+								website: record.website || '',
+								logoUrl: record.logoUrl || '',
 							});
 							setModalVisible(true);
 						}}
@@ -297,6 +307,13 @@ export default function OAuthClientsPage() {
 						<Input placeholder={t('oauthClients.form.clientNamePlaceholder')} />
 					</Form.Item>
 					<Form.Item
+						name="alias"
+						label={t('oauthClients.form.alias')}
+						extra={t('oauthClients.form.aliasExtra')}
+					>
+						<Input maxLength={32} placeholder={t('oauthClients.form.aliasPlaceholder')} />
+					</Form.Item>
+					<Form.Item
 						name="redirectUris"
 						label={t('oauthClients.form.redirectUris')}
 						extra={t('oauthClients.form.redirectUrisExtra')}
@@ -325,6 +342,22 @@ export default function OAuthClientsPage() {
 							<Option value="implicit">implicit</Option>
 						</Select>
 					</Form.Item>
+					{/* 展示元信息（用户门户「已授权应用」消费）：官网 → 「打开应用」；Logo → 列表图标。
+					    URL 合法性由服务端校验（CreateClient/UpdateClient），前端不重复第三份白名单。 */}
+					<Form.Item
+						name="website"
+						label={t('oauthClients.form.website')}
+						extra={t('oauthClients.form.websiteExtra')}
+					>
+						<Input maxLength={255} placeholder={t('oauthClients.form.websitePlaceholder')} />
+					</Form.Item>
+					<Form.Item
+						name="logoUrl"
+						label={t('oauthClients.form.logoUrl')}
+						extra={t('oauthClients.form.logoUrlExtra')}
+					>
+						<Input maxLength={255} placeholder={t('oauthClients.form.logoUrlPlaceholder')} />
+					</Form.Item>
 				</Form>
 			</Modal>
 
@@ -340,6 +373,9 @@ export default function OAuthClientsPage() {
 						<Descriptions column={1} bordered size="small">
 							<Descriptions.Item label={t('oauthClients.column.clientName')}>
 								{detailClient.name}
+							</Descriptions.Item>
+							<Descriptions.Item label={t('oauthClients.detailAlias')}>
+								{detailClient.alias || '-'}
 							</Descriptions.Item>
 							<Descriptions.Item label={t('oauthClients.column.clientId')}>
 								<Space>
@@ -368,6 +404,14 @@ export default function OAuthClientsPage() {
 							</Descriptions.Item>
 							<Descriptions.Item label={t('oauthClients.detailRedirectUris')}>
 								{(detailClient.redirectUris || []).join(', ') || '-'}
+							</Descriptions.Item>
+							{/* 展示元信息：纯文本展示（不渲染成可点链接）——内部控制台只需核对值，
+							    避免在管理面引入第四份外链白名单。 */}
+							<Descriptions.Item label={t('oauthClients.detailWebsite')}>
+								<span style={{ wordBreak: 'break-all' }}>{detailClient.website || '-'}</span>
+							</Descriptions.Item>
+							<Descriptions.Item label={t('oauthClients.detailLogo')}>
+								<span style={{ wordBreak: 'break-all' }}>{detailClient.logoUrl || '-'}</span>
 							</Descriptions.Item>
 						</Descriptions>
 
