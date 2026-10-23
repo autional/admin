@@ -1,6 +1,7 @@
 {
   ".ant-card": "Ant Card",
   "403.backHome": "Back to Home",
+  "403.switchAccount": "Switch Account",
   "403.subtitle": "You do not have permission to access this page",
   "403.title": "Forbidden",
   "@/lib/api.generated": "Lib Api Generated",

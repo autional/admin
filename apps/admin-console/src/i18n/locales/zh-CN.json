@@ -1,6 +1,7 @@
 {
   ".ant-card": "ant card",
   "403.backHome": "返回首页",
+  "403.switchAccount": "切换账号",
   "403.subtitle": "您没有权限访问此页面",
   "403.title": "禁止访问",
   "@/lib/api.generated": "lib api generated",
