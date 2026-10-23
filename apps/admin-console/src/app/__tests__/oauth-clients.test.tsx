@@ -230,6 +230,7 @@ describe('OAuthClientsPage', () => {
 					...mockClients[0],
 					website: 'https://novel.example.com',
 					logoUrl: 'https://novel.example.com/logo.png',
+					alias: '小说',
 				},
 			],
 			isLoading: false,
@@ -246,6 +247,9 @@ describe('OAuthClientsPage', () => {
 		fireEvent.change(screen.getByDisplayValue('https://novel.example.com/logo.png'), {
 			target: { value: ' https://novel.example.com/logo.png ' },
 		});
+		fireEvent.change(screen.getByDisplayValue('小说'), {
+			target: { value: '  小说  ' },
+		});
 		fireEvent.click(screen.getByRole('button', { name: 'OK' }));
 
 		await waitFor(() =>
@@ -255,6 +259,7 @@ describe('OAuthClientsPage', () => {
 					data: expect.objectContaining({
 						website: 'https://novel.example.com',
 						logoUrl: 'https://novel.example.com/logo.png',
+						alias: '小说',
 					}),
 				}),
 			),
