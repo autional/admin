@@ -43,6 +43,10 @@ export default function WebhookPage() {
 					});
 				}
 			})
+			.catch(() => {
+				// 404 = 尚未配置 webhook（service-profile 对空配置返回 NotFound，见
+				// profile_service_webhook.go GetWebhookConfig）；按「未配置」渲染空表单。
+			})
 			.finally(() => setLoading(false));
 	}, []);
 

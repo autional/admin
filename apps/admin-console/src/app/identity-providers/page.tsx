@@ -263,15 +263,19 @@ export default function IdentityProvidersPage() {
 					>
 						{t('common.edit')}
 					</Button>
-					<Button
-						type="link"
-						size="small"
-						icon={<CheckCircle2 size="1em" />}
-						loading={testingId === record.id}
-						onClick={() => handleTest(record.id)}
-					>
-						{t('idp.testConnection')}
-					</Button>
+					{/* SAML 行不提供测试：identity /identity-providers/:id/test 不认 saml-service
+					    的 provider id（404）；service-saml 无测试端点。 */}
+					{record.type !== 'saml' && (
+						<Button
+							type="link"
+							size="small"
+							icon={<CheckCircle2 size="1em" />}
+							loading={testingId === record.id}
+							onClick={() => handleTest(record.id)}
+						>
+							{t('idp.testConnection')}
+						</Button>
+					)}
 					<Popconfirm title={t('idp.confirmDelete')} onConfirm={() => handleDelete(record.id)}>
 						<Button type="link" size="small" danger icon={<Trash2 size="1em" />}>
 							{t('common.delete')}
