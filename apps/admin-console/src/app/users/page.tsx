@@ -315,14 +315,17 @@ export default function UsersPage() {
 						label={t('users.column.email')}
 						rules={[{ required: true, type: 'email', message: t('users.emailRequired') }]}
 					>
-						<Input placeholder={t('users.emailPlaceholder')} />
+						<Input autoComplete="email" placeholder={t('users.emailPlaceholder')} />
 					</Form.Item>
 					<Form.Item
 						name="password"
 						label={t('users.column.password')}
 						rules={[{ required: true, min: 8, message: t('users.passwordRequired') }]}
 					>
-						<Input.Password placeholder={t('users.passwordPlaceholder')} />
+						<Input.Password
+							autoComplete="new-password"
+							placeholder={t('users.passwordPlaceholder')}
+						/>
 					</Form.Item>
 					<Form.Item name="forcePasswordChange" valuePropName="checked">
 						<Checkbox>{t('usersTable.forcePasswordChange')}</Checkbox>

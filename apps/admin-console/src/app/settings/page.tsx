@@ -280,6 +280,15 @@ export default function SettingsPage() {
 
 			<Card title={t('settings.changePassword')}>
 				<Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
+					{/* 密码表单语义：隐藏 username 供密码管理器/AT 识别输入目的。 */}
+					<input
+						type="text"
+						name="username"
+						autoComplete="username"
+						value={user?.username || user?.email || ''}
+						readOnly
+						hidden
+					/>
 					<Form.Item
 						name="oldPassword"
 						label={t('settings.oldPassword')}
@@ -339,6 +348,15 @@ export default function SettingsPage() {
 			>
 				{emailStep === 'request' ? (
 					<Form form={emailForm} layout="vertical" onFinish={handleRequestEmailChange}>
+						{/* 密码表单语义：隐藏 username 供密码管理器/AT 识别输入目的。 */}
+						<input
+							type="text"
+							name="username"
+							autoComplete="username"
+							value={user?.username || user?.email || ''}
+							readOnly
+							hidden
+						/>
 						<Form.Item
 							name="newEmail"
 							label={t('settings.newEmail')}

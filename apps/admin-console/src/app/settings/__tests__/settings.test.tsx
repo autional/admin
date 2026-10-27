@@ -89,7 +89,8 @@ describe('settings 自助三通道（A-437 / A-438）', () => {
 	it('AC-B4-W2-04-1：保存用户名走 self 端点 + 精确合并（头像未变 → 不触发头像通道）', { timeout: 20000 }, async () => {
 		renderPage();
 
-		const nameInput = await screen.findByDisplayValue('alice');
+		// 不用 display value 定位：改密表单的 hidden username 语义字段同样值是 alice（会二义）。
+		const nameInput = await screen.findByPlaceholderText('用户名');
 		fireEvent.change(nameInput, { target: { value: 'alice-new' } });
 		fireEvent.click(screen.getByText('保存资料'));
 
@@ -209,5 +210,28 @@ describe('settings 自助三通道（A-437 / A-438）', () => {
 			expect(screen.queryByText('发送验证码')).toBeNull();
 		});
 		expect(cancelEmailChange).not.toHaveBeenCalled();
+	});
+
+	// DevTools 密码语义回归锁（2026-10-27）：改密表单的密码输入在 <form> 内 + autocomplete
+	// + form 内含 username 语义隐藏字段（Chromium 三条 VERBOSE [DOM] 警告清零的结构前提）。
+	it('改密表单携带 form 语义（hidden username + autocomplete）', () => {
+		const { container } = renderPage();
+
+		const passwords = container.querySelectorAll<HTMLInputElement>('input[type="password"]');
+		expect(passwords).toHaveLength(3);
+		expect(passwords[0].getAttribute('autocomplete')).toBe('current-password');
+		expect(passwords[1].getAttribute('autocomplete')).toBe('new-password');
+		expect(passwords[2].getAttribute('autocomplete')).toBe('new-password');
+
+		const form = passwords[0].closest('form');
+		expect(form).not.toBeNull();
+		for (const password of passwords) {
+			expect(password.closest('form')).toBe(form);
+		}
+
+		const username = form!.querySelector<HTMLInputElement>('input[name="username"]');
+		expect(username).not.toBeNull();
+		expect(username!.getAttribute('autocomplete')).toBe('username');
+		expect(username!.value).toBe('alice');
 	});
 });

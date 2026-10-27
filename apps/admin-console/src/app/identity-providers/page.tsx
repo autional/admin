@@ -393,7 +393,7 @@ export default function IdentityProvidersPage() {
 								label={t('idp.form.clientSecret')}
 								rules={[{ required: true }]}
 							>
-								<Input.Password />
+								<Input.Password autoComplete="off" />
 							</Form.Item>
 							<Form.Item
 								name="authorizationUrl"
@@ -460,7 +460,7 @@ export default function IdentityProvidersPage() {
 								label={t('idp.form.bindPassword')}
 								rules={[{ required: true }]}
 							>
-								<Input.Password />
+								<Input.Password autoComplete="off" />
 							</Form.Item>
 							<Form.Item name="baseDn" label={t('idp.form.baseDn')} rules={[{ required: true }]}>
 								<Input placeholder="dc=example,dc=com" />

@@ -246,9 +246,16 @@ export default function BrandingPage() {
 								<p className="text-center text-neutral-600 text-sm mb-6">
 									{values.loginSubtitle || t('branding.defaultLoginSubtitle')}
 								</p>
-								<div className="space-y-4">
+								<form
+									className="space-y-4"
+									onSubmit={(e) => e.preventDefault()}
+								>
 									<Input placeholder={t('branding.emailPlaceholder')} disabled />
-									<Input.Password placeholder={t('branding.passwordPlaceholder')} disabled />
+									<Input.Password
+										autoComplete="off"
+										placeholder={t('branding.passwordPlaceholder')}
+										disabled
+									/>
 									<Button
 										type="primary"
 										block
@@ -256,7 +263,7 @@ export default function BrandingPage() {
 									>
 										{t('branding.loginBtn')}
 									</Button>
-								</div>
+								</form>
 							</div>
 						</Card>
 					</Col>

@@ -217,7 +217,10 @@ export default function PayChannelsPage() {
 						/>
 					</Form.Item>
 					<Form.Item name="webhook_secret" label={t('payChannels.webhookSecret')}>
-						<Input.Password placeholder={editing ? t('payChannels.keepUnchanged') : 'whsec_...'} />
+						<Input.Password
+							autoComplete="off"
+							placeholder={editing ? t('payChannels.keepUnchanged') : 'whsec_...'}
+						/>
 					</Form.Item>
 				</Form>
 			</Modal>

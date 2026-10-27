@@ -550,6 +550,7 @@ export default function SecretsPage() {
 						rules={editing ? [] : [{ required: true, message: t('secrets.form.valueRequired') }]}
 					>
 						<Input.Password
+							autoComplete="off"
 							placeholder={
 								editing ? t('secrets.form.valueEmpty') : t('secrets.form.valuePlaceholder')
 							}
@@ -580,7 +581,7 @@ export default function SecretsPage() {
 						label={t('secrets.form.newValue')}
 						rules={[{ required: true, message: t('secrets.form.newValueRequired') }]}
 					>
-						<Input.Password placeholder={t('secrets.form.newValuePlaceholder')} />
+						<Input.Password autoComplete="off" placeholder={t('secrets.form.newValuePlaceholder')} />
 					</Form.Item>
 				</Form>
 			</Modal>

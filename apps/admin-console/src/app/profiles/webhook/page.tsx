@@ -92,7 +92,7 @@ export default function WebhookPage() {
 						<Input placeholder={t('profileWebhook.form.urlPlaceholder')} />
 					</Form.Item>
 					<Form.Item name="secret" label={t('profileWebhook.form.secret')}>
-						<Input.Password placeholder={t('profileWebhook.form.secretPlaceholder')} />
+						<Input.Password autoComplete="off" placeholder={t('profileWebhook.form.secretPlaceholder')} />
 					</Form.Item>
 					<Form.Item
 						name="events"

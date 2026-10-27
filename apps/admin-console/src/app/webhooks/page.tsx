@@ -277,7 +277,7 @@ export default function WebhooksPage() {
 						<Input placeholder={t('webhooks.urlPlaceholder')} />
 					</Form.Item>
 					<Form.Item name="secret" label={t('webhooks.column.secret')}>
-						<Input.Password placeholder={t('webhooks.secretPlaceholder')} />
+						<Input.Password autoComplete="off" placeholder={t('webhooks.secretPlaceholder')} />
 					</Form.Item>
 					<Form.Item name="events" label={t('webhooks.column.events')} rules={[{ required: true }]}>
 						<Select mode="multiple" placeholder={t('webhooks.eventsPlaceholder')}>
