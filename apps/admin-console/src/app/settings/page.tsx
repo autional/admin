@@ -21,6 +21,7 @@ import {
 	verifyEmailChange,
 	cancelEmailChange,
 	updateMyAvatar,
+	getProfileAvatar,
 } from '@/lib/api.generated';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError } from '@autional/ui/antd';
@@ -69,6 +70,28 @@ export default function SettingsPage() {
 			});
 		}
 	}, [user, profileForm]);
+
+	// U447：/auth/me 不含 avatarUrl（头像存在 profile 服务）；进页面补读一次并回填表单与认证快照，
+	// 否则换浏览器/重新登录后，已保存的头像在表单里显示为空（保存时还会把这空值当"未变更"跳过）。
+	React.useEffect(() => {
+		if (!user?.id) return;
+		let cancelled = false;
+		getProfileAvatar()
+			.then((res) => {
+				const avatarUrl = ((res as { avatarUrl?: string } | undefined)?.avatarUrl ?? '').trim();
+				if (cancelled || !avatarUrl) return;
+				profileForm.setFieldsValue({ avatarUrl });
+				const fresh = useAuthStore.getState().user;
+				if (fresh) setUser({ ...fresh, avatarUrl });
+			})
+			.catch(() => {
+				/* 读取失败保持占位，不影响其它设置项 */
+			});
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [user?.id, profileForm, setUser]);
 
 	const handleSavePreferences = (values: { language: string }) => {
 		localStorage.setItem(PREFERENCE_KEYS.language, values.language);

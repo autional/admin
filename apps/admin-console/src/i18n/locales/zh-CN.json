@@ -804,6 +804,8 @@
   "branding.emailPlaceholder": "邮箱 / 用户名",
   "branding.faviconUrl": "Favicon URL",
   "branding.invalidColor": "色值不合法：仅支持 #RGB / #RRGGBB 格式",
+  "branding.invalidUrl": "URL 不合法：仅支持 http(s):// 绝对地址或站内 / 路径",
+  "branding.urlTooLong": "URL 过长：最多 {{max}} 个字符",
   "branding.livePreview": "实时预览",
   "branding.loadError": "加载失败",
   "branding.loadFailed": "加载品牌配置失败",

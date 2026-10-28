@@ -804,6 +804,8 @@
   "branding.emailPlaceholder": "Email / Username",
   "branding.faviconUrl": "Favicon URL",
   "branding.invalidColor": "Invalid color: only #RGB / #RRGGBB allowed",
+  "branding.invalidUrl": "Invalid URL: use an http(s):// address or a site-relative / path",
+  "branding.urlTooLong": "URL too long: at most {{max}} characters",
   "branding.livePreview": "Live Preview",
   "branding.loadError": "Failed to load",
   "branding.loadFailed": "Failed to load branding config",

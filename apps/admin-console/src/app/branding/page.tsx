@@ -50,6 +50,27 @@ export function toLegalColor(value: unknown, fallback: string): string {
 	return HEX_COLOR_RE.test(hex) ? hex : fallback;
 }
 
+/** U447：品牌预览 Logo 加载失败回落品牌名，不留碎图（与登录页同口径）。 */
+function BrandingPreviewLogo({ src, color }: { src: string; color: string }) {
+	const [failed, setFailed] = useState(false);
+	React.useEffect(() => setFailed(false), [src]);
+	if (failed) {
+		return (
+			<div className="h-10 mx-auto mb-4 text-center font-bold" style={{ color }}>
+				Autional
+			</div>
+		);
+	}
+	return (
+		<img
+			src={src}
+			alt="logo"
+			className="h-10 mx-auto mb-4 object-contain"
+			onError={() => setFailed(true)}
+		/>
+	);
+}
+
 export default function BrandingPage() {
 	const { t } = useTranslation();
 	// A-150：页面标题（与面包屑同源；原 tab 恒默认站名）
@@ -139,6 +160,29 @@ export default function BrandingPage() {
 		},
 	];
 
+	// U447：品牌资源 URL 与头像同口径 —— 只收 http(s) 绝对地址或站内 / 路径；
+	// 上限对齐列宽（tenant_branding.logo_url/favicon_url 为 VARCHAR(500)）。
+	const BRANDING_URL_MAX = 500;
+	const brandingUrlRule = [
+		{
+			validator: (_: unknown, v: unknown) => {
+				if (v === undefined || v === null || String(v).trim() === '') return Promise.resolve();
+				const s = String(v).trim();
+				if (s.length > BRANDING_URL_MAX) {
+					return Promise.reject(
+						new Error(t('branding.urlTooLong', { max: BRANDING_URL_MAX })),
+					);
+				}
+				const lower = s.toLowerCase();
+				const ok =
+					lower.startsWith('http://') ||
+					lower.startsWith('https://') ||
+					(s.startsWith('/') && !s.startsWith('//'));
+				return ok ? Promise.resolve() : Promise.reject(new Error(t('branding.invalidUrl')));
+			},
+		},
+	];
+
 	return (
 		<div>
 			{error && <PageError message={t('branding.loadFailed')} retry={refetch} className="mb-4" />}
@@ -166,10 +210,10 @@ export default function BrandingPage() {
 								onValuesChange={handleValuesChange}
 								initialValues={values}
 							>
-								<Form.Item name="logoUrl" label={t('branding.logoUrl')}>
+								<Form.Item name="logoUrl" label={t('branding.logoUrl')} rules={brandingUrlRule}>
 									<Input placeholder="https://example.com/logo.png" />
 								</Form.Item>
-								<Form.Item name="faviconUrl" label={t('branding.faviconUrl')}>
+								<Form.Item name="faviconUrl" label={t('branding.faviconUrl')} rules={brandingUrlRule}>
 									<Input placeholder="https://example.com/favicon.ico" />
 								</Form.Item>
 								<Form.Item name="primaryColor" label={t('branding.primaryColor')} rules={colorRule}>
@@ -227,11 +271,7 @@ export default function BrandingPage() {
 								}}
 							>
 								{values.logoUrl ? (
-									<img
-										src={values.logoUrl}
-										alt="logo"
-										className="h-10 mx-auto mb-4 object-contain"
-									/>
+									<BrandingPreviewLogo src={values.logoUrl} color={primary} />
 								) : (
 									<div
 										className="h-10 mx-auto mb-4 text-center font-bold"
