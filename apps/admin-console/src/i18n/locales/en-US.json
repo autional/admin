@@ -4638,5 +4638,12 @@
   "sod.modeRequired": "Please select a SoD mode",
   "sod.saveSuccess": "SoD configuration saved successfully",
   "sod.saveFailed": "Failed to save SoD configuration",
-  "sod.loadFailed": "Failed to load SoD configuration"
+  "sod.loadFailed": "Failed to load SoD configuration",
+  "authConfig.providerRuntimeHint": "Only providers wired at runtime are listed. \"Follow global\" uses the platform default.",
+  "authConfig.providerGlobalDefault": "Global default",
+  "authConfig.providerInherit": "Follow global",
+  "authConfig.providerManualOn": "Manually on",
+  "authConfig.providerManualOff": "Manually off",
+  "common.enabled": "Enabled",
+  "common.disabled": "Disabled"
 }

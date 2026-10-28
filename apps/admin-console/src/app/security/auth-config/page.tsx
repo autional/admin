@@ -19,6 +19,7 @@ import { message } from '@/lib/antd-app';
 import { BadgeCheck, Save } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getAuthConfig, updateAuthConfig } from '@/lib/api.generated';
+import { GeneratedApi } from '@autional/shared';
 
 import { queryKeys } from '@/lib/query-keys';
 import { handleApiError } from '@/lib/error-handler';
@@ -36,6 +37,54 @@ export default function AuthConfigPage() {
 	const tenantId = useCurrentTenantId() ?? '';
 	const [selectedProfile, setSelectedProfile] = useState<string>('custom');
 	const [showProfileConfirm, setShowProfileConfirm] = useState<ProfilePreset | null>(null);
+
+	// OAuth provider 三态：跟随全局 / 手动开 / 手动关（真源 = oauth-service 覆盖行）。
+	// 平台/租户管理员都通过同一组 admin 接口读写；不再写 identity 的 policy.oauth_providers（已废弃）。
+	const [oauthProviderRows, setOauthProviderRows] = useState<any[]>([]);
+	const [oauthProvidersLoading, setOauthProvidersLoading] = useState(false);
+	const loadOauthProviders = React.useCallback(async () => {
+		setOauthProvidersLoading(true);
+		try {
+			const res: any = await GeneratedApi.adminOauthProviders();
+			const body = res?.data ?? res;
+			setOauthProviderRows(Array.isArray(body?.providers) ? body.providers : []);
+		} catch {
+			setOauthProviderRows([]);
+		} finally {
+			setOauthProvidersLoading(false);
+		}
+	}, []);
+	React.useEffect(() => {
+		void loadOauthProviders();
+	}, [loadOauthProviders]);
+
+	const groupedOauthProviders = React.useMemo(() => {
+		const map = new Map<string, { name: string; displayName?: string; global?: any; tenantRow?: any }>();
+		for (const p of oauthProviderRows) {
+			const item = map.get(p.name) ?? { name: p.name as string };
+			if (p.tenantId) item.tenantRow = p;
+			else item.global = p;
+			if (p.displayName) item.displayName = p.displayName as string;
+			map.set(p.name, item);
+		}
+		return [...map.values()]
+			.filter((it) => (it.global ? Boolean(it.global.clientId) : true))
+			.sort((a, b) => a.name.localeCompare(b.name));
+	}, [oauthProviderRows]);
+
+	const changeOauthProviderState = async (name: string, next: string) => {
+		try {
+			if (next === 'inherit') {
+				await GeneratedApi.adminOauthProvidersByProvidersDelete(name);
+			} else {
+				await GeneratedApi.adminOauthProvidersToggleByProvidersPut(name, { enabled: next === 'on' });
+			}
+			message.success(t('authConfig.saveSuccess'));
+			await loadOauthProviders();
+		} catch (err) {
+			handleApiError(err, t('authConfig.saveFailed'));
+		}
+	};
 
 	const handleProfileChange = (key: string) => {
 		if (key === 'custom') {
@@ -108,7 +157,6 @@ export default function AuthConfigPage() {
 				historyCount: values.historyCount,
 				passwordTransmission: values.transmissionMethod,
 				loginMethods: values.loginMethods,
-				oauthProviders: values.oauthProviders,
 				ssoProviders: values.ssoProviders,
 				membershipApproval: values.membershipApproval,
 				magicLinkEnabled: values.magicLinkEnabled,
@@ -282,17 +330,37 @@ export default function AuthConfigPage() {
 				</Card>
 
 				<Card title={t('authConfig.oauthProviders')} loading={isLoading} className="mb-4">
-					<Form.Item name="oauthProviders" label={t('authConfig.enabledOAuthProviders')}>
-						<Checkbox.Group>
-							<Space>
-								<Checkbox value="github">GitHub</Checkbox>
-								<Checkbox value="google">Google</Checkbox>
-								<Checkbox value="microsoft">Microsoft</Checkbox>
-								<Checkbox value="apple">Apple</Checkbox>
-								<Checkbox value="wechat">{t('authConfig.oauthProviderWechat')}</Checkbox>
-							</Space>
-						</Checkbox.Group>
-					</Form.Item>
+					<div className="mb-3 text-sm text-secondary">{t('authConfig.providerRuntimeHint')}</div>
+					<Space direction="vertical" style={{ width: '100%' }} size={10}>
+						{oauthProvidersLoading && <span>{t('common.loading')}</span>}
+						{!oauthProvidersLoading && groupedOauthProviders.length === 0 && (
+							<span className="text-secondary">{t('common.noData')}</span>
+						)}
+						{groupedOauthProviders.map((it) => {
+							const state = it.tenantRow ? (it.tenantRow.enabled ? 'on' : 'off') : 'inherit';
+							const globalOn = Boolean(it.global?.enabled);
+							return (
+								<div key={it.name} className="flex items-center justify-between gap-3">
+									<Space size={8}>
+										<span className="font-medium">{it.displayName || it.name}</span>
+										<Tag color={globalOn ? 'green' : 'default'}>
+											{t('authConfig.providerGlobalDefault')}: {globalOn ? t('common.enabled') : t('common.disabled')}
+										</Tag>
+									</Space>
+									<Select
+										value={state}
+										style={{ width: 180 }}
+										onChange={(v) => void changeOauthProviderState(it.name, v)}
+										options={[
+											{ value: 'inherit', label: t('authConfig.providerInherit') },
+											{ value: 'on', label: t('authConfig.providerManualOn') },
+											{ value: 'off', label: t('authConfig.providerManualOff') },
+										]}
+									/>
+								</div>
+							);
+						})}
+					</Space>
 				</Card>
 
 				<Card title={t('authConfig.ssoProviders')} loading={isLoading} className="mb-4">

@@ -4638,5 +4638,12 @@
   "sod.modeRequired": "请选择 SoD 模式",
   "sod.saveSuccess": "SoD 配置已保存",
   "sod.saveFailed": "保存 SoD 配置失败",
-  "sod.loadFailed": "加载 SoD 配置失败"
+  "sod.loadFailed": "加载 SoD 配置失败",
+  "authConfig.providerRuntimeHint": "仅列出运行时已接入的登录方式；「跟随全局」表示使用平台默认值。",
+  "authConfig.providerGlobalDefault": "全局默认",
+  "authConfig.providerInherit": "跟随全局",
+  "authConfig.providerManualOn": "手动开启",
+  "authConfig.providerManualOff": "手动关闭",
+  "common.enabled": "已启用",
+  "common.disabled": "已停用"
 }
