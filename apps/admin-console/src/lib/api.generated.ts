@@ -927,4 +927,12 @@ export const updateMyProfile = Generated.authMePut; // PUT /identity/api/v1/auth
 export const requestEmailChange = Generated.authMeEmailChangePost; // POST .../auth/me/email/change
 export const verifyEmailChange = Generated.authMeEmailVerifyPost; // POST .../auth/me/email/verify
 export const cancelEmailChange = Generated.authMeEmailChangeCancelPost; // POST .../auth/me/email/change/cancel
-export const updateMyAvatar = Generated.profilesAvatarByProfilesPut; // PUT /profile/api/v1/profiles/{user_id}/avatar
+// U447（2026-10-28）：本人头像写改走 self 端点（无 :user_id）—— 用户面
+// PUT /profile/api/v1/profiles/{user_id}/avatar 落网关 user 受众路由，admin 入口平面被拒
+// （entry_plane_forbidden 40000503，设置页保存静默失败）。self 端点目标恒为令牌主体，
+// 任何入口平面均可调；响应体同形（{profile}）。生成物暂无该操作（待下轮 swagger 重生成）。
+export const updateMyAvatar = async (data: { avatarUrl: string }) => {
+	const res = await apiClient.put('/profile/api/v1/profile/avatar', data);
+	return res.data;
+};
+

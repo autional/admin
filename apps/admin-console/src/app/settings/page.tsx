@@ -135,10 +135,11 @@ export default function SettingsPage() {
 		}
 
 		// 通道 2：头像（仅当值变更且非空；端点不接受空串 → 无法经此清空头像）
+		// U447：走 self 端点（目标 = 令牌主体，非 user.id）—— 用户面端点会被 admin 入口平面拒。
 		const avatarUrl = (values.avatarUrl ?? '').trim();
 		if (avatarUrl && avatarUrl !== (user.avatarUrl ?? '')) {
 			try {
-				const res = (await updateMyAvatar(user.id, { avatarUrl })) as
+				const res = (await updateMyAvatar({ avatarUrl })) as
 					| { profile?: { avatarUrl?: string } }
 					| undefined;
 				const fresh = useAuthStore.getState().user ?? user;

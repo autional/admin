@@ -22,6 +22,7 @@ import {
 	verifyEmailChange,
 	cancelEmailChange,
 	updateMyAvatar,
+	getProfileAvatar,
 } from '@/lib/api.generated';
 import { PublicAuthConfigByAuthConfig } from '@autional/shared/generated/api';
 
@@ -36,6 +37,9 @@ vi.mock('@/lib/api.generated', () => ({
 	verifyEmailChange: vi.fn(),
 	cancelEmailChange: vi.fn(),
 	updateMyAvatar: vi.fn(),
+	// U447：页面挂载即补读一次 self 头像端点（/auth/me 不含 avatarUrl）；不 mock 会让
+	// mock 模块缺该导出 → 调用 undefined → 整个 describe 全红。
+	getProfileAvatar: vi.fn(),
 }));
 
 vi.mock('@autional/shared/generated/api', async (importOriginal) => {
@@ -84,6 +88,26 @@ describe('settings 自助三通道（A-437 / A-438）', () => {
 		vi.mocked(requestEmailChange).mockResolvedValue({} as any);
 		vi.mocked(verifyEmailChange).mockResolvedValue({} as any);
 		vi.mocked(cancelEmailChange).mockResolvedValue({} as any);
+		vi.mocked(getProfileAvatar).mockResolvedValue({} as any);
+	});
+
+	it('U447：进页面补读 self 头像端点并回填表单与认证快照（/auth/me 不含 avatarUrl）', { timeout: 20000 }, async () => {
+		vi.mocked(getProfileAvatar).mockResolvedValue({
+			avatarUrl: 'https://cdn.example.com/stored.png',
+		} as any);
+		// 模拟"换浏览器/重新登录后"：认证快照里没有头像
+		useAuthStore.setState({
+			user: { id: 'user-1', username: 'alice', email: OLD_EMAIL } as any,
+			currentTenantId: TENANT,
+		});
+		renderPage();
+
+		expect(
+			await screen.findByDisplayValue('https://cdn.example.com/stored.png'),
+		).toBeInTheDocument();
+		await waitFor(() =>
+			expect(useAuthStore.getState().user?.avatarUrl).toBe('https://cdn.example.com/stored.png'),
+		);
 	});
 
 	it('AC-B4-W2-04-1：保存用户名走 self 端点 + 精确合并（头像未变 → 不触发头像通道）', { timeout: 20000 }, async () => {
@@ -116,7 +140,7 @@ describe('settings 自助三通道（A-437 / A-438）', () => {
 		fireEvent.click(screen.getByText('保存资料'));
 
 		await waitFor(() =>
-			expect(updateMyAvatar).toHaveBeenCalledWith('user-1', {
+			expect(updateMyAvatar).toHaveBeenCalledWith({
 				avatarUrl: 'https://cdn.example.com/new.png',
 			}),
 		);
