@@ -72,6 +72,8 @@ export function readBuildEnv(env = process.env) {
   const cdnHost = (env.CDN_HOST || 'https://cdn.autional.cn').replace(/\/+$/, '');
   const siteHost = new URL(siteUrl).host;
   const rootDomain = siteHost.split('.').slice(-2).join('.');
+  // 门户 OAuth 客户端（公开标识，非密钥）；缺省用平台门户 seed 的 admin 客户端。
+  const oauthClientId = env.VITE_OAUTH_CLIENT_ID || '01AR0000000000000000000002';
   const apiNamespace = pickApiNamespace(env);
   /**
    * 前端 API 基址策略（2026-10-27）：
@@ -104,6 +106,7 @@ export function readBuildEnv(env = process.env) {
     cdnHost,
     siteHost,
     rootDomain,
+    oauthClientId,
     apiNamespace,
     apiMode,
     apiOrigin,

@@ -52,6 +52,7 @@ ${portalConfig}
   },
   VITE_COOKIE_DOMAIN: ".${buildEnv.rootDomain}",
   VITE_API_BASE_URL: "${apiBase}",
+  VITE_OAUTH_CLIENT_ID: "${buildEnv.oauthClientId}",
   VITE_API_NAMESPACE: "${buildEnv.apiNamespace}"
 };
 `,
