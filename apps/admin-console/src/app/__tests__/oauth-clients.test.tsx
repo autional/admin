@@ -63,6 +63,7 @@ const mockClients = [
 		name: '测试应用',
 		redirectUris: ['https://example.com/callback'],
 		postLogoutRedirectUris: ['https://example.com/', 'https://alt.example.com/'],
+		corsOrigins: ['https://app.example.com'],
 		grantTypes: ['authorization_code'],
 		status: 'active',
 		createdAt: '2026-01-01T00:00:00Z',
@@ -162,6 +163,21 @@ describe('OAuthClientsPage', () => {
 	});
 
 	// === Editor wire alignment (A-45/A-46 + post_logout 字段) ===
+	it('edit modal prefills CORS origins (cors_origins wire)', async () => {
+		renderPage();
+		fireEvent.click(screen.getAllByRole('button', { name: '编辑' })[0]);
+		// 2026-10-31：第三方应用跨域白名单必须可在管理面维护（此前只能调 API）
+		expect(await screen.findByDisplayValue('https://app.example.com')).toBeTruthy();
+		expect(await screen.findByText('允许的浏览器源（CORS，每行一个）')).toBeTruthy();
+	});
+
+	it('detail drawer shows CORS origins', async () => {
+		renderPage();
+		fireEvent.click(screen.getAllByText('详情')[0]);
+		expect(await screen.findByText('允许的浏览器源（CORS）')).toBeInTheDocument();
+		expect(await screen.findByText('https://app.example.com')).toBeInTheDocument();
+	});
+
 	it('edit modal prefills name + post-logout URIs from wire keys (A-45/A-46)', async () => {
 		renderPage();
 		fireEvent.click(screen.getAllByRole('button', { name: '编辑' })[0]);
@@ -192,6 +208,7 @@ describe('OAuthClientsPage', () => {
 					alias: '',
 					redirectUris: ['https://example.com/callback'],
 					postLogoutRedirectUris: ['https://example.com/', 'https://alt.example.com/'],
+					corsOrigins: ['https://app.example.com'],
 					grantTypes: ['authorization_code'],
 					website: '',
 					logoUrl: '',

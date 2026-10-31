@@ -83,6 +83,10 @@ export default function OAuthClientsPage() {
 			alias: (values.alias || '').trim(),
 			redirectUris: splitUris(values.redirectUris),
 			postLogoutRedirectUris: splitUris(values.postLogoutRedirectUris),
+			// 允许的浏览器源（CORS）：第三方应用浏览器直连换票/取用户信息时的跨域白名单。
+			// 仅精确 origin（scheme+host[:port]，无路径/尾斜杠）——语法校验在服务端
+			// normalizeCorsOrigins，前端不重复实现第二份规则。
+			corsOrigins: splitUris(values.corsOrigins),
 			grantTypes: values.grantTypes,
 			// 展示元信息：用户门户「已授权应用」用 website 渲染「打开应用」、logo_url 渲染图标。
 			// 空串 = 清除（UpdateClientParams 用 *string：nil 不动、空串清空）。
@@ -222,6 +226,7 @@ export default function OAuthClientsPage() {
 								alias: record.alias || '',
 								redirectUris: record.redirectUris?.join('\n') || '',
 								postLogoutRedirectUris: record.postLogoutRedirectUris?.join('\n') || '',
+								corsOrigins: record.corsOrigins?.join('\n') || '',
 								grantTypes: record.grantTypes || [],
 								website: record.website || '',
 								logoUrl: record.logoUrl || '',
@@ -330,6 +335,15 @@ export default function OAuthClientsPage() {
 							placeholder={t('oauthClients.form.postLogoutRedirectUrisPlaceholder')}
 						/>
 					</Form.Item>
+					{/* CORS：第三方应用浏览器直连（SDK 直连形态）必需；登记后 ≤60s 生效（网关快照 TTL）。
+					    未登记的表现是浏览器 CORS 报错、而换票在服务端已成功 —— 极难自查，故给出明确提示。 */}
+					<Form.Item
+						name="corsOrigins"
+						label={t('oauthClients.form.corsOrigins')}
+						extra={t('oauthClients.form.corsOriginsExtra')}
+					>
+						<Input.TextArea rows={2} placeholder={t('oauthClients.form.corsOriginsPlaceholder')} />
+					</Form.Item>
 					<Form.Item
 						name="grantTypes"
 						label={t('oauthClients.form.grantTypes')}
@@ -404,6 +418,11 @@ export default function OAuthClientsPage() {
 							</Descriptions.Item>
 							<Descriptions.Item label={t('oauthClients.detailRedirectUris')}>
 								{(detailClient.redirectUris || []).join(', ') || '-'}
+							</Descriptions.Item>
+							<Descriptions.Item label={t('oauthClients.detailCorsOrigins')}>
+								<span style={{ wordBreak: 'break-all' }}>
+									{(detailClient.corsOrigins || []).join(', ') || '-'}
+								</span>
 							</Descriptions.Item>
 							{/* 展示元信息：纯文本展示（不渲染成可点链接）——内部控制台只需核对值，
 							    避免在管理面引入第四份外链白名单。 */}

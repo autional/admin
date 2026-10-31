@@ -34,6 +34,12 @@ export interface OAuthClientRecord {
 	alias?: string;
 	/** 应用 Logo（用户门户列表图标；wire `logo_url` → `logoUrl`） */
 	logoUrl?: string;
+	/**
+	 * 允许的浏览器源（CORS，wire `cors_origins`）。
+	 * 第三方应用浏览器直连换票/取用户信息时，网关按此并集精确回显 ACAO；登记后最长 60s 生效。
+	 * 未登记 ⇒ 浏览器报 `No 'Access-Control-Allow-Origin'`（换票在服务端其实已成功）。
+	 */
+	corsOrigins?: string[];
 }
 
 export interface OAuthClientSecretRecord {
