@@ -15,6 +15,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HeaderActions } from '../HeaderActions';
+import zhCN from '@/i18n/locales/zh-CN.json';
+import enUS from '@/i18n/locales/en-US.json';
 
 const mockCatalog = vi.hoisted(() => ({
 	value: { portals: [] as Array<{ code: string; name?: string; url: string }>, isError: false, isLoading: false },
@@ -64,6 +66,16 @@ describe('HeaderActions · 站外出口与切换器收窄', () => {
 		mockCatalog.value = { portals: [], isError: false, isLoading: false };
 		mockLogout.mockClear();
 		mockGetPortalUrl.mockClear();
+	});
+
+	it('i18n 键是顶层平铺键（keySeparator:false 口径）', () => {
+		// 本仓 i18n 用 keySeparator:false：只有顶层平铺键可解析。若有人把这三个键塞进
+		// 嵌套 "nav": {}，生产会渲染成字面量 "nav.docs"，而普通的标签断言（默认分隔符下
+		// 嵌套也能解析）会假绿 —— 所以这里直接锁 JSON 的顶层键形态。
+		for (const key of ['nav.docs', 'nav.statusPage', 'nav.officialSite']) {
+			expect(Object.prototype.hasOwnProperty.call(zhCN, key), `${key} 必须在 zh-CN 顶层`).toBe(true);
+			expect(Object.prototype.hasOwnProperty.call(enUS, key), `${key} 必须在 en-US 顶层`).toBe(true);
+		}
 	});
 
 	it('用户菜单有三条站外出口，且登出恒为末项', async () => {
