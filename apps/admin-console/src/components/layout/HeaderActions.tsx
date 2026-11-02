@@ -5,11 +5,23 @@ import { useNavigate } from 'react-router';
 import { Layout, Space, Typography, Select, Tag } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useLogout, usePortalCatalog, useTenantSlug } from '@autional/shared';
+import {
+	getDEVELOPER_PORTAL_URL,
+	getLANDING_SITE_URL,
+	getSTATUS_PAGE_URL,
+} from '@autional/shared';
 import { LanguageSwitcher, PortalSwitcher, ThemeToggle, UserMenu } from '@autional/ui';
 import { useTranslation } from 'react-i18next';
 import { buildNavHref } from '@/lib/nav';
 
 const { Text } = Typography;
+
+/**
+ * 门户切换器只列「同类控制台」（2026-11-02）。
+ * status/trust/developer/brand 是公开内容站：混在控制台切换器里会把用户整页甩出
+ * 当前工作上下文，权限身份也换了。白名单而非黑名单 —— 以后新增内容站不会自动漏进来。
+ */
+const CONSOLE_PORTALS = new Set(['admin', 'security', 'user', 'platform']);
 
 // HeaderActions —— 顶栏**右侧**那组控件（门户切换 / 语言 / 主题 / 租户选择 / 用户菜单）。
 //
@@ -35,10 +47,14 @@ export function HeaderActions() {
 		slug: tenantSlug,
 		audience: 'admin',
 	});
+	const consolePortals = React.useMemo(
+		() => portals.filter((p) => CONSOLE_PORTALS.has(p.code)),
+		[portals],
+	);
 
 	return (
 		<Space size="large">
-			<PortalSwitcher portals={portals} currentPortal="admin" />
+			<PortalSwitcher portals={consolePortals} currentPortal="admin" />
 			<LanguageSwitcher />
 			<ThemeToggle />
 			{tenants.length === 0 ? (
@@ -70,6 +86,11 @@ export function HeaderActions() {
 						type: 'settings',
 						onClick: () => navigate(buildNavHref('/settings', tenantSlug)),
 					},
+					// 站外出口（2026-11-02）：控制台此前只有「设置/退出」，登录后回不到
+					// 官网、文档、状态页。三项用 shared 的门户 URL 解析（随根域/区域派生）。
+					{ key: 'docs', type: 'custom', label: t('nav.docs'), href: getDEVELOPER_PORTAL_URL() },
+					{ key: 'status', type: 'custom', label: t('nav.statusPage'), href: getSTATUS_PAGE_URL() },
+					{ key: 'landing', type: 'custom', label: t('nav.officialSite'), href: getLANDING_SITE_URL() },
 					{ key: 'logout', type: 'logout', onClick: handleLogout },
 				]}
 			/>

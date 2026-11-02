@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet, useParams } from 'react-router';
+import { Routes, Route, Outlet, Link, useParams } from 'react-router';
 import type { ReactNode } from 'react';
 import { Button } from 'antd';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
@@ -92,7 +92,14 @@ function LayoutWrapper() {
 					<AppShell
 						className="!h-full"
 						brand={
-							<span className="truncate text-lg font-bold">{collapsed ? 'A' : t('app.brand')}</span>
+							// 品牌区可点回本门户首页（2026-11-02）：此前是纯 <span>，控制台内
+							// 没有任何「回家」入口。必须带租户段——裸 `/` 会命中 path="*" 的 404。
+							<Link
+								to={tenantSlug ? `/${tenantSlug}` : '/'}
+								className="truncate text-lg font-bold transition-opacity hover:opacity-80"
+							>
+								{collapsed ? 'A' : t('app.brand')}
+							</Link>
 						}
 						nav={<NavMenu />}
 						sidebarCollapsed={collapsed}
