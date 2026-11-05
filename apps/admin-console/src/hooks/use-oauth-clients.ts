@@ -28,6 +28,10 @@ export interface OAuthClientRecord {
 	grantTypes: string[];
 	status: string;
 	createdAt?: string;
+	/** 关联的租户应用 ID（wire metadata.application_id） */
+	applicationId?: string;
+	/** 应用后端资源标识（wire metadata.default_resource，AT aud 用） */
+	defaultResource?: string;
 	/** 应用官网（用户门户「已授权应用」的「打开应用」目标；wire `website`） */
 	website?: string;
 	/** 显示简称（用户门户磁贴优先展示；wire `alias` ← metadata.alias） */

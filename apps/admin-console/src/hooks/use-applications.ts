@@ -18,6 +18,7 @@ export interface AppRecord {
 	id: string;
 	code: string;
 	name: string;
+	resource?: string;
 	type: string;
 	clientId: string;
 	status: string;

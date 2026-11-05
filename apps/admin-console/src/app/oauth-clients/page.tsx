@@ -93,6 +93,10 @@ export default function OAuthClientsPage() {
 			// URL 合法性由服务端校验（CreateClient/UpdateClient 内），前端不重复实现第三份白名单。
 			website: (values.website || '').trim(),
 			logoUrl: (values.logoUrl || '').trim(),
+			// 应用绑定：client ↔ application（写 metadata.application_id）；
+			// default_resource 作为 AT 的 aud（不填则平台默认）。
+			applicationId: (values.applicationId || '').trim(),
+			defaultResource: (values.defaultResource || '').trim(),
 		};
 		try {
 			if (editing) {
@@ -230,6 +234,8 @@ export default function OAuthClientsPage() {
 								grantTypes: record.grantTypes || [],
 								website: record.website || '',
 								logoUrl: record.logoUrl || '',
+								applicationId: record.applicationId || '',
+								defaultResource: record.defaultResource || '',
 							});
 							setModalVisible(true);
 						}}
@@ -317,6 +323,20 @@ export default function OAuthClientsPage() {
 						extra={t('oauthClients.form.aliasExtra')}
 					>
 						<Input maxLength={32} placeholder={t('oauthClients.form.aliasPlaceholder')} />
+					</Form.Item>
+					<Form.Item
+						name="applicationId"
+						label={t('oauthClients.form.applicationId')}
+						extra={t('oauthClients.form.applicationIdExtra')}
+					>
+						<Input placeholder={t('oauthClients.form.applicationIdPlaceholder')} />
+					</Form.Item>
+					<Form.Item
+						name="defaultResource"
+						label={t('oauthClients.form.defaultResource')}
+						extra={t('oauthClients.form.defaultResourceExtra')}
+					>
+						<Input placeholder={t('oauthClients.form.defaultResourcePlaceholder')} />
 					</Form.Item>
 					<Form.Item
 						name="redirectUris"

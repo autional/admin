@@ -82,6 +82,8 @@ export const createApplicationSchema = (t: TFunction) =>
 		// A-43：类型放宽为任意非空字符串（支持租户自定义应用类型，内置 oidc/saml/custom 仍是合法值）
 		type: z.string().min(1, t('validation.applicationTypeInvalid')),
 		description: z.string().optional(),
+		// 资源标识（AT aud）；留空由服务端按 root_domain 派生默认值。
+		resource: z.string().optional(),
 	});
 
 export const createPlanSchema = (t: TFunction) =>

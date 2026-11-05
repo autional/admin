@@ -204,6 +204,7 @@ export default function ApplicationsPage() {
 							form.setFieldsValue({
 								code: record.code,
 								name: record.name,
+								resource: record.resource || '',
 								type: record.type,
 								description: record.description,
 							});
@@ -308,6 +309,13 @@ export default function ApplicationsPage() {
 								}
 							}}
 						/>
+					</Form.Item>
+					<Form.Item
+						name="resource"
+						label={t('applications.form.resource')}
+						extra={t('applications.form.resourceExtra')}
+					>
+						<Input placeholder={t('applications.form.resourcePlaceholder')} />
 					</Form.Item>
 					<Form.Item
 						name="type"
