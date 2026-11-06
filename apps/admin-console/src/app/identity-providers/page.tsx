@@ -8,6 +8,7 @@ import {
 	Pencil,
 	Plug,
 	Plus,
+	ShieldCheck,
 	Trash2,
 } from 'lucide-react';
 import {
@@ -18,6 +19,8 @@ import {
 	useTestIdentityProvider,
 	useLdapHealth,
 	useTestLdapConnection,
+	useSamlSigningStatus,
+	useUpdateSamlSigningPolicy,
 } from '@/hooks/use-identity-providers';
 import { handleApiError } from '@/lib/error-handler';
 import { PageError, DataTable } from '@autional/ui/antd';
@@ -64,6 +67,10 @@ export default function IdentityProvidersPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [testingId, setTestingId] = useState<string | null>(null);
 	const [metadataFileList, setMetadataFileList] = useState<any[]>([]);
+	// SAML 签名策略弹窗
+	const [signingRecord, setSigningRecord] = useState<IdPRecord | null>(null);
+	const [signAuthnMode, setSignAuthnMode] = useState<'inherit' | 'on' | 'off'>('inherit');
+	const [signLogoutMode, setSignLogoutMode] = useState<'inherit' | 'on' | 'off'>('inherit');
 
 	// LDAP: test-connection state for the inline form button
 	const [testConnResult, setTestConnResult] = useState<LdapTestConnectionResponse | null>(null);
@@ -74,6 +81,8 @@ export default function IdentityProvidersPage() {
 	const updateMut = useUpdateIdentityProvider();
 	const deleteMut = useDeleteIdentityProvider();
 	const testMut = useTestIdentityProvider();
+	const { data: signingStatus } = useSamlSigningStatus();
+	const signingMut = useUpdateSamlSigningPolicy();
 
 	// LDAP hooks
 	const {
@@ -223,6 +232,32 @@ export default function IdentityProvidersPage() {
 		}
 	};
 
+	const modeOf = (v: unknown): 'inherit' | 'on' | 'off' =>
+		v === true ? 'on' : v === false ? 'off' : 'inherit';
+
+	const openSigning = (record: IdPRecord) => {
+		const cfg = record.config || {};
+		setSigningRecord(record);
+		setSignAuthnMode(modeOf(cfg.signAuthnRequests));
+		setSignLogoutMode(modeOf(cfg.signLogout));
+	};
+
+	const saveSigning = async () => {
+		if (!signingRecord) return;
+		const payload: any = {};
+		if (signAuthnMode === 'inherit') payload.clearSignAuthn = true;
+		else payload.signAuthnRequests = signAuthnMode === 'on';
+		if (signLogoutMode === 'inherit') payload.clearSignLogout = true;
+		else payload.signLogout = signLogoutMode === 'on';
+		try {
+			await signingMut.mutateAsync({ id: signingRecord.id, ...payload });
+			message.success(t('idp.signing.saveSuccess'));
+			setSigningRecord(null);
+		} catch (err) {
+			handleApiError(err, t('idp.signing.saveFailed'));
+		}
+	};
+
 	const columns = [
 		{ title: t('common.name'), dataIndex: 'name', key: 'name' },
 		{
@@ -276,6 +311,16 @@ export default function IdentityProvidersPage() {
 							{t('idp.testConnection')}
 						</Button>
 					)}
+					{record.type === 'saml' && (
+						<Button
+							type="link"
+							size="small"
+							icon={<ShieldCheck size="1em" />}
+							onClick={() => openSigning(record)}
+						>
+							{t('idp.signing.action')}
+						</Button>
+					)}
 					<Popconfirm title={t('idp.confirmDelete')} onConfirm={() => handleDelete(record.id)}>
 						<Button type="link" size="small" danger icon={<Trash2 size="1em" />}>
 							{t('common.delete')}
@@ -300,6 +345,35 @@ export default function IdentityProvidersPage() {
 					</>
 				}
 			/>
+
+			{/* SAML SP 签名证书状态（只读；到期倒计时） */}
+			{signingStatus && (
+				<div className="mb-4">
+					{signingStatus.hasKey === false || !signingStatus.certificate?.notAfter ? (
+						<Alert
+							variant="neutral"
+							title={t('idp.signing.certMissing')}
+						/>
+					) : (
+						(() => {
+							const notAfter = signingStatus.certificate!.notAfter!;
+							const days = Math.ceil((new Date(notAfter).getTime() - Date.now()) / 86400000);
+							const variant = days <= 0 ? 'danger' : days <= 30 ? 'warning' : 'success';
+							const tail = signingStatus.certificate?.sha256Fingerprint?.slice(0, 16) ?? '';
+							return (
+								<Alert
+									variant={variant}
+									title={`${t('idp.signing.certTitle')} · ${
+										days <= 0
+											? t('idp.signing.certExpired')
+											: `${days} ${t('idp.signing.certDaysLeft')}`
+									} · ${new Date(notAfter).toLocaleDateString()}${tail ? ` · ${tail}…` : ''}`}
+								/>
+							);
+						})()
+					)}
+				</div>
+			)}
 
 			{/* LDAP Health Status Section（A-37 三态：加载中不渲染 / 有健康数据渲染列表 /
 			    未配置（503/61001801）渲染中性块 / 其他错误渲染失败块） */}
@@ -494,6 +568,72 @@ export default function IdentityProvidersPage() {
 						</>
 					)}
 				</Form>
+			</Modal>
+
+			{/* SAML 签名策略（三态覆盖） */}
+			<Modal
+				title={`${t('idp.signing.title')}${signingRecord ? ` — ${signingRecord.name}` : ''}`}
+				open={!!signingRecord}
+				onCancel={() => setSigningRecord(null)}
+				onOk={saveSigning}
+				confirmLoading={signingMut.isPending}
+				okText={t('common.save')}
+				width={520}
+			>
+				<div className="space-y-5">
+					<div className="text-sm text-neutral-600">
+						{t('idp.signing.desc')}
+					</div>
+
+					<div>
+						<div className="mb-1 text-sm font-medium">
+							{t('idp.signing.authn')}
+						</div>
+						<Select
+							value={signAuthnMode}
+							onChange={(v) => setSignAuthnMode(v as 'inherit' | 'on' | 'off')}
+							style={{ width: '100%' }}
+							options={[
+								{ value: 'inherit', label: t('idp.signing.inherit') },
+								{ value: 'on', label: t('idp.signing.on') },
+								{ value: 'off', label: t('idp.signing.off') },
+							]}
+						/>
+						<div className="mt-1 text-xs text-neutral-500">
+							{t('idp.signing.effective')}:{' '}
+							{signingRecord?.config?.signAuthnEffective
+								? t('idp.signing.on')
+								: t('idp.signing.off')}
+						</div>
+					</div>
+
+					<div>
+						<div className="mb-1 text-sm font-medium">
+							{t('idp.signing.logout')}
+						</div>
+						<Select
+							value={signLogoutMode}
+							onChange={(v) => setSignLogoutMode(v as 'inherit' | 'on' | 'off')}
+							style={{ width: '100%' }}
+							options={[
+								{ value: 'inherit', label: t('idp.signing.inherit') },
+								{ value: 'on', label: t('idp.signing.on') },
+								{ value: 'off', label: t('idp.signing.off') },
+							]}
+						/>
+						<div className="mt-1 text-xs text-neutral-500">
+							{t('idp.signing.effective')}:{' '}
+							{signingRecord?.config?.signLogoutEffective
+								? t('idp.signing.on')
+								: t('idp.signing.off')}
+						</div>
+					</div>
+
+					<Alert
+						variant="warning"
+						title={t('idp.signing.authnWarning')}
+					/>
+				</div>
 			</Modal>
 		</div>
 	);

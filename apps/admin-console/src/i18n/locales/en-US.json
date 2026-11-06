@@ -4661,5 +4661,21 @@
   "authConfig.providerManualOn": "Manually on",
   "authConfig.providerManualOff": "Manually off",
   "common.enabled": "Enabled",
-  "common.disabled": "Disabled"
+  "common.disabled": "Disabled",
+  "idp.signing.action": "Signing",
+  "idp.signing.title": "Signing policy",
+  "idp.signing.desc": "Override the global signing policy per IdP. \"Inherit\" follows the global default (request signing off, logout signing on).",
+  "idp.signing.authn": "AuthnRequest signing",
+  "idp.signing.logout": "Logout signing",
+  "idp.signing.inherit": "Inherit global",
+  "idp.signing.on": "On",
+  "idp.signing.off": "Off",
+  "idp.signing.effective": "Effective",
+  "idp.signing.saveSuccess": "Signing policy updated",
+  "idp.signing.saveFailed": "Failed to update signing policy",
+  "idp.signing.certTitle": "SP signing certificate",
+  "idp.signing.certDaysLeft": "days until expiry",
+  "idp.signing.certExpired": "expired",
+  "idp.signing.certMissing": "SP signing certificate is not ready (request/logout signing unavailable)",
+  "idp.signing.authnWarning": "After enabling AuthnRequest signing, Entra IDP-initiated login (My Apps / M365) stops working; Okta requires NameIDPolicy in the request (already supported)."
 }

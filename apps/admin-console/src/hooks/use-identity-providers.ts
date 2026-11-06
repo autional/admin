@@ -15,6 +15,11 @@ import {
 	testLdapConnection,
 	getSamlProviders,
 } from '@/lib/api.generated';
+import {
+	getSamlSigningStatus,
+	updateSamlSigningPolicy,
+	type SamlSigningPolicyPayload,
+} from '@/lib/saml-signing';
 
 export interface IdPRecord {
 	id: string;
@@ -32,6 +37,7 @@ export interface IdPRecord {
  * 前端聚合两个来源展示。
  */
 function toIdPRecordFromSaml(item: SamlProviderItem): IdPRecord {
+	const raw = item as unknown as Record<string, unknown>;
 	return {
 		id: item.id ?? '',
 		name: item.name ?? '',
@@ -46,6 +52,11 @@ function toIdPRecordFromSaml(item: SamlProviderItem): IdPRecord {
 			allowIdpInitiated: item.allowIdpInitiated,
 			defaultRedirectUri: item.defaultRedirectUri,
 			forceAuthn: item.forceAuthn,
+			// 三态签名策略（null = 继承全局）与生效值
+			signAuthnRequests: raw.signAuthnRequests ?? null,
+			signLogout: raw.signLogout ?? null,
+			signAuthnEffective: raw.signAuthnEffective ?? false,
+			signLogoutEffective: raw.signLogoutEffective ?? false,
 		},
 	};
 }
@@ -166,5 +177,26 @@ export function useLdapHealth() {
 export function useTestLdapConnection() {
 	return useMutation({
 		mutationFn: (data: { directoryName: string }) => testLdapConnection(data),
+	});
+}
+
+// --- SAML signing policy hooks (2026-11-06) ---
+
+/** SP 签名材料状态（证书 subject / 到期 / 指纹；不含私钥）。 */
+export function useSamlSigningStatus() {
+	return useQuery({
+		queryKey: ['saml', 'signing-status'],
+		staleTime: 60000,
+		queryFn: getSamlSigningStatus,
+	});
+}
+
+/** 更新单个 SAML IdP 的签名策略（三态覆盖 / 恢复继承）。 */
+export function useUpdateSamlSigningPolicy() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, ...payload }: { id: string } & SamlSigningPolicyPayload) =>
+			updateSamlSigningPolicy(id, payload),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.identityProviders.all }),
 	});
 }

@@ -4661,5 +4661,21 @@
   "authConfig.providerManualOn": "手动开启",
   "authConfig.providerManualOff": "手动关闭",
   "common.enabled": "已启用",
-  "common.disabled": "已停用"
+  "common.disabled": "已停用",
+  "idp.signing.action": "签名",
+  "idp.signing.title": "签名策略",
+  "idp.signing.desc": "按 IdP 覆盖全局签名策略；“继承”表示跟随全局默认（请求签名默认关、登出签名默认开）。",
+  "idp.signing.authn": "AuthnRequest 签名",
+  "idp.signing.logout": "Logout 签名",
+  "idp.signing.inherit": "继承全局",
+  "idp.signing.on": "开启",
+  "idp.signing.off": "关闭",
+  "idp.signing.effective": "当前生效",
+  "idp.signing.saveSuccess": "签名策略已更新",
+  "idp.signing.saveFailed": "更新签名策略失败",
+  "idp.signing.certTitle": "SP 签名证书",
+  "idp.signing.certDaysLeft": "天后到期",
+  "idp.signing.certExpired": "已过期",
+  "idp.signing.certMissing": "SP 签名证书未就绪（请求/登出签名不可用）",
+  "idp.signing.authnWarning": "开启 AuthnRequest 签名后：Entra 的 IdP-initiated 登录（My Apps / M365）会失效；Okta 要求请求携带 NameIDPolicy（已支持）。"
 }

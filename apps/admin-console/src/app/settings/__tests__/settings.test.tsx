@@ -39,7 +39,7 @@ vi.mock('@/lib/api.generated', () => ({
 	updateMyAvatar: vi.fn(),
 	// U447：页面挂载即补读一次 self 头像端点（/auth/me 不含 avatarUrl）；不 mock 会让
 	// mock 模块缺该导出 → 调用 undefined → 整个 describe 全红。
-	getProfileAvatar: vi.fn(),
+	getProfileAvatar: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@autional/shared/generated/api', async (importOriginal) => {

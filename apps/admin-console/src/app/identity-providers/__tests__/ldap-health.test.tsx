@@ -22,9 +22,16 @@ vi.mock('@/hooks/use-identity-providers', () => ({
 	useTestIdentityProvider: vi.fn(),
 	useLdapHealth: vi.fn(),
 	useTestLdapConnection: vi.fn(),
+	useSamlSigningStatus: vi.fn(),
+	useUpdateSamlSigningPolicy: vi.fn(),
 }));
 
-import { useIdentityProviders, useLdapHealth } from '@/hooks/use-identity-providers';
+import {
+	useIdentityProviders,
+	useLdapHealth,
+	useSamlSigningStatus,
+	useUpdateSamlSigningPolicy,
+} from '@/hooks/use-identity-providers';
 
 function mockBaseHooks(ldapHealthReturn: Record<string, unknown>) {
 	vi.mocked(useIdentityProviders).mockReturnValue({
@@ -36,6 +43,13 @@ function mockBaseHooks(ldapHealthReturn: Record<string, unknown>) {
 	vi.mocked(useLdapHealth).mockReturnValue(
 		ldapHealthReturn as unknown as ReturnType<typeof useLdapHealth>,
 	);
+	vi.mocked(useSamlSigningStatus).mockReturnValue({
+		data: undefined,
+	} as unknown as ReturnType<typeof useSamlSigningStatus>);
+	vi.mocked(useUpdateSamlSigningPolicy).mockReturnValue({
+		mutateAsync: vi.fn(),
+		isPending: false,
+	} as unknown as ReturnType<typeof useUpdateSamlSigningPolicy>);
 }
 
 function renderPage() {
