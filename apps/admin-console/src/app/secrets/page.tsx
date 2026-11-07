@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Button, Space, Tag, Modal, Form, Input, Select, Descriptions, Typography, Tooltip, Empty } from 'antd';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Button, Space, Tag, Modal, Form, Input, Select, Descriptions, Typography, Tooltip, Empty } from 'antd';
 import { message, modal } from '@/lib/antd-app';
 import {
 	Ban,
@@ -55,6 +55,9 @@ export default function SecretsPage() {
 		version: number;
 	} | null>(null);
 	const [versionValueLoading, setVersionValueLoading] = useState(false);
+	const [revealTarget, setRevealTarget] = useState<{ key: string; version: number } | null>(null);
+	const [revealReason, setRevealReason] = useState('');
+	const revealTimer = useRef<number | null>(null);
 
 	const { data = [], isLoading, error, refetch } = useSecrets();
 	const createMut = useCreateSecret();
@@ -235,18 +238,62 @@ export default function SecretsPage() {
 		});
 	};
 
-	const handleViewVersionValue = async (key: string, version: number) => {
+	const clearRevealTimer = () => {
+		if (revealTimer.current !== null) {
+			window.clearTimeout(revealTimer.current);
+			revealTimer.current = null;
+		}
+	};
+
+	const closeReveal = () => {
+		clearRevealTimer();
+		setVersionValueVisible(false);
+		setVersionValueData(null);
+		setRevealReason('');
+		setRevealTarget(null);
+	};
+
+	const handleOpenReveal = (key: string, version: number) => {
+		clearRevealTimer();
+		setRevealTarget({ key, version });
+		setRevealReason('');
+		setVersionValueData(null);
+		setVersionValueVisible(true);
+	};
+
+	const handleConfirmReveal = async () => {
+		if (!revealTarget) return;
+		const reason = revealReason.trim();
+		if (!reason) {
+			message.warning(t('secrets.revealReasonRequired'));
+			return;
+		}
 		setVersionValueLoading(true);
 		try {
-			const result = await versionValueMut.mutateAsync({ key, version });
-			setVersionValueData({ value: result.value!, version: result.version! });
-			setVersionValueVisible(true);
+			const result = await versionValueMut.mutateAsync({
+				key: revealTarget.key,
+				version: revealTarget.version,
+				reason,
+			});
+			setVersionValueData({ value: result.value ?? '', version: result.version ?? revealTarget.version });
+			clearRevealTimer();
+			revealTimer.current = window.setTimeout(() => {
+				setVersionValueData(null);
+				message.info(t('secrets.revealExpired'));
+			}, 30_000);
 		} catch (err) {
-			handleApiError(err, t('secrets.loadVersionError'));
+			handleApiError(err, t('secrets.revealFailed'));
 		} finally {
 			setVersionValueLoading(false);
 		}
 	};
+
+	useEffect(
+		() => () => {
+			if (revealTimer.current !== null) window.clearTimeout(revealTimer.current);
+		},
+		[],
+	);
 
 	const columns = [
 		{
@@ -492,7 +539,7 @@ export default function SecretsPage() {
 											size="small"
 											loading={versionValueLoading}
 											onClick={() =>
-												v.version != null && handleViewVersionValue(detailKey!, v.version)
+												v.version != null && handleOpenReveal(detailKey!, v.version)
 											}
 										>
 											{t('secrets.view')}
@@ -505,21 +552,58 @@ export default function SecretsPage() {
 				)}
 			</Drawer>
 
-			{/* Version Value Modal */}
+			{/* Reveal Version Value Modal（原因 + 审计 + 30s 自动隐藏） */}
 			<Modal
-				title={t('secrets.versionValueTitle', { version: versionValueData?.version })}
+				title={
+					versionValueData
+						? t('secrets.versionValueTitle', { version: versionValueData.version })
+						: t('secrets.revealTitle')
+				}
 				open={versionValueVisible}
-				onCancel={() => setVersionValueVisible(false)}
-				footer={null}
+				onCancel={closeReveal}
+				footer={
+					versionValueData ? (
+						<Button onClick={closeReveal}>{t('common.close')}</Button>
+					) : (
+						<Space>
+							<Button onClick={closeReveal}>{t('common.cancel')}</Button>
+							<Button type="primary" loading={versionValueLoading} onClick={handleConfirmReveal}>
+								{t('secrets.revealConfirm')}
+							</Button>
+						</Space>
+					)
+				}
 				destroyOnHidden
 				className="w-full max-w-[560px]"
 			>
-				<Input.TextArea
-					value={versionValueData?.value ?? ''}
-					readOnly
-					rows={6}
-					className="font-mono"
-				/>
+				{versionValueData ? (
+					<>
+						<Alert type="info" showIcon className="mb-2" message={t('secrets.revealShown')} />
+						<Input.TextArea
+							value={versionValueData.value}
+							readOnly
+							rows={6}
+							className="font-mono"
+						/>
+						<Text type="secondary" className="block mt-2">
+							{t('secrets.revealAutoHide')}
+						</Text>
+					</>
+				) : (
+					<>
+						<Text type="secondary" className="block mb-2">
+							{t('secrets.revealReason')}
+						</Text>
+						<Input.TextArea
+							value={revealReason}
+							onChange={(e) => setRevealReason(e.target.value)}
+							rows={3}
+							maxLength={512}
+							showCount
+							placeholder={t('secrets.revealReasonPlaceholder')}
+						/>
+					</>
+				)}
 			</Modal>
 
 			{/* Create/Edit Modal */}

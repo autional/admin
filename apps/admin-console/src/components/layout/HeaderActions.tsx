@@ -21,9 +21,9 @@ const { Text } = Typography;
  * 门户切换器只列「同类控制台」（2026-11-02）。
  * status/trust/developer/brand 是公开内容站：混在控制台切换器里会把用户整页甩出
  * 当前工作上下文，权限身份也换了。白名单而非黑名单 —— 以后新增内容站不会自动漏进来。
- * 2026-11 接入配置中心：config 同属管理面平面，加入白名单。
+ * 2026-11 接入配置中心 / 密钥中心：两者同属管理面平面，加入白名单。
  */
-const CONSOLE_PORTALS = new Set(['config', 'admin', 'security', 'user', 'platform']);
+const CONSOLE_PORTALS = new Set(['config', 'secret', 'admin', 'security', 'user', 'platform']);
 /** 目录里的 code → 图标；config 需显式补一个，否则落到 Globe 兜底。 */
 const PORTAL_ICONS = { config: SlidersHorizontal };
 

@@ -793,6 +793,18 @@ export const getSecretVersionValue = (
 	params?: { key: string },
 	_signal?: AbortSignal,
 ) => Generated.adminSecretsVersionsValuePost(data, params);
+/** 查看明文：带 X-Change-Reason（服务端写入审计 metadata）。 */
+export const revealSecretVersion = async (
+	data: { version: number },
+	params: { key: string },
+	reason: string,
+) => {
+	const res = await apiClient.post('/secret/api/v1/admin/secrets/versions/value', data, {
+		params,
+		headers: { 'X-Change-Reason': reason },
+	});
+	return res.data;
+};
 export const batchRevokeSecrets = (keys: string[], _signal?: AbortSignal) =>
 	Generated.adminSecretsBatchRevokePost({ keys });
 export const batchDeleteSecrets = (keys: string[], _signal?: AbortSignal) =>

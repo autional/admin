@@ -9,7 +9,7 @@ import {
 	getSecrets,
 	getSecretDetail,
 	getSecretVersions,
-	getSecretVersionValue,
+	revealSecretVersion,
 	updateSecret,
 	rotateSecret,
 	revokeSecret,
@@ -66,8 +66,8 @@ export function useSecretVersions(key: string) {
 
 export function useSecretVersionValue() {
 	return useMutation({
-		mutationFn: async ({ key, version }: { key: string; version: number }) => {
-			const res = await getSecretVersionValue({ version }, { key });
+		mutationFn: async ({ key, version, reason }: { key: string; version: number; reason: string }) => {
+			const res = await revealSecretVersion({ version }, { key }, reason);
 			return res as GeneratedTypes.SecretValueResponse;
 		},
 	});
