@@ -172,10 +172,12 @@ function appRoutes() {
 				}
 			/>
 
+			{/* users 路由：与网关 required_roles（super_admin/admin/security_admin）及 identity
+			    adminReadGroup 对齐 —— user_manager 直链落到 /403，而不是「页面能开、接口 403」的破页。 */}
 			<Route
 				path="users"
 				element={
-					<UserMgmtGuard fallback={<ForbiddenRedirect />}>
+					<UserMgmtGuard allowedRoles={['super_admin', 'admin', 'security_admin']} fallback={<ForbiddenRedirect />}>
 						<ErrorBoundary {...DEFAULT_ERROR_BOUNDARY}>
 							<UsersPage />
 						</ErrorBoundary>
@@ -185,7 +187,7 @@ function appRoutes() {
 			<Route
 				path="users/:id"
 				element={
-					<UserMgmtGuard fallback={<ForbiddenRedirect />}>
+					<UserMgmtGuard allowedRoles={['super_admin', 'admin', 'security_admin']} fallback={<ForbiddenRedirect />}>
 						<UserDetailPage />
 					</UserMgmtGuard>
 				}
