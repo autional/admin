@@ -847,8 +847,6 @@ export const patchPlanFeatureGates = (planId: string, featureGates: Record<strin
 // PIM/JIT Role Activations
 export const getRoleActivations = (params?: Record<string, unknown>) =>
 	Generated.adminRoleActivations(params);
-export const approveActivation = (id: string, _reason: string) =>
-	Generated.adminRoleActivationsApproveByRoleActivationsPost(id);
 export const revokeActivation = (id: string, reason: string) =>
 	Generated.adminRoleActivationsRevokeByRoleActivationsPost(id, { reason });
 
