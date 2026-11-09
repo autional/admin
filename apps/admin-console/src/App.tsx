@@ -1,3 +1,4 @@
+import { useSessionActivity } from './hooks/use-session-activity';
 import { Routes, Route, Outlet, Link, useParams } from 'react-router';
 import type { ReactNode } from 'react';
 import { Button } from 'antd';
@@ -128,6 +129,7 @@ function LayoutWrapper() {
 }
 
 export default function App() {
+	useSessionActivity();
 	useBranding();
 
 	return (
