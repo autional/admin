@@ -212,6 +212,9 @@ describe('OAuthClientsPage', () => {
 					grantTypes: ['authorization_code'],
 					website: '',
 					logoUrl: '',
+					// 2026-11 新增：client ↔ application 绑定与 AT aud（空值也按空串下发）
+					applicationId: '',
+					defaultResource: '',
 				},
 			}),
 		);

@@ -10,11 +10,17 @@ const DEPLOY_ENV = {
 	REGION: 'cn',
 	SITE_URL: 'https://admin.autional.cn',
 	CDN_HOST: 'https://cdn.autional.cn',
+	// cn 默认 direct 模式：scripts/env.mjs 要求跨域直连必须有绝对源站（fail-closed）
+	API_ORIGIN: 'https://api.autional.cn',
 };
 
 describe('构建期 API namespace（A2-R01 回归锁）', () => {
-	it('本地无部署变量 → dev', () => {
-		expect(readBuildEnv({}).apiNamespace).toBe('dev');
+	it('本地无部署变量 → dev（cn 默认 direct，需直连源站）', () => {
+		expect(readBuildEnv({ API_ORIGIN: 'https://api.autional.cn' }).apiNamespace).toBe('dev');
+	});
+
+	it('本地缺 API_ORIGIN → 抛错（direct 模式 fail-closed）', () => {
+		expect(() => readBuildEnv({})).toThrow(/API_ORIGIN/);
 	});
 
 	it('production → prod', () => {
