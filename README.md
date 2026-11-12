@@ -36,3 +36,22 @@ pnpm test     # Vitest 单元测试
 - 路由/重写：`vercel.ts`（fail-closed：`API_ORIGIN` 缺失即构建失败）。
 - 生成物（勿手改、勿入库）：`apps/admin-console/public/{env.js,robots.txt}` ← `scripts/gen-env.mjs`；区域文案在 `scripts/region-copy.mjs`。
 - 本地无 env 时兜底 cn 值（与迁移前基线一致）。
+
+## 产物体积预算（CI 门）
+
+`apps/admin-console/.size-limit.json` 是本仓**唯一**的体积预算真源（`size-limit` + `@size-limit/file`），CI 的
+`Build (size budget)` + `Size budget` 两步超限即红并打印超限条目名（含包名）。
+
+| 条目 | 匹配 | 阈值（= 2026-11-12 实测 ×110%） |
+|---|---|---|
+| entry | `dist/assets/index-*.js` | 1,366 kB（实测 1,241.03） |
+| vendor-ui | `dist/assets/vendor-ui-*.js`（antd + lucide） | 1,529 kB（实测 1,389.34） |
+| vendor-charts | `dist/assets/vendor-charts-*.js`（recharts） | 388 kB（实测 351.89） |
+| shared-api | `dist/assets/shared-api-*.js` | 334 kB（实测 303.09） |
+| css | `dist/assets/*.css` | 52.1 kB（实测 47.33） |
+| all-js | `dist/assets/*.js` 合计 | 3,766 kB（实测 3,423.34） |
+
+- 口径：`brotli:false` → **dist 原始字节**（不用压缩体积：会随 node 内建 zlib 漂移）。
+- 本地复跑：`pnpm build && pnpm --filter @autional/admin-console run size`（本地无部署 env 时用 `FRONTEND_API_MODE=proxy`，与 CI 同口径）。
+- **超限怎么办**：① 先拆 chunk / 路由级 `React.lazy`，把增长挪进按需块；② 确属合理增长才改阈值，且**同一个 PR** 改 `.size-limit.json` 并在描述里写「哪条、涨多少 kB、为何不可拆、谁还」；③ **禁止**删条目（空匹配会 fail）或调阈值不写理由。
+- 新增独立 chunk 不会被单条预算拦下（只被 `all-js` 兜住）→ 新增 chunk 时必须补一条对应条目。

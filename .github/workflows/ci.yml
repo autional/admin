@@ -38,6 +38,18 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # 产物体积预算（AC C-29 / ui-denominator G16）：阈值与条目在 apps/admin-console/.size-limit.json，
+      # 超限即 fail 并打印超限条目名（含包名，如 vendor-ui: antd + lucide-react）。
+      # 构建只为量体积，不发布：CI 不注入部署 env（API_ORIGIN 是发布链路的职责），改用同域 proxy 模式；
+      # API 基址走 public/env.js 运行时注入、不进 bundle，故与 direct 模式产物字节数一致（2026-11-12 实测）。
+      - name: Build (size budget)
+        env:
+          FRONTEND_API_MODE: proxy
+        run: pnpm --filter @autional/admin-console run build
+
+      - name: Size budget
+        run: pnpm --filter @autional/admin-console run size
+
       # 无障碍闸门（AC C-28 / ui-denominator G5·G6）：jsx-a11y recommended，0 error 才算过。
       # 单列一步的原因：本仓历史 lint 面从没跑过 a11y；先让它独立亮红/亮绿，
       # 不和 no-explicit-any 之类的存量噪音混在一起（试点通过后再随 DS 发版并入 pnpm lint）。

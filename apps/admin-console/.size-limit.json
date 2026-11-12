@@ -1,0 +1,38 @@
+[
+  {
+    "name": "entry: dist/assets/index-*.js（业务主 chunk）",
+    "path": "dist/assets/index-*.js",
+    "limit": "1366 kB",
+    "brotli": false
+  },
+  {
+    "name": "vendor-ui: antd + lucide-react",
+    "path": "dist/assets/vendor-ui-*.js",
+    "limit": "1529 kB",
+    "brotli": false
+  },
+  {
+    "name": "vendor-charts: recharts",
+    "path": "dist/assets/vendor-charts-*.js",
+    "limit": "388 kB",
+    "brotli": false
+  },
+  {
+    "name": "shared-api: @autional/shared",
+    "path": "dist/assets/shared-api-*.js",
+    "limit": "334 kB",
+    "brotli": false
+  },
+  {
+    "name": "css: dist/assets/*.css",
+    "path": "dist/assets/*.css",
+    "limit": "52.1 kB",
+    "brotli": false
+  },
+  {
+    "name": "all-js: dist/assets/*.js 合计",
+    "path": "dist/assets/*.js",
+    "limit": "3766 kB",
+    "brotli": false
+  }
+]
