@@ -13,6 +13,7 @@
     "lint:a11y": "eslint src --config eslint.a11y.config.mjs --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "clean": "rimraf dist"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@autional/eslint-config": "0.1.0-rc.1",
     "@autional/tsconfig": "0.1.0-rc",
+    "@playwright/test": "^1.65.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "4.4.0",
