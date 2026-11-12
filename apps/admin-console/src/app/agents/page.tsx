@@ -145,12 +145,13 @@ export default function AgentsPage() {
 			dataIndex: 'name',
 			key: 'name',
 			render: (v: string, record: AgentRecord) => (
-				<a
+				<button
+					type="button"
 					onClick={() => navigate(buildNavHref(`/agents/${record.identityId ?? ''}`, tenantSlug))}
-					className="font-medium"
+					className="font-medium text-left"
 				>
 					{v}
-				</a>
+				</button>
 			),
 		},
 		{

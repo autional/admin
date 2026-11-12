@@ -153,9 +153,13 @@ export default function DevicesPage() {
 			dataIndex: 'name',
 			key: 'name',
 			render: (v: string, record: DeviceRecord) => (
-				<a onClick={() => navigate(buildNavHref(`/devices/${record.identityId ?? ''}`, tenantSlug))} className="font-medium">
+				<button
+					type="button"
+					onClick={() => navigate(buildNavHref(`/devices/${record.identityId ?? ''}`, tenantSlug))}
+					className="font-medium text-left"
+				>
 					{v}
-				</a>
+				</button>
 			),
 		},
 		{

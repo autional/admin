@@ -37,3 +37,9 @@ jobs:
       # 那是发布链路的职责；这里只做类型检查，避免在 CI 里伪造部署环境。
       - name: Typecheck
         run: pnpm typecheck
+
+      # 无障碍闸门（AC C-28 / ui-denominator G5·G6）：jsx-a11y recommended，0 error 才算过。
+      # 单列一步的原因：本仓历史 lint 面从没跑过 a11y；先让它独立亮红/亮绿，
+      # 不和 no-explicit-any 之类的存量噪音混在一起（试点通过后再随 DS 发版并入 pnpm lint）。
+      - name: A11y lint
+        run: pnpm --filter @autional/admin-console run lint:a11y

@@ -722,6 +722,14 @@ export default function AuditAnomaliesPage() {
 								{relatedData.items.map((item: any) => (
 									<div
 										key={item.id}
+										role="button"
+										tabIndex={0}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												openDetail(item);
+											}
+										}}
 										className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 border rounded-xs hover:bg-neutral-50 hover:bg-neutral-900 cursor-pointer transition-colors"
 										onClick={() => openDetail(item)}
 									>

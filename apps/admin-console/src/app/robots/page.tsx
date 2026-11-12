@@ -113,9 +113,13 @@ export default function RobotsPage() {
 			dataIndex: 'name',
 			key: 'name',
 			render: (v: string, record: RobotRecord) => (
-				<a onClick={() => navigate(buildNavHref(`/robots/${record.identityId ?? ''}`, tenantSlug))} className="font-medium">
+				<button
+					type="button"
+					onClick={() => navigate(buildNavHref(`/robots/${record.identityId ?? ''}`, tenantSlug))}
+					className="font-medium text-left"
+				>
 					{v}
-				</a>
+				</button>
 			),
 		},
 		{
