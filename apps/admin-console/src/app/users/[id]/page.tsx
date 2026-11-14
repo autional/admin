@@ -36,6 +36,25 @@ import {
 } from '@/lib/api.generated';
 import { useAssignUserPermissions, useRevokeUserPermissions } from '@/hooks/use-user-roles';
 import { usePermissionsForSelect } from '@/hooks/use-permissions-for-select';
+import { useUserMfaMethods, type MfaMethodType } from '@/hooks/use-user-mfa';
+
+/** MFA 方式行状态（禁用优先于启用：disabled=true 视为已停用）。 */
+type MfaState = 'enabled' | 'disabled' | 'off';
+
+/** 固定展示顺序：验证器 / 短信 / 邮箱（后端缺失项按「未启用」渲染）。 */
+const MFA_ROW_TYPES: MfaMethodType[] = ['totp', 'sms', 'email'];
+
+const MFA_STATE_COLOR: Record<MfaState, string> = {
+	enabled: 'success',
+	disabled: 'error',
+	off: 'default',
+};
+
+function mfaStateOf(method?: { enabled?: boolean; disabled?: boolean }): MfaState {
+	if (method?.disabled) return 'disabled';
+	if (method?.enabled) return 'enabled';
+	return 'off';
+}
 
 export default function UserDetailPage() {
 	const { t } = useTranslation();
@@ -45,6 +64,8 @@ export default function UserDetailPage() {
 
 	const { data: user, isLoading: loading, refetch } = useUser(id);
 	const [activeTab, setActiveTab] = useState('basic');
+	// MFA 方式明细：仅在「MFA」页签打开时请求（403/404 自动降级为 null，不渲染新块）
+	const { data: mfaMethods } = useUserMfaMethods(activeTab === 'mfa' ? id : undefined);
 
 	const [roles, setRoles] = useState<any[]>([]);
 	const [permissions, setPermissions] = useState<any[]>([]);
@@ -508,23 +529,55 @@ export default function UserDetailPage() {
 						key: 'mfa',
 						label: t('userDetail.mfaStatus'),
 						children: (
-							<Card>
-								<Descriptions bordered column={1}>
-									<Descriptions.Item label={t('userDetail.mfaStatus')}>
-										{user.mfaEnabled ? (
-											<Tag color="success">{t('userDetail.mfaEnabled')}</Tag>
-										) : (
-											<Tag>{t('userDetail.mfaNotEnabled')}</Tag>
-										)}
-									</Descriptions.Item>
-									<Descriptions.Item label={t('userDetail.totp')}>
-										{user.mfaEnabled ? t('userDetail.bound') : t('userDetail.notBound')}
-									</Descriptions.Item>
-									<Descriptions.Item label={t('userDetail.backupRecoveryCodes')}>
-										{user.mfaEnabled ? t('userDetail.available') : t('userDetail.notGenerated')}
-									</Descriptions.Item>
-								</Descriptions>
-							</Card>
+							<>
+								<Card>
+									<Descriptions bordered column={1}>
+										<Descriptions.Item label={t('userDetail.mfaStatus')}>
+											{user.mfaEnabled ? (
+												<Tag color="success">{t('userDetail.mfaEnabled')}</Tag>
+											) : (
+												<Tag>{t('userDetail.mfaNotEnabled')}</Tag>
+											)}
+										</Descriptions.Item>
+										<Descriptions.Item label={t('userDetail.totp')}>
+											{user.mfaEnabled ? t('userDetail.bound') : t('userDetail.notBound')}
+										</Descriptions.Item>
+										<Descriptions.Item label={t('userDetail.backupRecoveryCodes')}>
+											{user.mfaEnabled ? t('userDetail.available') : t('userDetail.notGenerated')}
+										</Descriptions.Item>
+									</Descriptions>
+								</Card>
+								{/* 已开通方式：固定三行；接口不可用（403/404 → null）时整块不渲染，保持旧行为 */}
+								{mfaMethods ? (
+									<Card title={t('userDetail.mfaMethods')} className="mt-4">
+										<Descriptions bordered column={1}>
+											{MFA_ROW_TYPES.map((type) => {
+												const method = mfaMethods.methods.find((m) => m.type === type);
+												const state = mfaStateOf(method);
+												return (
+													<Descriptions.Item
+														key={type}
+														label={t(`userDetail.mfaType.${type}`)}
+													>
+														<Space size="middle" wrap>
+															<Tag color={MFA_STATE_COLOR[state]}>
+																{t(`userDetail.mfaState.${state}`)}
+															</Tag>
+															<span className="text-neutral-600">
+																{method?.contact || '-'}
+															</span>
+															<span className="text-neutral-400">
+																{t('userDetail.lastChanged')}{' '}
+																{method?.updatedAt || '-'}
+															</span>
+														</Space>
+													</Descriptions.Item>
+												);
+											})}
+										</Descriptions>
+									</Card>
+								) : null}
+							</>
 						),
 					},
 					{

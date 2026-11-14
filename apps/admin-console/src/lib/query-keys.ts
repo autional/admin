@@ -15,6 +15,8 @@ export const queryKeys = {
 		activeSessions: (tenantId: string) => ['active-sessions', tenantId] as const,
 		passwordStatus: (tenantId: string, id: string) =>
 			['users', tenantId, id, 'password-status'] as const,
+		mfaMethods: (tenantId: string, id: string) =>
+			['users', tenantId, id, 'mfa-methods'] as const,
 		userRoles: (tenantId: string, id: string) => ['users', tenantId, id, 'roles'] as const,
 		userPermissions: (tenantId: string, id: string) =>
 			['users', tenantId, id, 'permissions'] as const,
